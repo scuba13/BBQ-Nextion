@@ -90,6 +90,8 @@ void FileSystem::initializeAndLoadConfig(SystemStatus &status, String mac)
     status.maxPrtTemp = doc["maxPrtTemp"].as<int>();
     status.minCaliTemp = doc["minCaliTemp"].as<int>();
     status.maxCaliTemp = doc["maxCaliTemp"].as<int>();
+    status.minCaliTempP = doc["minCaliTempP"].as<int>();
+    status.maxCaliTempP = doc["maxCaliTempP"].as<int>();
     strlcpy(status.aiKey, doc["aiKey"].as<const char *>(), sizeof(status.aiKey));
     strlcpy(status.tip, doc["tip"].as<const char *>(), sizeof(status.tip));
 
@@ -117,6 +119,10 @@ void FileSystem::initializeAndLoadConfig(SystemStatus &status, String mac)
     Serial.println(status.minCaliTemp);
     Serial.print("maxCaliTemp: ");
     Serial.println(status.maxCaliTemp);
+    Serial.print("minCaliTempP: ");
+    Serial.println(status.minCaliTempP);
+    Serial.print("maxCaliTempP: ");
+    Serial.println(status.maxCaliTempP);
     Serial.print("aiKey: ");
     Serial.println(status.aiKey);
     Serial.print("tip: ");
@@ -148,6 +154,8 @@ void FileSystem::saveConfigToFile(const SystemStatus &status)
     doc["maxPrtTemp"] = status.maxPrtTemp;
     doc["minCaliTemp"] = status.minCaliTemp;
     doc["maxCaliTemp"] = status.maxCaliTemp;
+    doc["minCaliTempP"] = status.minCaliTempP;
+    doc["maxCaliTempP"] = status.maxCaliTempP;
     
     doc["aiKey"] = status.aiKey;
     doc["tip"] = status.tip;
