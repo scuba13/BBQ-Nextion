@@ -3,6 +3,28 @@
 // Define nexSerial
 #define nexSerial Serial2
 
+// Store the last known values to check for changes
+float lastBbqTempSet = 0;
+float lastBbqTemp = 0;
+float lastChunkTempSet = 0;
+float lastChunkTemp = 0;
+float lastBbqTempAvg = 0;
+bool lastRelayState = false;
+uint32_t lastPageId = -1;
+
+static float lastMinBBQTemp = 0;
+static float lastMaxBBQTemp = 0;
+uint32_t lastPageIdBBQ = -1;
+
+static float lastMinChunkTemp = 0;
+static float lastMaxChunkTemp = 0;
+uint32_t lastPageIdChunk = -1;
+
+static float lastPower = 0;
+static float lastEnergy = 0;
+static float lastCost = 0;
+uint32_t lastPageIdEnergy = -1;
+
 // Definition of Nextion components
 NexPage wifi = NexPage(0, 0, "wifi");
 NexPage welcome = NexPage(1, 0, "welcome");
@@ -18,8 +40,7 @@ NexNumber bbqTemp = NexNumber(3, 1, "bbqTemp");
 NexNumber chunkTempSet = NexNumber(3, 11, "chunkTempSet");
 NexNumber chunkTemp = NexNumber(3, 2, "chunkTemp");
 NexNumber bbqTempAvg = NexNumber(3, 8, "bbqTempAvg");
-// NexPicture relayStatePic = NexPicture(3, 9, "relayStatePic");
-// NexNumber active = NexNumber(3, 19, "active");
+NexButton stop = NexButton(3, 18, "stop");
 
 // Page BBQTemp
 NexNumber setBBQTemp = NexNumber(4, 1, "setBBQTemp");
@@ -41,6 +62,7 @@ NexNumber cost = NexNumber(6, 4, "cost");
 NexTouch *nex_listen_list[] = {
     &setBBQTempPop,
     &setChunkTempPop,
+    &stop,
     NULL};
 
 char buffer[100] = {0};
@@ -115,12 +137,33 @@ void setChunkTempPopCallback(void *ptr)
     monitor.show();
 }
 
+void setStopPushCallback(void *ptr)
+{
+    Serial.println("Entering setStopPushCallback");
+
+    // Check if the pointer is valid
+    if (ptr == nullptr)
+    {
+        Serial.println("Error: ptr is null");
+        return;
+    }
+
+    // Cast the pointer to SystemStatus
+    SystemStatus *systemStatus = static_cast<SystemStatus *>(ptr);
+
+    resetSystem(*systemStatus);
+
+   
+    Serial.println("Exiting setStopPushCallback");
+}
+
 void initNextion(SystemStatus &sysStat)
 {
     Serial2.begin(9600, SERIAL_8N1, 16, 17); // Configura a porta serial para o Nextion (pinos RX2 e TX2)
     nexInit();
     setBBQTempPop.attachPop(setBBQTempPopCallback, &sysStat);
     setChunkTempPop.attachPop(setChunkTempPopCallback, &sysStat);
+    stop.attachPush(setStopPushCallback, &sysStat);
 
     delay(1000);
 }
@@ -171,28 +214,8 @@ void setPageBackground(const char *pageName, uint32_t img_id)
     delay(50); // Pequeno delay para garantir que o comando seja processado
 }
 
-// Store the last known values to check for changes
-float lastBbqTempSet = 0;
-float lastBbqTemp = 0;
-float lastChunkTempSet = 0;
-float lastChunkTemp = 0;
-float lastBbqTempAvg = 0;
-bool lastRelayState = false;
-uint32_t lastPageId = -1;
-
-static float lastMinBBQTemp = 0;
-static float lastMaxBBQTemp = 0;
-
-static float lastMinChunkTemp = 0;
-static float lastMaxChunkTemp = 0;
-
-static float lastPower = 0;
-static float lastEnergy = 0;
-static float lastCost = 0;
-
-
 // Function to update a Nextion number component if the value has changed or forceUpdate is true
-void updateNumberComponent(NexNumber &component, float &lastValue, float newValue, const char* componentName, bool forceUpdate)
+void updateNumberComponent(NexNumber &component, float &lastValue, float newValue, const char *componentName, bool forceUpdate)
 {
     if (lastValue != newValue || forceUpdate)
     {
@@ -267,46 +290,77 @@ void updateNextionMonitorVariables(SystemStatus &sysStat)
 
 void updateNextionSetBBQVariables(SystemStatus &sysStat)
 {
+    uint32_t currentPageId = getCurrentPageId();
+    bool forceUpdate = (currentPageId != lastPageIdBBQ); // Force update if the page has changed
 
     // Check if the current page is the set BBQ page
-    if (getCurrentPageId() != 4)
+    if (currentPageId != 4)
     {
+        lastPageIdBBQ = currentPageId;
         return;
     }
 
     Serial.println("-------------------------");
-    updateNumberComponent(minBBQTemp, lastMinBBQTemp, sysStat.minBBQTemp, "minBBQTemp", false);
-    updateNumberComponent(maxBBQTemp, lastMaxBBQTemp, sysStat.maxBBQTemp, "maxBBQTemp", false);
+    updateNumberComponent(minBBQTemp, lastMinBBQTemp, sysStat.minBBQTemp, "minBBQTemp", forceUpdate);
+    updateNumberComponent(maxBBQTemp, lastMaxBBQTemp, sysStat.maxBBQTemp, "maxBBQTemp", forceUpdate);
     Serial.println("-------------------------");
+
+    // Update the last page ID
+    lastPageIdBBQ = currentPageId;
 }
 
 void updateNextionSetChunkVariables(SystemStatus &sysStat)
 {
+    uint32_t currentPageId = getCurrentPageId();
+    bool forceUpdate = (currentPageId != lastPageIdChunk); // Force update if the page has changed
 
     // Check if the current page is the set Chunk page
-    if (getCurrentPageId() != 5)
+    if (currentPageId != 5)
     {
+        lastPageIdChunk = currentPageId;
         return;
     }
 
     Serial.println("-------------------------");
-    updateNumberComponent(minChunkTemp, lastMinChunkTemp, sysStat.minPrtTemp, "minChunkTemp", false);
-    updateNumberComponent(maxChunkTemp, lastMaxChunkTemp, sysStat.maxPrtTemp, "maxChunkTemp", false);
+    updateNumberComponent(minChunkTemp, lastMinChunkTemp, sysStat.minPrtTemp, "minChunkTemp", forceUpdate);
+    updateNumberComponent(maxChunkTemp, lastMaxChunkTemp, sysStat.maxPrtTemp, "maxChunkTemp", forceUpdate);
     Serial.println("-------------------------");
+
+    // Update the last page ID
+    lastPageIdChunk = currentPageId;
 }
 
 void updateNextionEnergyVariables(SystemStatus &sysStat)
 {
+    uint32_t currentPageId = getCurrentPageId();
+    bool forceUpdate = (currentPageId != lastPageIdEnergy); // Force update if the page has changed
 
     // Check if the current page is the energy page
-    if (getCurrentPageId() != 6)
+    if (currentPageId != 6)
     {
+        lastPageIdEnergy = currentPageId;
         return;
     }
 
     Serial.println("-------------------------");
-    updateNumberComponent(power, lastPower, sysStat.power, "power", false);
-    updateNumberComponent(energy, lastEnergy, sysStat.energy, "energy", false);
-    updateNumberComponent(cost, lastCost, sysStat.cost, "cost", false);
+
+    // Ensure the values are not negative
+    float powerValue = sysStat.power > 0 ? sysStat.power : 0;
+    Serial.print("Power Value: ");
+    Serial.println(powerValue);
+    float energyValue = sysStat.energy > 0 ? sysStat.energy : 0;
+    Serial.print("Energy Value: ");
+    Serial.println(energyValue);
+    float costValue = sysStat.cost > 0 ? sysStat.cost : 0;
+    Serial.print("Cost Value: ");
+    Serial.println(costValue);
+
+    updateNumberComponent(power, lastPower, powerValue, "power", forceUpdate);
+    updateNumberComponent(energy, lastEnergy, energyValue, "energy", forceUpdate);
+    updateNumberComponent(cost, lastCost, costValue, "cost", forceUpdate);
+
     Serial.println("-------------------------");
+
+    // Update the last page ID
+    lastPageIdEnergy = currentPageId;
 }

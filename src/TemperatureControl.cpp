@@ -139,18 +139,25 @@ void resetSystem(SystemStatus &sysStat)
   sysStat.proteinTemperature = 0;
   sysStat.tempCalibration = 0;
 
+
   // Reset variáveis de média
   sysStat.startAverage = false;
   sysStat.averageTemp = 0;
   sysStat.numSamples = 0;
+  sysStat.numSamplesP = 0;
   sysStat.hasReachedSetTemp = false;
 
   // Reseta o índice de amostras
   sysStat.sampleIndex = 0;
+  sysStat.nextSampleIndex = 0;
+  sysStat.nextSampleIndexP = 0;
+  
+
 
   // Apaga as amostras
   for (int i = 0; i < NUM_SAMPLES; i++)
   {
     sysStat.tempSamples[i] = 0;
+    sysStat.tempSamplesP[i] = 0;
   }
 }

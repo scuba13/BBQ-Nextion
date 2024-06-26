@@ -3,6 +3,7 @@
 
 #include <Nextion.h>
 #include "SystemStatus.h"
+#include "TemperatureControl.h"
 
 // Definição dos componentes Nextion
 extern NexPage wifi;
@@ -36,6 +37,7 @@ void updateNextionMonitorVariables(SystemStatus &sysStat);
 void updateNextionSetBBQVariables(SystemStatus &sysStat);
 void updateNextionSetChunkVariables(SystemStatus &sysStat);
 void updateNextionEnergyVariables(SystemStatus &sysStat);
+void setStopPushCallback(void *ptr);
 uint8_t getCurrentPageId();
 
 #endif // NEXTION_HANDLER_H
