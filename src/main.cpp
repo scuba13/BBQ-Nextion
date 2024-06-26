@@ -32,6 +32,8 @@ void setup()
     Serial.begin(9600);
     Serial.println("Iniciando App ..");
 
+    //colocar chamada pagina inicial
+
     // Inicialização do Nextion
     Serial.println("Iniciando Nextion");
     initNextion(sysStat);
@@ -93,19 +95,15 @@ void loop()
     // Loop do Nextion
     nexLoop(nex_listen_list);
 
-    // Loop do Energy Monitor
-    energyMonitor.loop();
 
-    // Controle da temperatura do BBQ se estiver definido
-    if (sysStat.bbqTemperature > 0)
-    {
-        controlTemperature(sysStat);
-    }
 
     // Gerencia a publicação e verificação do MQTT
     mqttHandler.managePublishing(sysStat);
 
     // Atualizar os valores das variáveis do Nextion
-    updateNextionVariables(sysStat);
-    delay(1000);
+    updateNextionMonitorVariables(sysStat);
+    updateNextionSetBBQVariables(sysStat);
+    updateNextionSetChunkVariables(sysStat);
+    updateNextionEnergyVariables(sysStat);
+    delay(500);
 }

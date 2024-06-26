@@ -10,6 +10,8 @@ extern NexPage welcome;
 extern NexPage menu;
 extern NexPage monitor;
 extern NexPage BBQTemp;
+extern NexPage ChunkTemp;
+extern NexPage energyPg;
 
 extern NexNumber bbqTempSet;
 extern NexNumber bbqTemp;
@@ -30,6 +32,10 @@ void initNextion(SystemStatus &sysStat);
 void setBBQTempPopCallback(void *ptr);
 
 // Função para atualizar os valores das variáveis do Nextion
-void updateNextionVariables(SystemStatus &sysStat);
+void updateNextionMonitorVariables(SystemStatus &sysStat);
+void updateNextionSetBBQVariables(SystemStatus &sysStat);
+void updateNextionSetChunkVariables(SystemStatus &sysStat);
+void updateNextionEnergyVariables(SystemStatus &sysStat);
+uint8_t getCurrentPageId();
 
 #endif // NEXTION_HANDLER_H

@@ -8,7 +8,7 @@ class EnergyMonitor {
 public:
     EnergyMonitor(SystemStatus& systemStatus);
     void setup();
-    void loop();
+    void monitor();
 
 private:
     SystemStatus& systemStatus;
@@ -18,7 +18,6 @@ private:
     float power;
     float energy;
     float cost; // Custo em reais
-    unsigned long previousMillis;
     bool isPhaseToPhase;
 
     float readCurrent(int sensorPin);

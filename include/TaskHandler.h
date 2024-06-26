@@ -4,10 +4,8 @@
 #include "SystemStatus.h"
 #include "TemperatureControl.h"
 #include "EnergyMonitor.h"
+//#include "NextionHandler.h"
 
-// Declaração das tarefas
-void getCalibratedTempTask(void *parameter);
-void getCalibratedTempPTask(void *parameter);
 
 // Função para criar as tarefas
 void createTasks();
