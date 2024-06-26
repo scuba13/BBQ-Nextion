@@ -42,6 +42,8 @@ void FileSystem::initializeAndLoadConfig(SystemStatus &status, String mac)
         doc["maxPrtTemp"] = 99;
         doc["minCaliTemp"] = -20;
         doc["maxCaliTemp"] = 20;
+        doc["minCaliTempP"] = -20;
+        doc["maxCaliTempP"] = 20;
         doc["aiKey"] = "AIzaSyDf9K8Ya3djc2PO0YMmJmADRhuYFHMrgbc";
         doc["tip"] = "Me de 1 dica e 1 receita de Churrasco americano no total de 200 palavras. Estruture o texto com Cabecalho, Dica, Cabecalho com o nome da receita, Receita."; 
         

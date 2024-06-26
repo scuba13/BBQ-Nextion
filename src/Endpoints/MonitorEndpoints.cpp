@@ -18,7 +18,9 @@ void registerMonitorEndpoints(AsyncWebServer &server, SystemStatus &systemStatus
         jsonResponse += "\"minPrtTemp\": " + String(systemStatus.minPrtTemp) + ",";
         jsonResponse += "\"maxPrtTemp\": " + String(systemStatus.maxPrtTemp) + ",";
         jsonResponse += "\"minCaliTemp\": " + String(systemStatus.minCaliTemp) + ",";
-        jsonResponse += "\"maxCaliTemp\": " + String(systemStatus.maxCaliTemp);
+        jsonResponse += "\"maxCaliTemp\": " + String(systemStatus.maxCaliTemp) + ",";
+        jsonResponse += "\"minCaliTempP\": " + String(systemStatus.minCaliTempP) + ",";
+        jsonResponse += "\"maxCaliTempP\": " + String(systemStatus.maxCaliTempP);
         jsonResponse += "}";
         request->send(200, "application/json", jsonResponse); });
 }

@@ -14,6 +14,19 @@ void registerSystemEndpoints(AsyncWebServer& server, SystemStatus& systemStatus,
         }
     });
 
+  
+    server.on("/setTempCalibrationP", HTTP_POST, [&systemStatus, &logger](AsyncWebServerRequest *request) {
+        if (request->hasParam("tempCalibrationP", true)) {
+            int tempCalibrationP = request->getParam("tempCalibrationP", true)->value().toInt();
+            systemStatus.tempCalibrationP = tempCalibrationP;
+            Serial.println("Temp CalibrationP set to: " + String(systemStatus.tempCalibrationP));
+            logger.logMessage("Temp CalibrationP set to: " + String(systemStatus.tempCalibrationP));
+            request->send(200, "application/json", "{ \"status\": \"success\" }");
+        } else {
+            Serial.println("Parâmetro 'tempCalibrationP' não encontrado na solicitação.");
+        }
+    });
+
     server.on("/activateCure", HTTP_POST, [&systemStatus, &logger](AsyncWebServerRequest *request) {
         systemStatus.cureProcessMode = true;
         Serial.println("Cure process activated");

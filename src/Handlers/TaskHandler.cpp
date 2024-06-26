@@ -50,19 +50,6 @@ void geEnergyTask(void *parameter)
     }
 }
 
-// Tarefa para atualizar as variáveis do monitor no Nextion
-// void updateMonitorTask(void *parameter)
-// {
-//     while (true)
-//     if (getCurrentPageId() != 3)
-//     {
-//         return;
-//     }
-//     updateNextionMonitorVariables(sysStat);
-//         vTaskDelay(pdMS_TO_TICKS(1000));
-// }
-
-
 // Função para criar as tarefas
 void createTasks()
 {
@@ -101,15 +88,6 @@ void createTasks()
         2,                   // Prioridade da tarefa. Aqui, a tarefa tem uma prioridade de 1.
         NULL                 // Pode armazenar o identificador da tarefa, mas não estamos armazenando aqui.
     );
-
-    // xTaskCreate(
-    //     updateMonitorTask,   // Função que será executada pela tarefa. Esta função irá controlar a temperatura.
-    //     "UpdateMonitorTask", // Nome da tarefa (útil para fins de depuração).
-    //     2000,                // Tamanho da pilha da tarefa. Reserva espaço para 2000 entradas.
-    //     NULL,                // Parâmetros que são passados para a função da tarefa. No caso, nenhum parâmetro é passado.
-    //     2,                   // Prioridade da tarefa. Aqui, a tarefa tem uma prioridade de 1.
-    //     NULL                 // Pode armazenar o identificador da tarefa, mas não estamos armazenando aqui.
-    // );
 
 
 }

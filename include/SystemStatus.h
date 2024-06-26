@@ -14,15 +14,12 @@ struct CureState
 struct SystemStatus
 {
     int tempCalibration = 0;
+    int tempCalibrationP = 0;
     int lastPos = -1;
     int currentPos = 0;
     int bbqTemperature = 0;
     int proteinTemperature = 0;
     bool isRelayOn = false;
-  //  unsigned long lastDebounceTime = 0;
-  //  unsigned long lastTempUpdateMonitor = 0;
-  //  unsigned long lastTempUpdateCure = 0;
-   // bool monitorMode = false;
     bool cureProcessMode = false;
     float samples[MOVING_AVERAGE_SIZE];
     int sampleIndex;
@@ -30,8 +27,6 @@ struct SystemStatus
     bool startAverage = false;
     int averageTemp = 0;
     bool hasReachedSetTemp = false;
-
-    CureState cureState;
 
     // BBQ Variables Temp
     float tempSamples[NUM_SAMPLES];
@@ -60,6 +55,8 @@ struct SystemStatus
     int maxPrtTemp;
     int minCaliTemp;
     int maxCaliTemp;
+    int minCaliTempP;
+    int maxCaliTempP;
 
     // AI
     char aiKey[128];

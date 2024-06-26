@@ -15,15 +15,18 @@ uint32_t lastPageId = -1;
 static float lastMinBBQTemp = 0;
 static float lastMaxBBQTemp = 0;
 uint32_t lastPageIdBBQ = -1;
+bool initialUpdateDoneBBQ = false; // Variable to check if the initial update is done
 
 static float lastMinChunkTemp = 0;
 static float lastMaxChunkTemp = 0;
 uint32_t lastPageIdChunk = -1;
+bool initialUpdateDoneChunk = false; // Variable to check if the initial update is done
 
 static float lastPower = 0;
 static float lastEnergy = 0;
 static float lastCost = 0;
 uint32_t lastPageIdEnergy = -1;
+
 
 // Definition of Nextion components
 NexPage wifi = NexPage(0, 0, "wifi");
@@ -53,6 +56,7 @@ NexNumber setChunkTemp = NexNumber(5, 1, "setChunkTemp");
 NexNumber minChunkTemp = NexNumber(5, 6, "minChunkTemp");
 NexNumber maxChunkTemp = NexNumber(5, 7, "maxChunkTemp");
 NexButton setChunkTempPop = NexButton(5, 8, "setChunk");
+
 
 // Page Energy
 NexNumber power = NexNumber(6, 2, "power");
@@ -153,7 +157,6 @@ void setStopPushCallback(void *ptr)
 
     resetSystem(*systemStatus);
 
-   
     Serial.println("Exiting setStopPushCallback");
 }
 
@@ -297,7 +300,21 @@ void updateNextionSetBBQVariables(SystemStatus &sysStat)
     if (currentPageId != 4)
     {
         lastPageIdBBQ = currentPageId;
+        initialUpdateDoneBBQ = false; // Reset the initial update flag when leaving the page
         return;
+    }
+
+    if (!initialUpdateDoneBBQ) // Perform the update only once when the page is loaded
+    {
+        int value = sysStat.bbqTemperature; 
+
+        if (value == 0)
+        {
+            value = sysStat.minBBQTemp; 
+        }
+
+        setBBQTemp.setValue(value);    // Set the value on the Nextion component
+        initialUpdateDoneBBQ = true; // Set the flag to true to prevent further updates
     }
 
     Serial.println("-------------------------");
@@ -318,7 +335,22 @@ void updateNextionSetChunkVariables(SystemStatus &sysStat)
     if (currentPageId != 5)
     {
         lastPageIdChunk = currentPageId;
+        initialUpdateDoneChunk = false; // Reset the initial update flag when leaving the page
         return;
+    }
+
+    if (!initialUpdateDoneChunk) // Perform the update only once when the page is loaded
+    {
+        int value = sysStat.proteinTemperature; // Get the value from sysStat.proteinTemperature
+
+        if (value == 0)
+        {
+            value = sysStat.minPrtTemp; // Use sysStat.minPrtTemp if avgChunkTemp is zero
+        }
+
+        setChunkTemp.setValue(value);    // Set the value on the Nextion component
+        
+        initialUpdateDoneChunk = true; // Set the flag to true to prevent further updates
     }
 
     Serial.println("-------------------------");
@@ -346,14 +378,14 @@ void updateNextionEnergyVariables(SystemStatus &sysStat)
 
     // Ensure the values are not negative
     float powerValue = sysStat.power > 0 ? sysStat.power : 0;
-    Serial.print("Power Value: ");
-    Serial.println(powerValue);
+    // Serial.print("Power Value: ");
+    // Serial.println(powerValue);
     float energyValue = sysStat.energy > 0 ? sysStat.energy : 0;
-    Serial.print("Energy Value: ");
-    Serial.println(energyValue);
+    // Serial.print("Energy Value: ");
+    // Serial.println(energyValue);
     float costValue = sysStat.cost > 0 ? sysStat.cost : 0;
-    Serial.print("Cost Value: ");
-    Serial.println(costValue);
+    // Serial.print("Cost Value: ");
+    // Serial.println(costValue);
 
     updateNumberComponent(power, lastPower, powerValue, "power", forceUpdate);
     updateNumberComponent(energy, lastEnergy, energyValue, "energy", forceUpdate);

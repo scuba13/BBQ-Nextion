@@ -107,7 +107,7 @@ void collectSample(SystemStatus &sysStat)
 // Protein Collection Functions
 int getCalibratedTempP(MAX6675 &thermocoupleP, SystemStatus &sysStat)
 {
-  float temp = thermocoupleP.readCelsius();
+  float temp = thermocoupleP.readCelsius() + sysStat.tempCalibrationP;
   sysStat.tempSamplesP[sysStat.nextSampleIndexP] = temp;
   sysStat.nextSampleIndexP = (sysStat.nextSampleIndexP + 1) % NUM_SAMPLES;
   if (sysStat.numSamplesP < NUM_SAMPLES)

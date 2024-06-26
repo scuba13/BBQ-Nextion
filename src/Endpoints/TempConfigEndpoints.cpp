@@ -11,6 +11,8 @@ void registerTempConfigEndpoints(AsyncWebServer& server, SystemStatus& systemSta
         doc["maxPrtTemp"] = systemStatus.maxPrtTemp;
         doc["minCaliTemp"] = systemStatus.minCaliTemp;
         doc["maxCaliTemp"] = systemStatus.maxCaliTemp;
+        doc["minCaliTempP"] = systemStatus.minCaliTempP;
+        doc["maxCaliTempP"] = systemStatus.maxCaliTempP;
 
         String jsonResponse;
         serializeJson(doc, jsonResponse);
@@ -21,7 +23,7 @@ void registerTempConfigEndpoints(AsyncWebServer& server, SystemStatus& systemSta
         logger.logMessage("Updating TempConfig configuration");
         Serial.println("Updating TempConfig configuration");
 
-        int newMinBBQTemp, newMaxBBQTemp, newMinPrtTemp, newMaxPrtTemp, newMinCaliTemp, newMaxCaliTemp;
+        int newMinBBQTemp, newMaxBBQTemp, newMinPrtTemp, newMaxPrtTemp, newMinCaliTemp, newMaxCaliTemp, newMinCaliTempP, newMaxCaliTempP;
         if (request->hasParam("minBBQTemp", true)) {
             newMinBBQTemp = request->getParam("minBBQTemp", true)->value().toInt();
         } else {
@@ -58,6 +60,19 @@ void registerTempConfigEndpoints(AsyncWebServer& server, SystemStatus& systemSta
             request->send(400, "application/json", "{ \"error\": \"maxCaliTemp parameter is missing\" }");
             return;
         }
+        if (request->hasParam("minCaliTempP", true)) {
+            newMinCaliTempP = request->getParam("minCaliTempP", true)->value().toInt();
+        } else {
+            request->send(400, "application/json", "{ \"error\": \"minCaliTempP parameter is missing\" }");
+            return;
+        }
+        if (request->hasParam("maxCaliTempP", true)) {
+            newMaxCaliTempP = request->getParam("maxCaliTempP", true)->value().toInt();
+        } else {
+            request->send(400, "application/json", "{ \"error\": \"maxCaliTempP parameter is missing\" }");
+            return;
+        }
+        
 
         systemStatus.minBBQTemp = newMinBBQTemp;
         systemStatus.maxBBQTemp = newMaxBBQTemp;
@@ -65,6 +80,8 @@ void registerTempConfigEndpoints(AsyncWebServer& server, SystemStatus& systemSta
         systemStatus.maxPrtTemp = newMaxPrtTemp;
         systemStatus.minCaliTemp = newMinCaliTemp;
         systemStatus.maxCaliTemp = newMaxCaliTemp;
+        systemStatus.minCaliTempP = newMinCaliTempP;
+        systemStatus.maxCaliTempP = newMaxCaliTempP;
 
         fileSystem.saveConfigToFile(systemStatus);
 
