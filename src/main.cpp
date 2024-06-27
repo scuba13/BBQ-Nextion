@@ -32,7 +32,7 @@ void setup()
     Serial.begin(9600);
     Serial.println("Iniciando App ..");
 
-    //colocar chamada pagina inicial
+    // colocar chamada pagina inicial
 
     // Inicialização do Nextion
     Serial.println("Iniciando Nextion");
@@ -89,21 +89,27 @@ void setup()
     Serial.println("App Iniciada");
 }
 
+unsigned long lastUpdateTime = 0;         // Variável para armazenar o tempo da última atualização
+const unsigned long updateInterval = 700; // Intervalo de tempo desejado (em milissegundos)
+
 void loop()
 {
 
-    // Loop do Nextion
-    nexLoop(nex_listen_list);
+    // Atualizar os valores das variáveis do Nextion com intervalo
+    unsigned long currentTime = millis();
+    if (currentTime - lastUpdateTime >= updateInterval)
+    {
+        lastUpdateTime = currentTime;
+        // Loop do Nextion
+        nexLoop(nex_listen_list);
 
-
-
-    // Gerencia a publicação e verificação do MQTT
-    mqttHandler.managePublishing(sysStat);
-
-    // Atualizar os valores das variáveis do Nextion
-    updateNextionMonitorVariables(sysStat);
-    updateNextionSetBBQVariables(sysStat);
-    updateNextionSetChunkVariables(sysStat);
-    updateNextionEnergyVariables(sysStat);
-    delay(500);
+        // Gerencia a publicação e verificação do MQTT
+        mqttHandler.managePublishing(sysStat);
+        
+        // Atualiza as variáveis do Nextion
+        updateNextionMonitorVariables(sysStat);
+        updateNextionSetBBQVariables(sysStat);
+        updateNextionSetChunkVariables(sysStat);
+        updateNextionEnergyVariables(sysStat);
+    }
 }

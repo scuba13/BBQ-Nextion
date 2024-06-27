@@ -133,26 +133,29 @@ int getCalibratedTempP(MAX6675 &thermocoupleP, SystemStatus &sysStat)
 // Reset the variables
 void resetSystem(SystemStatus &sysStat)
 {
+  Serial.println("System reset Started...");
+ 
+  // Desliga o relé
   digitalWrite(RELAY_PIN, LOW);
   sysStat.isRelayOn = false;
+
+  // Reset das temperaturas
   sysStat.bbqTemperature = 0;
   sysStat.proteinTemperature = 0;
   sysStat.tempCalibration = 0;
+  sysStat.tempCalibrationP = 0; // Certifique-se de resetar também a calibração da proteína, se aplicável
 
-
-  // Reset variáveis de média
+  // Reset das variáveis de média
   sysStat.startAverage = false;
   sysStat.averageTemp = 0;
   sysStat.numSamples = 0;
   sysStat.numSamplesP = 0;
   sysStat.hasReachedSetTemp = false;
 
-  // Reseta o índice de amostras
+  // Reseta os índices de amostras
   sysStat.sampleIndex = 0;
   sysStat.nextSampleIndex = 0;
   sysStat.nextSampleIndexP = 0;
-  
-
 
   // Apaga as amostras
   for (int i = 0; i < NUM_SAMPLES; i++)
@@ -160,4 +163,16 @@ void resetSystem(SystemStatus &sysStat)
     sysStat.tempSamples[i] = 0;
     sysStat.tempSamplesP[i] = 0;
   }
+
+  // Reset das temperaturas calibradas
+  sysStat.calibratedTemp = 0;
+  sysStat.calibratedTempP = 0;
+
+  //Reset das variáveis de energia
+  sysStat.power = 0.0;
+  sysStat.energy = 0.0;
+  sysStat.cost = 0.0;
+
+  // Debugging statements
+  Serial.println("System reset completed.");
 }
