@@ -1,5 +1,6 @@
 #include "MQTTConfigEndpoints.h"
 #include <ArduinoJson.h>
+#include <Nextion.h>
 
 
 
@@ -19,7 +20,7 @@ void registerMQTTConfigEndpoints(AsyncWebServer& server, SystemStatus& systemSta
 
     server.on("/updateMQTTConfig", HTTP_POST, [&systemStatus, &fileSystem, &logger](AsyncWebServerRequest *request) {
         logger.logMessage("Updating MQTT configuration");
-        Serial.println("Updating MQTT configuration");
+        dbSerial.println("Updating MQTT configuration");
 
         String mqttServer;
         int mqttPort = 0; // Inicializado com um valor padrão
@@ -78,7 +79,7 @@ void registerMQTTConfigEndpoints(AsyncWebServer& server, SystemStatus& systemSta
         fileSystem.saveConfigToFile(systemStatus);
 
         logger.logMessage("MQTT configuration updated");
-        Serial.println("MQTT configuration updated");
+        dbSerial.println("MQTT configuration updated");
         request->send(200, "application/json", "{ \"status\": \"success\" }");
     });
 }

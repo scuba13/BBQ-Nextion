@@ -1,6 +1,7 @@
 #include "TemperatureControl.h"
 #include "PinDefinitions.h"
 #include <Arduino.h>
+#include <Nextion.h>
 
 MAX6675 thermocouple(MAX6675_SCK, MAX6675_CS, MAX6675_SO);        // Instanciação da variável
 MAX6675 thermocoupleP(MAX6675_SCK_P, MAX6675_CS_P, MAX6675_SO_P); // Instanciação da variável
@@ -47,7 +48,7 @@ void updateRelayState(int temp, SystemStatus &sysStat)
 
 void controlTemperature(SystemStatus &sysStat)
 {
-  //Serial.println("Controlando temperatura...");
+  //dbSerial.println("Controlando temperatura...");
   int temp = sysStat.calibratedTemp;
 
   // Verifica se a temperatura atingiu o valor configurado
@@ -133,7 +134,7 @@ int getCalibratedTempP(MAX6675 &thermocoupleP, SystemStatus &sysStat)
 // Reset the variables
 void resetSystem(SystemStatus &sysStat)
 {
-  Serial.println("System reset Started...");
+  dbSerial.println("System reset Started...");
  
   // Desliga o relé
   digitalWrite(RELAY_PIN, LOW);
@@ -174,5 +175,5 @@ void resetSystem(SystemStatus &sysStat)
   sysStat.cost = 0.0;
 
   // Debugging statements
-  Serial.println("System reset completed.");
+  dbSerial.println("System reset completed.");
 }

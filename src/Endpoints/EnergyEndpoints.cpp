@@ -1,5 +1,6 @@
 #include "EnergyEndpoints.h"
 #include <ArduinoJson.h>
+#include <Nextion.h>
 
 
 void registerEnergyEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, LogHandler& logger) {
@@ -16,13 +17,13 @@ void registerEnergyEndpoints(AsyncWebServer& server, SystemStatus& systemStatus,
     });
 
     server.on("/setEnergyCost", HTTP_POST, [&systemStatus, &logger](AsyncWebServerRequest *request) {
-        Serial.println("Requisição recebida Set EnergyCost");
+        dbSerial.println("Requisição recebida Set EnergyCost");
         logger.logMessage("Requisição recebida Set EnergyCost");
 
         if (request->hasParam("kWhCost", true)) {
             float receivedNumber = request->getParam("kWhCost", true)->value().toFloat();
             systemStatus.kWhCost = receivedNumber;
-            Serial.println("EnergyCost recebida: " + String(systemStatus.kWhCost));
+            dbSerial.println("EnergyCost recebida: " + String(systemStatus.kWhCost));
             logger.logMessage("EnergyCost recebida: " + String(systemStatus.kWhCost));
 
             AsyncResponseStream *response = request->beginResponseStream("application/json");
@@ -31,18 +32,18 @@ void registerEnergyEndpoints(AsyncWebServer& server, SystemStatus& systemStatus,
             jsonDoc["kWhCost"] = systemStatus.kWhCost;
             serializeJson(jsonDoc, *response);
             request->send(response);
-            Serial.println("EnergyCost definida: " + String(systemStatus.kWhCost));
+            dbSerial.println("EnergyCost definida: " + String(systemStatus.kWhCost));
             logger.logMessage("EnergyCost definida: " + String(systemStatus.kWhCost));
 
         } else {
-            Serial.println("Parâmetro 'kWhCost' não encontrado na solicitação.");
+            dbSerial.println("Parâmetro 'kWhCost' não encontrado na solicitação.");
             AsyncResponseStream *response = request->beginResponseStream("application/json");
             StaticJsonDocument<200> jsonDoc;
             jsonDoc["status"] = "error";
             jsonDoc["message"] = "Parameter 'kWhCost' not found in the request.";
             serializeJson(jsonDoc, *response);
             request->send(response);
-            Serial.println("Parâmetro 'kWhCost' não encontrado na solicitação.");
+            dbSerial.println("Parâmetro 'kWhCost' não encontrado na solicitação.");
             logger.logMessage("Parâmetro 'kWhCost' não encontrado na solicitação.");
         }
     });

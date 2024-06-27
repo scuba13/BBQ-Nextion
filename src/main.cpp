@@ -29,49 +29,49 @@ EnergyMonitor energyMonitor(sysStat);
 
 void setup()
 {
-    Serial.begin(9600);
+    //Serial.begin(9600);
     Serial.println("Iniciando App ..");
 
     // colocar chamada pagina inicial
 
     // Inicialização do Nextion
-    Serial.println("Iniciando Nextion");
+    dbSerial.println("Iniciando Nextion");
     initNextion(sysStat);
-    Serial.println("Nextion Iniciado");
+    dbSerial.println("Nextion Iniciado");
 
     // Inicialização do Energy Monitor
-    Serial.println("Iniciando o Energy Monitor...");
+    dbSerial.println("Iniciando o Energy Monitor...");
     energyMonitor.setup();
-    Serial.println("Energy Monitor iniciado");
+    dbSerial.println("Energy Monitor iniciado");
 
     // Obtenção e exibição do endereço MAC
     String mac = WiFi.macAddress();
-    Serial.println("Endereço MAC: " + mac);
+    dbSerial.println("Endereço MAC: " + mac);
 
     // Inicialização do sistema de arquivos
-    Serial.println("Inicializando FileSystem");
+    dbSerial.println("Inicializando FileSystem");
     fileSystem.initializeAndLoadConfig(sysStat, mac);
-    Serial.println("FileSystem inicializado");
+    dbSerial.println("FileSystem inicializado");
 
     // Inicialização do LogHandler
-    Serial.println("Inicializando LogHandler");
+    dbSerial.println("Inicializando LogHandler");
     logHandler.logMessage("Log Inicializado");
-    Serial.println("LogHandler inicializado");
+    dbSerial.println("LogHandler inicializado");
 
     // Conexão WiFi
     initWiFi(sysStat, logHandler);
 
     // Inicialização do servidor web
-    Serial.println("Inicializando servidor web...");
+    dbSerial.println("Inicializando servidor web...");
     webServerControl.begin();
-    Serial.println("Servidor Web iniciado com sucesso");
+    dbSerial.println("Servidor Web iniciado com sucesso");
     logHandler.logMessage("Servidor Web iniciado com sucesso");
 
     // Configuração do pino do relé
-    Serial.println("Iniciando Pino do Rele");
+    dbSerial.println("Iniciando Pino do Rele");
     pinMode(RELAY_PIN, OUTPUT);
     digitalWrite(RELAY_PIN, LOW);
-    Serial.println("Pino do Rele Iniciado");
+    dbSerial.println("Pino do Rele Iniciado");
 
     // Criação das tarefas para obter as temperaturas calibradas
     createTasks();
@@ -80,17 +80,17 @@ void setup()
     mqttHandler.verifyAndReconnect(sysStat);
 
     // Verificação e validação do sistema de arquivos
-    Serial.println("Validando arquivos...");
+    dbSerial.println("Validando arquivos...");
     logHandler.logMessage("Validando arquivos...");
     fileSystem.verifyFileSystem();
-    Serial.println("Arquivos validados");
+    dbSerial.println("Arquivos validados");
     logHandler.logMessage("Arquivos validados");
 
-    Serial.println("App Iniciada");
+    dbSerial.println("App Iniciada");
 }
 
 unsigned long lastUpdateTime = 0;         // Variável para armazenar o tempo da última atualização
-const unsigned long updateInterval = 700; // Intervalo de tempo desejado (em milissegundos)
+const unsigned long updateInterval = 1000; // Intervalo de tempo desejado (em milissegundos)
 
 void loop()
 {

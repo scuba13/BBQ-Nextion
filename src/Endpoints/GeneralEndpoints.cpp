@@ -2,6 +2,7 @@
 #include <LittleFS.h>
 #include <FS.h>
 #include "TemperatureControl.h"
+#include <Nextion.h>
 
 void handleGetLogContent(AsyncWebServerRequest *request);
 
@@ -24,7 +25,7 @@ void registerGeneralEndpoints(AsyncWebServer& server, SystemStatus& systemStatus
 
     server.on("/resetSystem", HTTP_POST, [&systemStatus, &logger](AsyncWebServerRequest *request) {
         resetSystem(systemStatus);
-        Serial.println("Sistema resetado");
+        dbSerial.println("Sistema resetado");
         logger.logMessage("Sistema resetado");
         request->send(200, "application/json", "{ \"status\": \"success\" }");
     });

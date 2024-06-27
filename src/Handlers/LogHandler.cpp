@@ -1,6 +1,7 @@
 #include "LogHandler.h"
 #include <FS.h>
 #include <LittleFS.h>
+#include <Nextion.h>
 
 
 // Defina o tamanho máximo do arquivo de log em bytes (por exemplo, 1 MB)
@@ -26,7 +27,7 @@ void LogHandler::logMessage(const String& message) {
     // Abre o arquivo de log para adicionar a mensagem ou cria um novo se não existir
     File logFile = LittleFS.open("/log.txt", "a"); // Modo de append para adicionar ao final do arquivo
     if (!logFile) {
-        Serial.println("Falha ao abrir arquivo de log para escrita no LogHandler!");
+        dbSerial.println("Falha ao abrir arquivo de log para escrita no LogHandler!");
         return;
     }
 

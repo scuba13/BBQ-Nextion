@@ -3,30 +3,31 @@
 #include <LittleFS.h>
 #include "SystemStatus.h"
 #include "FileSystem.h"
+#include <Nextion.h>
 
 void FileSystem::initializeAndLoadConfig(SystemStatus &status, String mac)
 {
 
     if (!LittleFS.begin(true))
     {
-        Serial.println("Falha ao montar o sistema LittleFS. Tentando formatar...");
+        dbSerial.println("Falha ao montar o sistema LittleFS. Tentando formatar...");
         if (!LittleFS.begin(true))
         {
-            Serial.println("Falha ao formatar e montar o sistema LittleFS!");
+            dbSerial.println("Falha ao formatar e montar o sistema LittleFS!");
         }
         else
         {
-            Serial.println("Sistema de arquivos formatado e montado com sucesso.");
+            dbSerial.println("Sistema de arquivos formatado e montado com sucesso.");
         }
     }
 
     if (!LittleFS.exists("/config.json"))
     {
-        Serial.println("Criando config.json com valores padrão...");
+        dbSerial.println("Criando config.json com valores padrão...");
         File configFile = LittleFS.open("/config.json", "w");
         if (!configFile)
         {
-            Serial.println("Falha ao criar config.json!");
+            dbSerial.println("Falha ao criar config.json!");
             return;
         }
 
@@ -52,7 +53,7 @@ void FileSystem::initializeAndLoadConfig(SystemStatus &status, String mac)
 
         if (serializeJson(doc, configFile) == 0)
         {
-            Serial.println("Falha ao escrever em config.json!");
+            dbSerial.println("Falha ao escrever em config.json!");
         }
         configFile.close();
     }
@@ -60,7 +61,7 @@ void FileSystem::initializeAndLoadConfig(SystemStatus &status, String mac)
     File configFile = LittleFS.open("/config.json", "r");
     if (!configFile)
     {
-        Serial.println("Falha ao abrir config.json para leitura!");
+        dbSerial.println("Falha ao abrir config.json para leitura!");
         return;
     }
 
@@ -74,10 +75,10 @@ void FileSystem::initializeAndLoadConfig(SystemStatus &status, String mac)
 
     if (error)
     {
-        Serial.println("Falha ao desserializar config.json!");
+        dbSerial.println("Falha ao deserializeJson config.json!");
         return;
     }
-    Serial.println("Configurações sendo Carregadas.");
+    dbSerial.println("Configurações sendo Carregadas.");
     status.isHAAvailable = doc["isHAAvailable"].as<bool>();
     strlcpy(status.mqttServer, doc["mqttServer"].as<const char *>(), sizeof(status.mqttServer));
     status.mqttPort = doc["mqttPort"].as<int>();
@@ -95,40 +96,40 @@ void FileSystem::initializeAndLoadConfig(SystemStatus &status, String mac)
     strlcpy(status.aiKey, doc["aiKey"].as<const char *>(), sizeof(status.aiKey));
     strlcpy(status.tip, doc["tip"].as<const char *>(), sizeof(status.tip));
 
-    Serial.print("isHAAvailable: ");
-    Serial.println(status.isHAAvailable ? "true" : "false");
-    Serial.print("mqttServer: ");
-    Serial.println(status.mqttServer);
-    Serial.print("mqttPort: ");
-    Serial.println(status.mqttPort);
-    Serial.print("mqttUser: ");
-    Serial.println(status.mqttUser);
-    Serial.print("mqttPassword: ");
-    Serial.println(status.mqttPassword);
-    Serial.print("deviceId: ");
-    Serial.println(status.deviceId);
-    Serial.print("minBBQTemp: ");
-    Serial.println(status.minBBQTemp);
-    Serial.print("maxBBQTemp: ");
-    Serial.println(status.maxBBQTemp);
-    Serial.print("minPrtTemp: ");
-    Serial.println(status.minPrtTemp);
-    Serial.print("maxPrtTemp: ");
-    Serial.println(status.maxPrtTemp);
-    Serial.print("minCaliTemp: ");
-    Serial.println(status.minCaliTemp);
-    Serial.print("maxCaliTemp: ");
-    Serial.println(status.maxCaliTemp);
-    Serial.print("minCaliTempP: ");
-    Serial.println(status.minCaliTempP);
-    Serial.print("maxCaliTempP: ");
-    Serial.println(status.maxCaliTempP);
-    Serial.print("aiKey: ");
-    Serial.println(status.aiKey);
-    Serial.print("tip: ");
-    Serial.println(status.tip);
+    dbSerial.print("isHAAvailable: ");
+    dbSerial.println(status.isHAAvailable ? "true" : "false");
+    dbSerial.print("mqttServer: ");
+    dbSerial.println(status.mqttServer);
+    dbSerial.print("mqttPort: ");
+    dbSerial.println(status.mqttPort);
+    dbSerial.print("mqttUser: ");
+    dbSerial.println(status.mqttUser);
+    dbSerial.print("mqttPassword: ");
+    dbSerial.println(status.mqttPassword);
+    dbSerial.print("deviceId: ");
+    dbSerial.println(status.deviceId);
+    dbSerial.print("minBBQTemp: ");
+    dbSerial.println(status.minBBQTemp);
+    dbSerial.print("maxBBQTemp: ");
+    dbSerial.println(status.maxBBQTemp);
+    dbSerial.print("minPrtTemp: ");
+    dbSerial.println(status.minPrtTemp);
+    dbSerial.print("maxPrtTemp: ");
+    dbSerial.println(status.maxPrtTemp);
+    dbSerial.print("minCaliTemp: ");
+    dbSerial.println(status.minCaliTemp);
+    dbSerial.print("maxCaliTemp: ");
+    dbSerial.println(status.maxCaliTemp);
+    dbSerial.print("minCaliTempP: ");
+    dbSerial.println(status.minCaliTempP);
+    dbSerial.print("maxCaliTempP: ");
+    dbSerial.println(status.maxCaliTempP);
+    dbSerial.print("aiKey: ");
+    dbSerial.println(status.aiKey);
+    dbSerial.print("tip: ");
+    dbSerial.println(status.tip);
 
-    Serial.println("Configurações carregadas com sucesso.");
+    dbSerial.println("Configurações carregadas com sucesso.");
 }
 
 void FileSystem::saveConfigToFile(const SystemStatus &status)
@@ -137,7 +138,7 @@ void FileSystem::saveConfigToFile(const SystemStatus &status)
     File configFile = LittleFS.open("/config.json", "w");
     if (!configFile)
     {
-        Serial.println("Failed to open config file for writing");
+        dbSerial.println("Failed to open config file for writing");
         return;
     }
 
@@ -162,11 +163,11 @@ void FileSystem::saveConfigToFile(const SystemStatus &status)
 
     if (serializeJson(doc, configFile) == 0)
     {
-        Serial.println("Failed to write to config file");
+        dbSerial.println("Failed to write to config file");
     }
     else
     {
-        Serial.println("Configuration saved successfully");
+        dbSerial.println("Configuration saved successfully");
     }
 
     configFile.close();
@@ -174,13 +175,13 @@ void FileSystem::saveConfigToFile(const SystemStatus &status)
 
 void FileSystem::verifyFileSystem()
 {
-    Serial.println("Verificando o sistema de arquivos LittleFS...");
+    dbSerial.println("Verificando o sistema de arquivos LittleFS...");
 
     // Abre o diretório raiz no LittleFS
     File root = LittleFS.open("/", "r");
     if (!root)
     {
-        Serial.println("Falha ao abrir o diretório raiz.");
+        dbSerial.println("Falha ao abrir o diretório raiz.");
         return;
     }
 
@@ -192,8 +193,8 @@ void FileSystem::verifyFileSystem()
     while (file)
     {
         // Como LittleFS não suporta diretórios, não precisamos verificar se é um diretório
-        Serial.print("FILE: " + String(file.name()) + "  SIZE: ");
-        Serial.println(file.size());
+        dbSerial.print("FILE: " + String(file.name()) + "  SIZE: ");
+        dbSerial.println(file.size());
         file = root.openNextFile(); // Vai para o próximo arquivo
     }
 }

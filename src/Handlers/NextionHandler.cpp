@@ -71,14 +71,14 @@ NexTouch *nex_listen_list[] = {
 
 char buffer[100] = {0};
 
-void setBBQTempPopCallback(void *ptr)
+void setBBQTempPushCallback(void *ptr)
 {
-    Serial.println("Entering setBBQTempPopCallback");
+    dbSerial.println("Entering setBBQTempPopCallback");
 
     // Check if the pointer is valid
     if (ptr == nullptr)
     {
-        Serial.println("Error: ptr is null");
+        dbSerial.println("Error: ptr is null");
         return;
     }
 
@@ -91,7 +91,7 @@ void setBBQTempPopCallback(void *ptr)
 
     if (!success)
     {
-        Serial.println("Error: Failed to get value from setBBQTemp");
+        dbSerial.println("Error: Failed to get value from setBBQTemp");
         return;
     }
 
@@ -100,20 +100,20 @@ void setBBQTempPopCallback(void *ptr)
     systemStatus->bbqTemperature = bbqTempValue;
 
     // Debugging statements
-    Serial.println("BBQTempValue: " + String(bbqTempValue));
-    Serial.println("SystemStatus BBQ Temperature: " + String(systemStatus->bbqTemperature));
-    Serial.println("Exiting setBBQTempPopCallback");
+    dbSerial.println("BBQTempValue: " + String(bbqTempValue));
+    dbSerial.println("SystemStatus BBQ Temperature: " + String(systemStatus->bbqTemperature));
+    dbSerial.println("Exiting setBBQTempPopCallback");
     monitor.show();
 }
 
-void setChunkTempPopCallback(void *ptr)
+void setChunkTempPushCallback(void *ptr)
 {
-    Serial.println("Entering setChunkTempPopCallback");
+    dbSerial.println("Entering setChunkTempPopCallback");
 
     // Check if the pointer is valid
     if (ptr == nullptr)
     {
-        Serial.println("Error: ptr is null");
+        dbSerial.println("Error: ptr is null");
         return;
     }
 
@@ -126,7 +126,7 @@ void setChunkTempPopCallback(void *ptr)
 
     if (!success)
     {
-        Serial.println("Error: Failed to get value from setChunkTemp");
+        dbSerial.println("Error: Failed to get value from setChunkTemp");
         return;
     }
 
@@ -135,20 +135,20 @@ void setChunkTempPopCallback(void *ptr)
     systemStatus->proteinTemperature = chunkTempValue;
 
     // Debugging statements
-    Serial.println("BBQTempValue: " + String(chunkTempValue));
-    Serial.println("SystemStatus Chunk Temperature: " + String(systemStatus->proteinTemperature));
-    Serial.println("Exiting setChunkTempPopCallback");
+    dbSerial.println("BBQTempValue: " + String(chunkTempValue));
+    dbSerial.println("SystemStatus Chunk Temperature: " + String(systemStatus->proteinTemperature));
+    dbSerial.println("Exiting setChunkTempPopCallback");
     monitor.show();
 }
 
 void setStopPushCallback(void *ptr)
 {
-    Serial.println("Entering setStopPushCallback");
+    dbSerial.println("Entering setStopPushCallback");
 
     // Check if the pointer is valid
     if (ptr == nullptr)
     {
-        Serial.println("Error: ptr is null");
+        dbSerial.println("Error: ptr is null");
         return;
     }
 
@@ -157,15 +157,15 @@ void setStopPushCallback(void *ptr)
 
     resetSystem(*systemStatus);
 
-    Serial.println("Exiting setStopPushCallback");
+    dbSerial.println("Exiting setStopPushCallback");
 }
 
 void initNextion(SystemStatus &sysStat)
 {
     Serial2.begin(9600, SERIAL_8N1, 16, 17); // Configura a porta serial para o Nextion (pinos RX2 e TX2)
     nexInit();
-    setBBQTempPop.attachPop(setBBQTempPopCallback, &sysStat);
-    setChunkTempPop.attachPop(setChunkTempPopCallback, &sysStat);
+    setBBQTempPop.attachPush(setBBQTempPushCallback, &sysStat);
+    setChunkTempPop.attachPush(setChunkTempPushCallback, &sysStat);
     stop.attachPush(setStopPushCallback, &sysStat);
 
     delay(1000);
@@ -194,8 +194,8 @@ uint8_t getCurrentPageId()
         }
     }
 
-    // Serial.print("Current Page ID: ");
-    // Serial.println(pageId);
+    // dbSerial.print("Current Page ID: ");
+    // dbSerial.println(pageId);
 
     return pageId;
 }
@@ -209,7 +209,7 @@ void setPageBackground(const char *pageName, uint32_t img_id)
 
     // Construct the command to change the background image
     String cmd = String(pageName) + ".pic=" + String(img_id);
-    // Serial.println("Command: " + cmd);
+    // dbSerial.println("Command: " + cmd);
     nexSerial.print(cmd);
     nexSerial.write(0xFF);
     nexSerial.write(0xFF);
@@ -222,22 +222,22 @@ void updateNumberComponent(NexNumber &component, float &lastValue, float newValu
 {
     if (lastValue != newValue || forceUpdate)
     {
-        Serial.print("Updating ");
-        Serial.print(componentName);
-        Serial.print(" from ");
-        Serial.print(lastValue);
-        Serial.print(" to ");
-        Serial.println(newValue);
+        // dbSerial.print("Updating ");
+        // dbSerial.print(componentName);
+        // dbSerial.print(" from ");
+        // dbSerial.print(lastValue);
+        // dbSerial.print(" to ");
+        // dbSerial.println(newValue);
 
         component.setValue(static_cast<uint32_t>(newValue));
         lastValue = newValue;
     }
     else
     {
-        Serial.print("No update needed for ");
-        Serial.print(componentName);
-        Serial.print(", value remains ");
-        Serial.println(lastValue);
+        // dbSerial.print("No update needed for ");
+        // dbSerial.print(componentName);
+        // dbSerial.print(", value remains ");
+        // dbSerial.println(lastValue);
     }
 }
 
@@ -253,7 +253,7 @@ void updateNextionMonitorVariables(SystemStatus &sysStat)
         return; // Exit if the current page is not the monitor page
     }
 
-    Serial.println("-------------------------");
+   // dbSerial.println("-------------------------");
     updateNumberComponent(bbqTempSet, lastBbqTempSet, sysStat.bbqTemperature, "bbqTempSet", forceUpdate);
     updateNumberComponent(bbqTemp, lastBbqTemp, sysStat.calibratedTemp, "bbqTemp", forceUpdate);
     updateNumberComponent(chunkTempSet, lastChunkTempSet, sysStat.proteinTemperature, "chunkTempSet", forceUpdate);
@@ -262,10 +262,10 @@ void updateNextionMonitorVariables(SystemStatus &sysStat)
 
     if (sysStat.isRelayOn != lastRelayState || forceUpdate)
     {
-        Serial.print("Updating relay state from ");
-        Serial.print(lastRelayState);
-        Serial.print(" to ");
-        Serial.println(sysStat.isRelayOn);
+        // dbSerial.print("Updating relay state from ");
+        // dbSerial.print(lastRelayState);
+        // dbSerial.print(" to ");
+        // dbSerial.println(sysStat.isRelayOn);
 
         if (sysStat.isRelayOn)
         {
@@ -281,11 +281,11 @@ void updateNextionMonitorVariables(SystemStatus &sysStat)
     }
     else
     {
-        Serial.print("No update needed for relay state, value remains ");
-        Serial.println(lastRelayState);
+      //  dbSerial.print("No update needed for relay state, value remains ");
+       // dbSerial.println(lastRelayState);
     }
 
-    Serial.println("-------------------------");
+   // dbSerial.println("-------------------------");
 
     // Update the last page ID
     lastPageId = currentPageId;
@@ -317,10 +317,10 @@ void updateNextionSetBBQVariables(SystemStatus &sysStat)
         initialUpdateDoneBBQ = true; // Set the flag to true to prevent further updates
     }
 
-    Serial.println("-------------------------");
+   // dbSerial.println("-------------------------");
     updateNumberComponent(minBBQTemp, lastMinBBQTemp, sysStat.minBBQTemp, "minBBQTemp", forceUpdate);
     updateNumberComponent(maxBBQTemp, lastMaxBBQTemp, sysStat.maxBBQTemp, "maxBBQTemp", forceUpdate);
-    Serial.println("-------------------------");
+   // dbSerial.println("-------------------------");
 
     // Update the last page ID
     lastPageIdBBQ = currentPageId;
@@ -353,10 +353,10 @@ void updateNextionSetChunkVariables(SystemStatus &sysStat)
         initialUpdateDoneChunk = true; // Set the flag to true to prevent further updates
     }
 
-    Serial.println("-------------------------");
+    //dbSerial.println("-------------------------");
     updateNumberComponent(minChunkTemp, lastMinChunkTemp, sysStat.minPrtTemp, "minChunkTemp", forceUpdate);
     updateNumberComponent(maxChunkTemp, lastMaxChunkTemp, sysStat.maxPrtTemp, "maxChunkTemp", forceUpdate);
-    Serial.println("-------------------------");
+   // dbSerial.println("-------------------------");
 
     // Update the last page ID
     lastPageIdChunk = currentPageId;
@@ -374,24 +374,24 @@ void updateNextionEnergyVariables(SystemStatus &sysStat)
         return;
     }
 
-    Serial.println("-------------------------");
+    //dbSerial.println("-------------------------");
 
     // Ensure the values are not negative
     float powerValue = sysStat.power > 0 ? sysStat.power : 0;
-    // Serial.print("Power Value: ");
-    // Serial.println(powerValue);
+    // dbSerial.print("Power Value: ");
+    // dbSerial.println(powerValue);
     float energyValue = sysStat.energy > 0 ? sysStat.energy : 0;
-    // Serial.print("Energy Value: ");
-    // Serial.println(energyValue);
+    // dbSerial.print("Energy Value: ");
+    // dbSerial.println(energyValue);
     float costValue = sysStat.cost > 0 ? sysStat.cost : 0;
-    // Serial.print("Cost Value: ");
-    // Serial.println(costValue);
+    // dbSerial.print("Cost Value: ");
+    // dbSerial.println(costValue);
 
     updateNumberComponent(power, lastPower, powerValue, "power", forceUpdate);
     updateNumberComponent(energy, lastEnergy, energyValue, "energy", forceUpdate);
     updateNumberComponent(cost, lastCost, costValue, "cost", forceUpdate);
 
-    Serial.println("-------------------------");
+   // dbSerial.println("-------------------------");
 
     // Update the last page ID
     lastPageIdEnergy = currentPageId;

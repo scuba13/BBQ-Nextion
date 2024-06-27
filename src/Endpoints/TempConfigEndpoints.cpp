@@ -1,5 +1,6 @@
 #include "TempConfigEndpoints.h"
 #include <ArduinoJson.h>
+#include <Nextion.h>
 
 
 void registerTempConfigEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, FileSystem& fileSystem, LogHandler& logger) {
@@ -21,7 +22,7 @@ void registerTempConfigEndpoints(AsyncWebServer& server, SystemStatus& systemSta
 
     server.on("/updateTempConfig", HTTP_POST, [&systemStatus, &fileSystem, &logger](AsyncWebServerRequest *request) {
         logger.logMessage("Updating TempConfig configuration");
-        Serial.println("Updating TempConfig configuration");
+        dbSerial.println("Updating TempConfig configuration");
 
         int newMinBBQTemp, newMaxBBQTemp, newMinPrtTemp, newMaxPrtTemp, newMinCaliTemp, newMaxCaliTemp, newMinCaliTempP, newMaxCaliTempP;
         if (request->hasParam("minBBQTemp", true)) {
@@ -86,7 +87,7 @@ void registerTempConfigEndpoints(AsyncWebServer& server, SystemStatus& systemSta
         fileSystem.saveConfigToFile(systemStatus);
 
         logger.logMessage("TempConfig configuration updated");
-        Serial.println("TempConfig configuration updated");
+        dbSerial.println("TempConfig configuration updated");
         request->send(200, "application/json", "{ \"status\": \"success\" }");
     });
 }

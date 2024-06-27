@@ -1,5 +1,6 @@
 #include "TaskHandler.h"
 #include <Arduino.h>
+#include <Nextion.h>
 
 // Declaração externa de sysStat para que as tarefas possam acessar
 extern SystemStatus sysStat;

@@ -1,6 +1,7 @@
 #include "EnergyMonitor.h"
 #include "PinDefinitions.h"
 #include <Arduino.h>
+#include <Nextion.h>
 
 EnergyMonitor::EnergyMonitor(SystemStatus &systemStatus)
     : systemStatus(systemStatus), current1(0), current2(0), voltage(220.0), power(0), energy(0), cost(0), isPhaseToPhase(false) {}
@@ -14,7 +15,7 @@ void EnergyMonitor::setup()
 void EnergyMonitor::monitor()
 {
 
-    //Serial.println("Monitorando energia...");
+    //dbSerial.println("Monitorando energia...");
     current1 = readCurrent(ACS712_PIN1);
     current2 = readCurrent(ACS712_PIN2);
 
@@ -36,11 +37,11 @@ void EnergyMonitor::monitor()
 
     // Atualiza os valores no SystemStatus
     systemStatus.power = power;
-    // Serial.println("Power: " + String(power) + "W");
+    // dbSerial.println("Power: " + String(power) + "W");
     systemStatus.energy = energy;
-    // Serial.println("Energy: " + String(energy) + "Wh");
+    // dbSerial.println("Energy: " + String(energy) + "Wh");
     systemStatus.cost = cost;
-    // Serial.println("Cost: R$" + String(cost));
+    // dbSerial.println("Cost: R$" + String(cost));
 }
 
 float EnergyMonitor::readCurrent(int sensorPin)

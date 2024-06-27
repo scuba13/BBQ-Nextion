@@ -1,6 +1,7 @@
 #include "WiFiHandler.h"
 #include <Arduino.h>
 #include "NextionHandler.h"
+#include <Nextion.h>
 
 // Objeto WiFiManager
 WiFiManager wifiManager;
@@ -13,27 +14,27 @@ void initWiFi(SystemStatus &sysStat, LogHandler &logHandler)
     {
         if (WiFi.status() != WL_CONNECTED)
         {
-            Serial.println("Conexão WiFi falhou, não há credenciais salvas.");
+            dbSerial.println("Conexão WiFi falhou, não há credenciais salvas.");
             logHandler.logMessage("Conexão WiFi falhou, não há credenciais salvas.");
         }
         else
         {
-            Serial.println("Conexão WiFi estabelecida!");
+            dbSerial.println("Conexão WiFi estabelecida!");
             logHandler.logMessage("Conexão WiFi estabelecida!");
-            Serial.println("O IP da ESP32 é: " + WiFi.localIP().toString());
+            dbSerial.println("O IP da ESP32 é: " + WiFi.localIP().toString());
             logHandler.logMessage("O IP da ESP32 é: " + WiFi.localIP().toString());
 
             // Inicialização do MDNS
             if (!MDNS.begin("bbq"))
             {
-                Serial.println("Erro ao configurar o MDNS");
+                dbSerial.println("Erro ao configurar o MDNS");
                 logHandler.logMessage("Erro ao configurar o MDNS");
                 while (1)
                 {
                     delay(1000);
                 }
             }
-            Serial.println("MDNS configurado com sucesso");
+            dbSerial.println("MDNS configurado com sucesso");
             logHandler.logMessage("MDNS configurado com sucesso");
             MDNS.addService("http", "tcp", 80);
             delay(1000);
@@ -42,7 +43,7 @@ void initWiFi(SystemStatus &sysStat, LogHandler &logHandler)
     }
     else
     {
-        Serial.println("Falha na tentativa de autoConectar, entrando no modo AP.");
+        dbSerial.println("Falha na tentativa de autoConectar, entrando no modo AP.");
         logHandler.logMessage("Falha na tentativa de autoConectar, entrando no modo AP.");
     }
 }

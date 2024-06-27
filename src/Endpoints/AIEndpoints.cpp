@@ -1,5 +1,6 @@
 #include "AIEndpoints.h"
 #include <ArduinoJson.h>
+#include <Nextion.h>
 
 
 void registerAIEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, LogHandler& logger, FileSystem& fileSystem) {
@@ -15,7 +16,7 @@ void registerAIEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, Log
 
     server.on("/updateAiConfig", HTTP_POST, [&systemStatus, &logger, &fileSystem](AsyncWebServerRequest *request) {
         logger.logMessage("Updating AI configuration");
-        Serial.println("Updating AI configuration");
+        dbSerial.println("Updating AI configuration");
 
         String aiKey;
         String tip;
@@ -43,7 +44,7 @@ void registerAIEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, Log
         fileSystem.saveConfigToFile(systemStatus);
 
         logger.logMessage("AI configuration updated");
-        Serial.println("AI configuration updated");
+        dbSerial.println("AI configuration updated");
         request->send(200, "application/json", "{ \"status\": \"success\" }");
     });
 }
