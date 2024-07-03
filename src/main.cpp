@@ -29,8 +29,9 @@ EnergyMonitor energyMonitor(sysStat);
 
 void setup()
 {
-    //Serial.begin(9600);
-    Serial.println("Iniciando App ..");
+    dbSerialBegin(9600);
+   // nexSerial.begin(9600);
+    dbSerial.println("Iniciando App ..");
 
     // colocar chamada pagina inicial
 
@@ -95,21 +96,21 @@ const unsigned long updateInterval = 1000; // Intervalo de tempo desejado (em mi
 void loop()
 {
 
-    // Atualizar os valores das variáveis do Nextion com intervalo
-    unsigned long currentTime = millis();
-    if (currentTime - lastUpdateTime >= updateInterval)
-    {
-        lastUpdateTime = currentTime;
-        // Loop do Nextion
-        nexLoop(nex_listen_list);
+    // // Atualizar os valores das variáveis do Nextion com intervalo
+    // unsigned long currentTime = millis();
+    // if (currentTime - lastUpdateTime >= updateInterval)
+    // {
+    //     lastUpdateTime = currentTime;
+    //     // Loop do Nextion
+    //     nexLoop(nex_listen_list);
 
-        // Gerencia a publicação e verificação do MQTT
-        mqttHandler.managePublishing(sysStat);
+    //     // Gerencia a publicação e verificação do MQTT
+    //     mqttHandler.managePublishing(sysStat);
         
-        // Atualiza as variáveis do Nextion
-        updateNextionMonitorVariables(sysStat);
-        updateNextionSetBBQVariables(sysStat);
-        updateNextionSetChunkVariables(sysStat);
-        updateNextionEnergyVariables(sysStat);
-    }
+    //     // Atualiza as variáveis do Nextion
+    //     updateNextionMonitorVariables(sysStat);
+    //     updateNextionSetBBQVariables(sysStat);
+    //     updateNextionSetChunkVariables(sysStat);
+    //     updateNextionEnergyVariables(sysStat);
+    // }
 }
