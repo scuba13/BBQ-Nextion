@@ -28,8 +28,8 @@ int getCalibratedTemp(MAX6675 &thermocouple, SystemStatus &sysStat)
 
   // Atualiza a temperatura calibrada na estrutura sysStat
   sysStat.calibratedTemp = newCalibratedTemp;
-  Serial.print("Calibrated Temp: ");
-  Serial.println(sysStat.calibratedTemp);
+  // Serial.print("Calibrated Temp: ");
+  // Serial.println(sysStat.calibratedTemp);
 
   return sysStat.calibratedTemp;
 }
@@ -129,8 +129,8 @@ int getCalibratedTempP(MAX6675 &thermocoupleP, SystemStatus &sysStat)
 
   // Atualiza a temperatura calibrada na estrutura sysStat
   sysStat.calibratedTempP = newCalibratedTempP;
-  Serial.print("Calibrated TempP: ");
-  Serial.println(sysStat.calibratedTempP);
+  // Serial.print("Calibrated TempP: ");
+  // Serial.println(sysStat.calibratedTempP);
 
   return sysStat.calibratedTempP;
 }
@@ -138,7 +138,7 @@ int getCalibratedTempP(MAX6675 &thermocoupleP, SystemStatus &sysStat)
 // Reset the variables
 void resetSystem(SystemStatus &sysStat)
 {
-  dbSerial.println("System reset Started...");
+  dbSerial.println("System Reset Started...");
  
   // Desliga o relé
   digitalWrite(RELAY_PIN, LOW);

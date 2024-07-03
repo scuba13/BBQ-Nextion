@@ -87,6 +87,48 @@ void setup()
     dbSerial.println("Arquivos validados");
     logHandler.logMessage("Arquivos validados");
 
+ 
+ 
+    // Verifique se a PSRAM está disponível
+    if (psramFound()) {
+        dbSerial.println("PSRAM found and initialized.");
+    } else {
+        dbSerial.println("PSRAM not found.");
+    }
+
+// Verifique o tamanho da PSRAM
+dbSerial.print("PSRAM size: ");
+dbSerial.print(ESP.getPsramSize() / 1024);
+dbSerial.println(" KB");
+
+// Verifique a memória PSRAM livre
+dbSerial.print("Free PSRAM: ");
+dbSerial.print(ESP.getFreePsram() / 1024);
+dbSerial.println(" KB");
+
+// Verifique o tamanho total da RAM interna
+dbSerial.print("Total heap size: ");
+dbSerial.print(ESP.getHeapSize() / 1024);
+dbSerial.println(" KB");
+
+// Verifique a memória RAM interna livre
+dbSerial.print("Free heap size: ");
+dbSerial.print(ESP.getFreeHeap() / 1024);
+dbSerial.println(" KB");
+
+// Verifique o tamanho total da DRAM interna
+dbSerial.print("Total DRAM: ");
+dbSerial.print(ESP.getMaxAllocHeap() / 1024);
+dbSerial.println(" KB");
+
+// Verifique o tamanho total da memória de código
+dbSerial.print("Total instruction RAM: ");
+dbSerial.print(ESP.getFlashChipSize() / 1024);
+dbSerial.println(" KB");
+
+
+
+
     dbSerial.println("App Iniciada");
 }
 
