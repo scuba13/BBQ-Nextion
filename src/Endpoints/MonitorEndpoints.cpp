@@ -3,24 +3,27 @@
 
 void registerMonitorEndpoints(AsyncWebServer &server, SystemStatus &systemStatus)
 {
-    server.on("/monitor", HTTP_GET, [&systemStatus](AsyncWebServerRequest *request)
-              {
-        String jsonResponse = "{";
-        jsonResponse += "\"currentTemp\": " + String(systemStatus.calibratedTemp) + ",";
-        jsonResponse += "\"setTemp\": " + String(systemStatus.bbqTemperature) + ",";
-        jsonResponse += "\"proteinTemp\": " + String(systemStatus.calibratedTempP) + ",";
-        jsonResponse += "\"proteinTempSet\": " + String(systemStatus.proteinTemperature) + ",";
-        jsonResponse += "\"relayState\": \"" + String(systemStatus.isRelayOn ? "ON" : "OFF") + "\",";
-        jsonResponse += "\"avgTemp\": " + String(systemStatus.averageTemp) + ",";
-        jsonResponse += "\"caliTemp\": " + String(systemStatus.tempCalibration) + ",";
-        jsonResponse += "\"minBBQTemp\": " + String(systemStatus.minBBQTemp) + ",";
-        jsonResponse += "\"maxBBQTemp\": " + String(systemStatus.maxBBQTemp) + ",";
-        jsonResponse += "\"minPrtTemp\": " + String(systemStatus.minPrtTemp) + ",";
-        jsonResponse += "\"maxPrtTemp\": " + String(systemStatus.maxPrtTemp) + ",";
-        jsonResponse += "\"minCaliTemp\": " + String(systemStatus.minCaliTemp) + ",";
-        jsonResponse += "\"maxCaliTemp\": " + String(systemStatus.maxCaliTemp) + ",";
-        jsonResponse += "\"minCaliTempP\": " + String(systemStatus.minCaliTempP) + ",";
-        jsonResponse += "\"maxCaliTempP\": " + String(systemStatus.maxCaliTempP);
-        jsonResponse += "}";
-        request->send(200, "application/json", jsonResponse); });
+    server.on("/monitorando", HTTP_GET, [&systemStatus](AsyncWebServerRequest *request)
+    {
+        StaticJsonDocument<500> doc; // Ajuste o tamanho conforme necessário
+        doc["currentTemp"] = systemStatus.calibratedTemp;
+        doc["setTemp"] = systemStatus.bbqTemperature;
+        doc["proteinTemp"] = systemStatus.calibratedTempP;
+        doc["proteinTempSet"] = systemStatus.proteinTemperature;
+        doc["relayState"] = systemStatus.isRelayOn ? "ON" : "OFF";
+        doc["avgTemp"] = systemStatus.averageTemp;
+        doc["caliTemp"] = systemStatus.tempCalibration;
+        doc["minBBQTemp"] = systemStatus.minBBQTemp;
+        doc["maxBBQTemp"] = systemStatus.maxBBQTemp;
+        doc["minPrtTemp"] = systemStatus.minPrtTemp;
+        doc["maxPrtTemp"] = systemStatus.maxPrtTemp;
+        doc["minCaliTemp"] = systemStatus.minCaliTemp;
+        doc["maxCaliTemp"] = systemStatus.maxCaliTemp;
+        doc["minCaliTempP"] = systemStatus.minCaliTempP;
+        doc["maxCaliTempP"] = systemStatus.maxCaliTempP;
+
+        String jsonResponse;
+        serializeJson(doc, jsonResponse);
+        request->send(200, "application/json", jsonResponse);
+    });
 }

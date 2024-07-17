@@ -17,6 +17,6 @@ void initNextion(SystemStatus &sysStat);
 void updateNextionMonitorVariables(SystemStatus &sysStat);
 void updateNextionSetBBQVariables(SystemStatus &sysStat);
 void updateNextionSetChunkVariables(SystemStatus &sysStat);
-void updateNextionEnergyVariables(SystemStatus &sysStat);
+void updateNextionSetCaliVariables(SystemStatus &sysStat);
 
 #endif // NEXTION_HANDLER_H

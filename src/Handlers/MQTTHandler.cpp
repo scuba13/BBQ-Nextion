@@ -175,14 +175,7 @@ void MQTTHandler::managePublishing(SystemStatus& systemStatus) {
         if (systemStatus.isHAAvailable) {
             publishAllMessages(systemStatus);
         }
-        // dbSerial.println(systemStatus.calibratedTemp);
-        // dbSerial.println(systemStatus.calibratedTempP);
-        // dbSerial.println(systemStatus.bbqTemperature);
-        // dbSerial.println(systemStatus.proteinTemperature);
-        // dbSerial.println(systemStatus.tempCalibration);
-        // dbSerial.println(systemStatus.energy);
-        // dbSerial.println(systemStatus.cost);
-        // dbSerial.println(systemStatus.power);
+        
     }
 
     if (systemStatus.isHAAvailable) {

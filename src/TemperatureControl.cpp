@@ -34,16 +34,47 @@ int getCalibratedTemp(MAX6675 &thermocouple, SystemStatus &sysStat)
   return sysStat.calibratedTemp;
 }
 
+// Protein Collection Functions
+int getCalibratedTempP(MAX6675 &thermocoupleP, SystemStatus &sysStat)
+{
+  float temp = thermocoupleP.readCelsius() + sysStat.tempCalibrationP;
+  sysStat.tempSamplesP[sysStat.nextSampleIndexP] = temp;
+  sysStat.nextSampleIndexP = (sysStat.nextSampleIndexP + 1) % NUM_SAMPLES;
+  if (sysStat.numSamplesP < NUM_SAMPLES)
+  {
+    sysStat.numSamplesP++;
+  }
+
+  float sum = 0;
+  for (int i = 0; i < sysStat.numSamplesP; i++)
+  {
+    sum += sysStat.tempSamplesP[i];
+  }
+
+  // Aqui, primeiro calculamos a nova temperatura calibrada
+  int newCalibratedTempP = (int)round(sum / sysStat.numSamplesP);
+
+  // Atualiza a temperatura calibrada na estrutura sysStat
+  sysStat.calibratedTempP = newCalibratedTempP;
+  // Serial.print("Calibrated TempP: ");
+  // Serial.println(sysStat.calibratedTempP);
+
+  return sysStat.calibratedTempP;
+}
+
+
 void updateRelayState(int temp, SystemStatus &sysStat)
 {
   if (temp <= sysStat.bbqTemperature)
   {
     digitalWrite(RELAY_PIN, HIGH);
+    neopixelWrite(RGB_BUILTIN, RGB_BRIGHTNESS, 0, 0);  // Red
     sysStat.isRelayOn = true;
   }
   else if (temp > sysStat.bbqTemperature)
   {
     digitalWrite(RELAY_PIN, LOW);
+    neopixelWrite(RGB_BUILTIN, 0, 0, RGB_BRIGHTNESS);  // Blue
     sysStat.isRelayOn = false;
   }
 }
@@ -107,33 +138,6 @@ void collectSample(SystemStatus &sysStat)
   }
 }
 
-// Protein Collection Functions
-int getCalibratedTempP(MAX6675 &thermocoupleP, SystemStatus &sysStat)
-{
-  float temp = thermocoupleP.readCelsius() + sysStat.tempCalibrationP;
-  sysStat.tempSamplesP[sysStat.nextSampleIndexP] = temp;
-  sysStat.nextSampleIndexP = (sysStat.nextSampleIndexP + 1) % NUM_SAMPLES;
-  if (sysStat.numSamplesP < NUM_SAMPLES)
-  {
-    sysStat.numSamplesP++;
-  }
-
-  float sum = 0;
-  for (int i = 0; i < sysStat.numSamplesP; i++)
-  {
-    sum += sysStat.tempSamplesP[i];
-  }
-
-  // Aqui, primeiro calculamos a nova temperatura calibrada
-  int newCalibratedTempP = (int)round(sum / sysStat.numSamplesP);
-
-  // Atualiza a temperatura calibrada na estrutura sysStat
-  sysStat.calibratedTempP = newCalibratedTempP;
-  // Serial.print("Calibrated TempP: ");
-  // Serial.println(sysStat.calibratedTempP);
-
-  return sysStat.calibratedTempP;
-}
 
 // Reset the variables
 void resetSystem(SystemStatus &sysStat)
@@ -177,6 +181,9 @@ void resetSystem(SystemStatus &sysStat)
   sysStat.power = 0.0;
   sysStat.energy = 0.0;
   sysStat.cost = 0.0;
+
+  // Desliga o LED RGB
+  digitalWrite(RGB_BUILTIN, LOW);  // Turn the RGB LED off
 
   // Debugging statements
   dbSerial.println("System reset completed.");

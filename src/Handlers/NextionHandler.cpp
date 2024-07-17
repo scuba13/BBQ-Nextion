@@ -22,10 +22,12 @@ static float lastMaxChunkTemp = 0;
 uint32_t lastPageIdChunk = -1;
 bool initialUpdateDoneChunk = false; // Variable to check if the initial update is done
 
-static float lastPower = 0;
-static float lastEnergy = 0;
-static float lastCost = 0;
-uint32_t lastPageIdEnergy = -1;
+static float lastMinCaliBBQ = 0;
+static float lastMaxCaliBBQ = 0;
+static float lastMinCaliChunk = 0;
+static float lastMaxCaliChunk = 0;
+uint32_t lastPageIdCali = -1;
+bool initialUpdateDoneCali = false;
 
 
 // Definition of Nextion components
@@ -43,30 +45,35 @@ NexNumber bbqTemp = NexNumber(3, 1, "bbqTemp");
 NexNumber chunkTempSet = NexNumber(3, 11, "chunkTempSet");
 NexNumber chunkTemp = NexNumber(3, 2, "chunkTemp");
 NexNumber bbqTempAvg = NexNumber(3, 8, "bbqTempAvg");
-NexButton stop = NexButton(3, 18, "stop");
+NexButton stopPush = NexButton(3, 18, "stop");
 
 // Page BBQTemp
 NexNumber setBBQTemp = NexNumber(4, 1, "setBBQTemp");
 NexNumber minBBQTemp = NexNumber(4, 6, "minBBQTemp");
 NexNumber maxBBQTemp = NexNumber(4, 7, "maxBBQTemp");
-NexButton setBBQTempPop = NexButton(4, 8, "setBBQ");
+NexButton setBBQTempPush = NexButton(4, 8, "setBBQ");
 
 // Page ChunkTemp
 NexNumber setChunkTemp = NexNumber(5, 1, "setChunkTemp");
 NexNumber minChunkTemp = NexNumber(5, 6, "minChunkTemp");
 NexNumber maxChunkTemp = NexNumber(5, 7, "maxChunkTemp");
-NexButton setChunkTempPop = NexButton(5, 8, "setChunk");
+NexButton setChunkTempPush = NexButton(5, 8, "setChunk");
 
 
-// Page Energy
-NexNumber power = NexNumber(6, 2, "power");
-NexNumber energy = NexNumber(6, 3, "energy");
-NexNumber cost = NexNumber(6, 4, "cost");
+// Page Calibration
+NexNumber caliBBQTemp = NexNumber(6, 4, "caliBBQTemp");
+NexNumber minCaliBBQTemp = NexNumber(6, 12, "minCaliBBQTemp");
+NexNumber maxCaliBBQTemp = NexNumber(6, 13, "maxCaliBBQTemp");
+NexNumber caliChunkTemp = NexNumber(6, 7, "caliChunkTemp");
+NexNumber minCaliChuTemp = NexNumber(6, 14, "minCaliChuTemp");
+NexNumber maxCaliChuTemp = NexNumber(6, 15, "maxCaliChuTemp");
+NexButton setCaliPush = NexButton(6, 10, "setCali");
 
 NexTouch *nex_listen_list[] = {
-    &setBBQTempPop,
-    &setChunkTempPop,
-    &stop,
+    &setBBQTempPush,
+    &setChunkTempPush,
+    &stopPush,
+    &setCaliPush,
     NULL};
 
 char buffer[100] = {0};
@@ -160,15 +167,69 @@ void setStopPushCallback(void *ptr)
     dbSerial.println("Exiting setStopPushCallback");
 }
 
+void setCaliPushCallback(void *ptr)
+{
+    dbSerial.println("Entering setCaliPushCallback");
+
+    // Check if the pointer is valid
+    if (ptr == nullptr)
+    {
+        dbSerial.println("Error: ptr is null");
+        return;
+    }
+
+    // Cast the pointer to SystemStatus
+    SystemStatus *systemStatus = static_cast<SystemStatus *>(ptr);
+
+    // Get the value from caliBBQTemp
+    uint32_t bbq;
+    bool successBBQ = caliBBQTemp.getValue(&bbq);
+
+    if (!successBBQ)
+    {
+        dbSerial.println("Error: Failed to get value from Cali BBQ");
+        return;
+    }
+
+    // Get the value from caliChunkTemp
+    uint32_t chunk;
+    bool successChunk = caliChunkTemp.getValue(&chunk);
+
+    if (!successChunk)
+    {
+        dbSerial.println("Error: Failed to get value from Cali Chunk");
+        return;
+    }
+
+    // Cast value to int and set it to the tempCalibration
+    int caliBBQValue = static_cast<int>(bbq);
+    systemStatus->tempCalibration = caliBBQValue;
+
+        // Cast value to int and set it to the tempCalibrationP
+    int caliChunkValue = static_cast<int>(chunk);
+    systemStatus->tempCalibrationP = caliChunkValue;
+
+    // Debugging statements
+    dbSerial.println("CaliBBQValue: " + String(caliBBQValue));
+    dbSerial.println("SystemStatus tempCalibration: " + String(systemStatus->tempCalibration));
+    dbSerial.println("CaliChunkValue: " + String(caliChunkValue));
+    dbSerial.println("SystemStatus tempCalibrationP: " + String(systemStatus->tempCalibrationP));
+    dbSerial.println("Exiting setChunkTempPopCallback");
+    monitor.show();
+}
+
+
 void initNextion(SystemStatus &sysStat)
 {
     Serial2.begin(9600, SERIAL_8N1, 16, 17); // Configura a porta serial para o Nextion (pinos RX2 e TX2)
     nexInit();
-    setBBQTempPop.attachPush(setBBQTempPushCallback, &sysStat);
-    setChunkTempPop.attachPush(setChunkTempPushCallback, &sysStat);
-    stop.attachPush(setStopPushCallback, &sysStat);
+    setBBQTempPush.attachPush(setBBQTempPushCallback, &sysStat);
+    setChunkTempPush.attachPush(setChunkTempPushCallback, &sysStat);
+    stopPush.attachPush(setStopPushCallback, &sysStat);
+    setCaliPush.attachPush(setCaliPushCallback, &sysStat);
 
-    delay(1000);
+
+    delay(500);
 }
 
 uint8_t getCurrentPageId()
@@ -353,46 +414,45 @@ void updateNextionSetChunkVariables(SystemStatus &sysStat)
         initialUpdateDoneChunk = true; // Set the flag to true to prevent further updates
     }
 
-    //dbSerial.println("-------------------------");
+    
     updateNumberComponent(minChunkTemp, lastMinChunkTemp, sysStat.minPrtTemp, "minChunkTemp", forceUpdate);
     updateNumberComponent(maxChunkTemp, lastMaxChunkTemp, sysStat.maxPrtTemp, "maxChunkTemp", forceUpdate);
-   // dbSerial.println("-------------------------");
+   
 
     // Update the last page ID
     lastPageIdChunk = currentPageId;
 }
 
-void updateNextionEnergyVariables(SystemStatus &sysStat)
+void updateNextionSetCaliVariables(SystemStatus &sysStat)
 {
     uint32_t currentPageId = getCurrentPageId();
-    bool forceUpdate = (currentPageId != lastPageIdEnergy); // Force update if the page has changed
+    bool forceUpdate = (currentPageId != lastPageIdCali); // Force update if the page has changed
 
-    // Check if the current page is the energy page
+    // Check if the current page is the set Chunk page
     if (currentPageId != 6)
     {
-        lastPageIdEnergy = currentPageId;
+        lastPageIdCali = currentPageId;
+        initialUpdateDoneCali = false; // Reset the initial update flag when leaving the page
         return;
     }
 
-    //dbSerial.println("-------------------------");
+    if (!initialUpdateDoneCali) // Perform the update only once when the page is loaded
+    {
+        int bbq = sysStat.tempCalibration; // Get the value from sysStat.tempCalibration
+        int chunk = sysStat.tempCalibrationP; // Get the value from sysStat.tempCalibrationP
 
-    // Ensure the values are not negative
-    float powerValue = sysStat.power > 0 ? sysStat.power : 0;
-    // dbSerial.print("Power Value: ");
-    // dbSerial.println(powerValue);
-    float energyValue = sysStat.energy > 0 ? sysStat.energy : 0;
-    // dbSerial.print("Energy Value: ");
-    // dbSerial.println(energyValue);
-    float costValue = sysStat.cost > 0 ? sysStat.cost : 0;
-    // dbSerial.print("Cost Value: ");
-    // dbSerial.println(costValue);
+        caliBBQTemp.setValue(bbq);    // Set the value on the Nextion component
+        caliChunkTemp.setValue(chunk);    // Set the value on the Nextion component
+        
+        initialUpdateDoneChunk = true; // Set the flag to true to prevent further updates
+    }
 
-    updateNumberComponent(power, lastPower, powerValue, "power", forceUpdate);
-    updateNumberComponent(energy, lastEnergy, energyValue, "energy", forceUpdate);
-    updateNumberComponent(cost, lastCost, costValue, "cost", forceUpdate);
+    updateNumberComponent(minCaliBBQTemp, lastMinCaliBBQ, sysStat.minCaliTemp, "minCaliBBQTemp", forceUpdate);
+    updateNumberComponent(maxCaliBBQTemp, lastMaxCaliBBQ, sysStat.maxCaliTemp, "maxCaliBBQTemp", forceUpdate);
+    updateNumberComponent(minCaliChuTemp, lastMinCaliChunk, sysStat.minCaliTempP, "minCaliChuTemp", forceUpdate);
+    updateNumberComponent(maxCaliChuTemp, lastMaxCaliChunk, sysStat.maxCaliTempP, "maxCaliChuTemp", forceUpdate);
 
-   // dbSerial.println("-------------------------");
 
     // Update the last page ID
-    lastPageIdEnergy = currentPageId;
+    lastPageIdCali = currentPageId;
 }
