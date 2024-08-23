@@ -67,6 +67,9 @@ struct SystemStatus
     float energy = 0.0;
     float cost = 0.0;
     float kWhCost = 1.0; // Valor do kWh em reais, padrão de 1 real por kWh
+
+    //Internal Temp
+    int calibratedTempInternal = 0;
 };
 
 #endif

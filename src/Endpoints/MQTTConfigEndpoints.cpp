@@ -6,7 +6,7 @@
 
 void registerMQTTConfigEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, FileSystem& fileSystem, LogHandler& logger) {
     server.on("/getMQTTConfig", HTTP_GET, [&systemStatus](AsyncWebServerRequest *request) {
-        StaticJsonDocument<200> doc;
+        JsonDocument doc;
         doc["mqttServer"] = systemStatus.mqttServer;
         doc["mqttPort"] = systemStatus.mqttPort;
         doc["mqttUser"] = systemStatus.mqttUser;

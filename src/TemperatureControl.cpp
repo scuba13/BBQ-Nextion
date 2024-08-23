@@ -2,9 +2,24 @@
 #include "PinDefinitions.h"
 #include <Arduino.h>
 #include <Nextion.h>
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
+OneWire oneWire(Ds18b2);
+DallasTemperature sensors(&oneWire);
 
 MAX6675 thermocouple(MAX6675_SCK, MAX6675_CS, MAX6675_SO);        // Instanciação da variável
 MAX6675 thermocoupleP(MAX6675_SCK_P, MAX6675_CS_P, MAX6675_SO_P); // Instanciação da variável
+
+//Internal Temp
+int getCalibratedInternalTemp(SystemStatus &sysStat)
+{
+  sensors.requestTemperatures();
+  float temp = sensors.getTempCByIndex(0);
+  sysStat.calibratedTempInternal = (int)round(temp);
+
+  return sysStat.calibratedTempInternal;
+}
 
 // BBQ Collection Functions
 int getCalibratedTemp(MAX6675 &thermocouple, SystemStatus &sysStat)
@@ -61,7 +76,6 @@ int getCalibratedTempP(MAX6675 &thermocoupleP, SystemStatus &sysStat)
 
   return sysStat.calibratedTempP;
 }
-
 
 void updateRelayState(int temp, SystemStatus &sysStat)
 {

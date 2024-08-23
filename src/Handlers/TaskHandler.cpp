@@ -39,6 +39,16 @@ void controlTemperatureTask(void *parameter)
     }
 }
 
+// Tarefa para obter a temperatura calibrada do ds18b20
+void getCalibratedInternalTempTask(void *parameter)
+{
+    while (true)
+    {
+        getCalibratedInternalTemp(sysStat);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}
+
 
 // Função para criar as tarefas
 void createTasks()
@@ -64,6 +74,15 @@ void createTasks()
     xTaskCreate(
         controlTemperatureTask, // Função que será executada pela tarefa. Esta função irá controlar a temperatura.
         "ControlTempTask",      // Nome da tarefa (útil para fins de depuração).
+        2000,                   // Tamanho da pilha da tarefa. Reserva espaço para 2000 entradas.
+        NULL,                   // Parâmetros que são passados para a função da tarefa. No caso, nenhum parâmetro é passado.
+        1,                      // Prioridade da tarefa. Aqui, a tarefa tem uma prioridade de 1.
+        NULL                    // Pode armazenar o identificador da tarefa, mas não estamos armazenando aqui.
+    );
+
+        xTaskCreate(
+        getCalibratedInternalTempTask, // Função que será executada pela tarefa. Esta função irá controlar a temperatura.
+        "ControlInternalTempTask",      // Nome da tarefa (útil para fins de depuração).
         2000,                   // Tamanho da pilha da tarefa. Reserva espaço para 2000 entradas.
         NULL,                   // Parâmetros que são passados para a função da tarefa. No caso, nenhum parâmetro é passado.
         1,                      // Prioridade da tarefa. Aqui, a tarefa tem uma prioridade de 1.

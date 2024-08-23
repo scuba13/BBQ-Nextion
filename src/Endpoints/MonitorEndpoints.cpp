@@ -5,7 +5,7 @@ void registerMonitorEndpoints(AsyncWebServer &server, SystemStatus &systemStatus
 {
     server.on("/monitorando", HTTP_GET, [&systemStatus](AsyncWebServerRequest *request)
     {
-        StaticJsonDocument<500> doc; // Ajuste o tamanho conforme necessário
+        JsonDocument doc; // Ajuste o tamanho conforme necessário
         doc["currentTemp"] = systemStatus.calibratedTemp;
         doc["setTemp"] = systemStatus.bbqTemperature;
         doc["proteinTemp"] = systemStatus.calibratedTempP;

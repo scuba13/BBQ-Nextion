@@ -5,7 +5,7 @@
 
 void registerAIEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, LogHandler& logger, FileSystem& fileSystem) {
     server.on("/getAiConfig", HTTP_GET, [&systemStatus](AsyncWebServerRequest *request) {
-        DynamicJsonDocument doc(1024);
+        JsonDocument doc;
         doc["aiKey"] = systemStatus.aiKey;
         doc["tip"] = systemStatus.tip;
 

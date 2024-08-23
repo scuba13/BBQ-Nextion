@@ -64,9 +64,11 @@ NexButton setChunkTempPush = NexButton(5, 8, "setChunk");
 NexNumber caliBBQTemp = NexNumber(6, 4, "caliBBQTemp");
 NexNumber minCaliBBQTemp = NexNumber(6, 12, "minCaliBBQTemp");
 NexNumber maxCaliBBQTemp = NexNumber(6, 13, "maxCaliBBQTemp");
+
 NexNumber caliChunkTemp = NexNumber(6, 7, "caliChunkTemp");
 NexNumber minCaliChuTemp = NexNumber(6, 14, "minCaliChuTemp");
 NexNumber maxCaliChuTemp = NexNumber(6, 15, "maxCaliChuTemp");
+
 NexButton setCaliPush = NexButton(6, 10, "setCali");
 
 NexTouch *nex_listen_list[] = {
@@ -215,9 +217,8 @@ void setCaliPushCallback(void *ptr)
     dbSerial.println("CaliChunkValue: " + String(caliChunkValue));
     dbSerial.println("SystemStatus tempCalibrationP: " + String(systemStatus->tempCalibrationP));
     dbSerial.println("Exiting setChunkTempPopCallback");
-    monitor.show();
+    menu.show();
 }
-
 
 void initNextion(SystemStatus &sysStat)
 {
@@ -283,24 +284,11 @@ void updateNumberComponent(NexNumber &component, float &lastValue, float newValu
 {
     if (lastValue != newValue || forceUpdate)
     {
-        // dbSerial.print("Updating ");
-        // dbSerial.print(componentName);
-        // dbSerial.print(" from ");
-        // dbSerial.print(lastValue);
-        // dbSerial.print(" to ");
-        // dbSerial.println(newValue);
-
-        component.setValue(static_cast<uint32_t>(newValue));
+        component.setValue(static_cast<int32_t>(newValue)); // Use int32_t to support negative values
         lastValue = newValue;
     }
-    else
-    {
-        // dbSerial.print("No update needed for ");
-        // dbSerial.print(componentName);
-        // dbSerial.print(", value remains ");
-        // dbSerial.println(lastValue);
-    }
 }
+
 
 void updateNextionMonitorVariables(SystemStatus &sysStat)
 {
@@ -438,20 +426,19 @@ void updateNextionSetCaliVariables(SystemStatus &sysStat)
 
     if (!initialUpdateDoneCali) // Perform the update only once when the page is loaded
     {
-        int bbq = sysStat.tempCalibration; // Get the value from sysStat.tempCalibration
-        int chunk = sysStat.tempCalibrationP; // Get the value from sysStat.tempCalibrationP
+        int32_t bbq = static_cast<int32_t>(sysStat.tempCalibration); // Get the value from sysStat.tempCalibration
+        int32_t chunk = static_cast<int32_t>(sysStat.tempCalibrationP); // Get the value from sysStat.tempCalibrationP
 
         caliBBQTemp.setValue(bbq);    // Set the value on the Nextion component
         caliChunkTemp.setValue(chunk);    // Set the value on the Nextion component
         
-        initialUpdateDoneChunk = true; // Set the flag to true to prevent further updates
+        initialUpdateDoneCali = true; // Set the flag to true to prevent further updates
     }
 
-    updateNumberComponent(minCaliBBQTemp, lastMinCaliBBQ, sysStat.minCaliTemp, "minCaliBBQTemp", forceUpdate);
+    updateNumberComponent(minCaliBBQTemp, lastMinCaliBBQ, static_cast<int32_t>(sysStat.minCaliTemp), "minCaliBBQTemp", forceUpdate);
     updateNumberComponent(maxCaliBBQTemp, lastMaxCaliBBQ, sysStat.maxCaliTemp, "maxCaliBBQTemp", forceUpdate);
-    updateNumberComponent(minCaliChuTemp, lastMinCaliChunk, sysStat.minCaliTempP, "minCaliChuTemp", forceUpdate);
+    updateNumberComponent(minCaliChuTemp, lastMinCaliChunk, static_cast<int32_t>(sysStat.minCaliTempP), "minCaliChuTemp", forceUpdate);
     updateNumberComponent(maxCaliChuTemp, lastMaxCaliChunk, sysStat.maxCaliTempP, "maxCaliChuTemp", forceUpdate);
-
 
     // Update the last page ID
     lastPageIdCali = currentPageId;

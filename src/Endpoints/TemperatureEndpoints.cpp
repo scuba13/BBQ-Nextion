@@ -15,7 +15,7 @@ void registerTemperatureEndpoints(AsyncWebServer& server, SystemStatus& systemSt
             logger.logMessage("Temperatura definida recebida: " + String(systemStatus.bbqTemperature));
 
             AsyncResponseStream *response = request->beginResponseStream("application/json");
-            StaticJsonDocument<200> jsonDoc;
+            JsonDocument jsonDoc;
             jsonDoc["status"] = "success";
             jsonDoc["temp"] = systemStatus.bbqTemperature;
             serializeJson(jsonDoc, *response);
@@ -23,7 +23,7 @@ void registerTemperatureEndpoints(AsyncWebServer& server, SystemStatus& systemSt
         } else {
             dbSerial.println("Parâmetro 'temp' não encontrado na solicitação.");
             AsyncResponseStream *response = request->beginResponseStream("application/json");
-            StaticJsonDocument<200> jsonDoc;
+            JsonDocument jsonDoc;
             jsonDoc["status"] = "error";
             jsonDoc["message"] = "Parameter 'temp' not found in the request.";
             serializeJson(jsonDoc, *response);
@@ -40,7 +40,7 @@ void registerTemperatureEndpoints(AsyncWebServer& server, SystemStatus& systemSt
             logger.logMessage("Protein temperature set to: " + String(systemStatus.proteinTemperature));
 
             AsyncResponseStream *response = request->beginResponseStream("application/json");
-            StaticJsonDocument<200> jsonDoc;
+            JsonDocument jsonDoc;
             jsonDoc["status"] = "success";
             jsonDoc["proteinTemp"] = systemStatus.proteinTemperature;
             serializeJson(jsonDoc, *response);
@@ -48,7 +48,7 @@ void registerTemperatureEndpoints(AsyncWebServer& server, SystemStatus& systemSt
         } else {
             dbSerial.println("Parâmetro 'proteinTemp' não encontrado na solicitação.");
             AsyncResponseStream *response = request->beginResponseStream("application/json");
-            StaticJsonDocument<200> jsonDoc;
+            JsonDocument jsonDoc;
             jsonDoc["status"] = "error";
             jsonDoc["message"] = "Parameter 'proteinTemp' not found in the request.";
             serializeJson(jsonDoc, *response);

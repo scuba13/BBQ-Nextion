@@ -15,6 +15,7 @@ void resetSystem(SystemStatus& sysStat);
 void calculateMovingAverage(int temp, SystemStatus& sysStat);
 void collectSample(SystemStatus& sysStat);
 void resetSystem(SystemStatus &sysStat);
+int getCalibratedInternalTemp(SystemStatus &sysStat);
 
 
 

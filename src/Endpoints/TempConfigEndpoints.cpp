@@ -5,7 +5,7 @@
 
 void registerTempConfigEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, FileSystem& fileSystem, LogHandler& logger) {
     server.on("/getTempConfig", HTTP_GET, [&systemStatus](AsyncWebServerRequest *request) {
-        StaticJsonDocument<200> doc;
+        JsonDocument doc;
         doc["minBBQTemp"] = systemStatus.minBBQTemp;
         doc["maxBBQTemp"] = systemStatus.maxBBQTemp;
         doc["minPrtTemp"] = systemStatus.minPrtTemp;

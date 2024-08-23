@@ -5,7 +5,7 @@
 
 void registerEnergyEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, LogHandler& logger) {
     server.on("/getEnergy", HTTP_GET, [&systemStatus](AsyncWebServerRequest *request) {
-        StaticJsonDocument<200> doc;
+        JsonDocument doc;
         doc["power"] = systemStatus.power;
         doc["energy"] = systemStatus.energy;
         doc["cost"] = systemStatus.cost;
@@ -27,7 +27,7 @@ void registerEnergyEndpoints(AsyncWebServer& server, SystemStatus& systemStatus,
             logger.logMessage("EnergyCost recebida: " + String(systemStatus.kWhCost));
 
             AsyncResponseStream *response = request->beginResponseStream("application/json");
-            StaticJsonDocument<200> jsonDoc;
+            JsonDocument jsonDoc;
             jsonDoc["status"] = "success";
             jsonDoc["kWhCost"] = systemStatus.kWhCost;
             serializeJson(jsonDoc, *response);
@@ -38,7 +38,7 @@ void registerEnergyEndpoints(AsyncWebServer& server, SystemStatus& systemStatus,
         } else {
             dbSerial.println("Parâmetro 'kWhCost' não encontrado na solicitação.");
             AsyncResponseStream *response = request->beginResponseStream("application/json");
-            StaticJsonDocument<200> jsonDoc;
+            JsonDocument jsonDoc;
             jsonDoc["status"] = "error";
             jsonDoc["message"] = "Parameter 'kWhCost' not found in the request.";
             serializeJson(jsonDoc, *response);
