@@ -1,26 +1,31 @@
 #include "MQTTConfigEndpoints.h"
+#include "LogHandler.h"       // Inclua o novo LogHandler aqui
+#include "ResponseHelper.h"   // Inclua o ResponseHelper aqui
 #include <ArduinoJson.h>
 #include <Nextion.h>
 
-
-
 void registerMQTTConfigEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, FileSystem& fileSystem, LogHandler& logger) {
-    server.on("/getMQTTConfig", HTTP_GET, [&systemStatus](AsyncWebServerRequest *request) {
-        JsonDocument doc;
+    server.on("/api/v1/mqtt/config", HTTP_GET, [&systemStatus, &logger](AsyncWebServerRequest *request) {
+        // Log da requisição utilizando o novo LogHandler
+        logger.logRequest(request, "Fetching MQTT configuration");
+
+        DynamicJsonDocument doc(1024);
         doc["mqttServer"] = systemStatus.mqttServer;
         doc["mqttPort"] = systemStatus.mqttPort;
         doc["mqttUser"] = systemStatus.mqttUser;
         doc["mqttPassword"] = systemStatus.mqttPassword;
         doc["isHAAvailable"] = systemStatus.isHAAvailable;
 
-        String jsonResponse;
-        serializeJson(doc, jsonResponse);
-        request->send(200, "application/json", jsonResponse);
+        // Utilizando ResponseHelper para enviar a resposta
+        ResponseHelper::sendJsonResponse(request, 200, "MQTT configuration fetched successfully", doc.as<JsonObject>());
+        
+        // Log da mensagem de sucesso utilizando o novo LogHandler
+        logger.logMessage("MQTT configuration fetched successfully");
     });
 
-    server.on("/updateMQTTConfig", HTTP_POST, [&systemStatus, &fileSystem, &logger](AsyncWebServerRequest *request) {
-        logger.logMessage("Updating MQTT configuration");
-        dbSerial.println("Updating MQTT configuration");
+    server.on("/api/v1/mqtt/config", HTTP_POST, [&systemStatus, &fileSystem, &logger](AsyncWebServerRequest *request) {
+        // Log da requisição utilizando o novo LogHandler
+        logger.logRequest(request, "Updating MQTT configuration");
 
         String mqttServer;
         int mqttPort = 0; // Inicializado com um valor padrão
@@ -31,42 +36,49 @@ void registerMQTTConfigEndpoints(AsyncWebServer& server, SystemStatus& systemSta
         if (request->hasParam("mqttServer", true)) {
             mqttServer = request->getParam("mqttServer", true)->value();
         } else {
-            request->send(400, "application/json", "{ \"error\": \"mqttServer parameter is missing\" }");
+            logger.logError("mqttServer parameter is missing");
+            ResponseHelper::sendErrorResponse(request, 400, "mqttServer parameter is missing");
             return;
         }
 
         if (request->hasParam("mqttPort", true)) {
             mqttPort = request->getParam("mqttPort", true)->value().toInt();
             if (mqttPort <= 0 || mqttPort > 65535) {
-                request->send(400, "application/json", "{ \"error\": \"Invalid mqttPort value\" }");
+                logger.logError("Invalid mqttPort value");
+                ResponseHelper::sendErrorResponse(request, 400, "Invalid mqttPort value");
                 return;
             }
         } else {
-            request->send(400, "application/json", "{ \"error\": \"mqttPort parameter is missing\" }");
+            logger.logError("mqttPort parameter is missing");
+            ResponseHelper::sendErrorResponse(request, 400, "mqttPort parameter is missing");
             return;
         }
 
         if (request->hasParam("mqttUser", true)) {
             mqttUser = request->getParam("mqttUser", true)->value();
         } else {
-            request->send(400, "application/json", "{ \"error\": \"mqttUser parameter is missing\" }");
+            logger.logError("mqttUser parameter is missing");
+            ResponseHelper::sendErrorResponse(request, 400, "mqttUser parameter is missing");
             return;
         }
 
         if (request->hasParam("mqttPassword", true)) {
             mqttPassword = request->getParam("mqttPassword", true)->value();
         } else {
-            request->send(400, "application/json", "{ \"error\": \"mqttPassword parameter is missing\" }");
+            logger.logError("mqttPassword parameter is missing");
+            ResponseHelper::sendErrorResponse(request, 400, "mqttPassword parameter is missing");
             return;
         }
 
         if (request->hasParam("isHAAvailable", true)) {
             isHAAvailable = request->getParam("isHAAvailable", true)->value().equals("true");
         } else {
-            request->send(400, "application/json", "{ \"error\": \"isHAAvailable parameter is missing\" }");
+            logger.logError("isHAAvailable parameter is missing");
+            ResponseHelper::sendErrorResponse(request, 400, "isHAAvailable parameter is missing");
             return;
         }
 
+        // Atualiza os valores em systemStatus
         strncpy(systemStatus.mqttServer, mqttServer.c_str(), sizeof(systemStatus.mqttServer) - 1);
         systemStatus.mqttServer[sizeof(systemStatus.mqttServer) - 1] = '\0';
         systemStatus.mqttPort = mqttPort;
@@ -76,10 +88,13 @@ void registerMQTTConfigEndpoints(AsyncWebServer& server, SystemStatus& systemSta
         systemStatus.mqttPassword[sizeof(systemStatus.mqttPassword) - 1] = '\0';
         systemStatus.isHAAvailable = isHAAvailable;
 
+        // Salva a configuração no sistema de arquivos
         fileSystem.saveConfigToFile(systemStatus);
 
-        logger.logMessage("MQTT configuration updated");
-        dbSerial.println("MQTT configuration updated");
-        request->send(200, "application/json", "{ \"status\": \"success\" }");
+        // Utilizando ResponseHelper para enviar a resposta
+        ResponseHelper::sendJsonResponse(request, 200, "MQTT configuration updated successfully");
+
+        // Log da mensagem de sucesso utilizando o novo LogHandler
+        logger.logMessage("MQTT configuration updated successfully");
     });
 }

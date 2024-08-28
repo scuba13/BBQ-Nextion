@@ -4,6 +4,9 @@
 #include <Nextion.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
+#include "LogHandler.h"
+
+extern LogHandler logHandler; // Certifique-se de que o logHandler esteja declarado externamente ou passado como argumento
 
 OneWire oneWire(Ds18b2);
 DallasTemperature sensors(&oneWire);
@@ -38,13 +41,10 @@ int getCalibratedTemp(MAX6675 &thermocouple, SystemStatus &sysStat)
     sum += sysStat.tempSamples[i];
   }
 
-  // Aqui, primeiro calculamos a nova temperatura calibrada
   int newCalibratedTemp = (int)round(sum / sysStat.numSamples);
-
-  // Atualiza a temperatura calibrada na estrutura sysStat
   sysStat.calibratedTemp = newCalibratedTemp;
-  // Serial.print("Calibrated Temp: ");
-  // Serial.println(sysStat.calibratedTemp);
+
+  logHandler.logMessage("Calibrated Temp: " + String(sysStat.calibratedTemp));
 
   return sysStat.calibratedTemp;
 }
@@ -66,13 +66,10 @@ int getCalibratedTempP(MAX6675 &thermocoupleP, SystemStatus &sysStat)
     sum += sysStat.tempSamplesP[i];
   }
 
-  // Aqui, primeiro calculamos a nova temperatura calibrada
   int newCalibratedTempP = (int)round(sum / sysStat.numSamplesP);
-
-  // Atualiza a temperatura calibrada na estrutura sysStat
   sysStat.calibratedTempP = newCalibratedTempP;
-  // Serial.print("Calibrated TempP: ");
-  // Serial.println(sysStat.calibratedTempP);
+
+  logHandler.logMessage("Calibrated TempP: " + String(sysStat.calibratedTempP));
 
   return sysStat.calibratedTempP;
 }
@@ -88,23 +85,23 @@ void updateRelayState(int temp, SystemStatus &sysStat)
   else if (temp > sysStat.bbqTemperature)
   {
     digitalWrite(RELAY_PIN, LOW);
-    neopixelWrite(RGB_BUILTIN, 0, 0, RGB_BRIGHTNESS);  // Blue
+   // neopixelWrite(RGB_BUILTIN, 0, 0, RGB_BRIGHTINESS);  // Blue
     sysStat.isRelayOn = false;
   }
+
+  logHandler.logMessage("Relay state updated: " + String(sysStat.isRelayOn ? "ON" : "OFF"));
 }
 
 void controlTemperature(SystemStatus &sysStat)
 {
-  //dbSerial.println("Controlando temperatura...");
+  logHandler.logMessage("Controlando temperatura...");
   int temp = sysStat.calibratedTemp;
 
-  // Verifica se a temperatura atingiu o valor configurado
   if (temp >= sysStat.bbqTemperature)
   {
     sysStat.hasReachedSetTemp = true;
   }
 
-  // Inicia o cálculo da média apenas se a temperatura configurada já foi atingida
   if (sysStat.hasReachedSetTemp)
   {
     sysStat.startAverage = true;
@@ -132,6 +129,7 @@ void calculateAverage(SystemStatus &sysStat)
     sum += sysStat.samples[i];
   }
   sysStat.averageTemp = sum / sysStat.avgNumSamples;
+  logHandler.logMessage("Average Temp: " + String(sysStat.averageTemp));
 }
 
 void collectSample(SystemStatus &sysStat)
@@ -140,7 +138,7 @@ void collectSample(SystemStatus &sysStat)
   unsigned long currentMillis = millis();
 
   if (sysStat.startAverage)
-  { // Só começa a coleta de amostras se startAverage for verdadeiro
+  {
     if (currentMillis - lastSampleCollection >= 60000)
     {
       lastSampleCollection = currentMillis;
@@ -152,53 +150,42 @@ void collectSample(SystemStatus &sysStat)
   }
 }
 
-
-// Reset the variables
 void resetSystem(SystemStatus &sysStat)
 {
-  dbSerial.println("System Reset Started...");
- 
-  // Desliga o relé
+  logHandler.logMessage("System Reset Started...");
+
   digitalWrite(RELAY_PIN, LOW);
   sysStat.isRelayOn = false;
 
-  // Reset das temperaturas
   sysStat.bbqTemperature = 0;
   sysStat.proteinTemperature = 0;
   sysStat.tempCalibration = 0;
-  sysStat.tempCalibrationP = 0; // Certifique-se de resetar também a calibração da proteína, se aplicável
+  sysStat.tempCalibrationP = 0;
 
-  // Reset das variáveis de média
   sysStat.startAverage = false;
   sysStat.averageTemp = 0;
   sysStat.numSamples = 0;
   sysStat.numSamplesP = 0;
   sysStat.hasReachedSetTemp = false;
 
-  // Reseta os índices de amostras
   sysStat.sampleIndex = 0;
   sysStat.nextSampleIndex = 0;
   sysStat.nextSampleIndexP = 0;
 
-  // Apaga as amostras
   for (int i = 0; i < NUM_SAMPLES; i++)
   {
     sysStat.tempSamples[i] = 0;
     sysStat.tempSamplesP[i] = 0;
   }
 
-  // Reset das temperaturas calibradas
   sysStat.calibratedTemp = 0;
   sysStat.calibratedTempP = 0;
 
-  //Reset das variáveis de energia
   sysStat.power = 0.0;
   sysStat.energy = 0.0;
   sysStat.cost = 0.0;
 
-  // Desliga o LED RGB
-  digitalWrite(RGB_BUILTIN, LOW);  // Turn the RGB LED off
+  digitalWrite(RGB_BUILTIN, LOW);
 
-  // Debugging statements
-  dbSerial.println("System reset completed.");
+  logHandler.logMessage("System reset completed.");
 }

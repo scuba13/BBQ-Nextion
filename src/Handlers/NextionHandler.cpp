@@ -1,4 +1,7 @@
 #include "NextionHandler.h"
+#include "LogHandler.h"
+
+extern LogHandler _logger; // Certifique-se de que o logHandler esteja declarado externamente ou passado como argumento
 
 // Define nexSerial
 #define nexSerial Serial2
@@ -82,141 +85,122 @@ char buffer[100] = {0};
 
 void setBBQTempPushCallback(void *ptr)
 {
-    dbSerial.println("Entering setBBQTempPopCallback");
+    _logger.logMessage("Entering setBBQTempPopCallback");
 
-    // Check if the pointer is valid
     if (ptr == nullptr)
     {
-        dbSerial.println("Error: ptr is null");
+        _logger.logMessage("Error: ptr is null");
         return;
     }
 
-    // Cast the pointer to SystemStatus
     SystemStatus *systemStatus = static_cast<SystemStatus *>(ptr);
 
-    // Get the value from setBBQTemp
     uint32_t value;
     bool success = setBBQTemp.getValue(&value);
 
     if (!success)
     {
-        dbSerial.println("Error: Failed to get value from setBBQTemp");
+        _logger.logMessage("Error: Failed to get value from setBBQTemp");
         return;
     }
 
-    // Cast value to int and set it to the bbqTemperature
     int bbqTempValue = static_cast<int>(value);
     systemStatus->bbqTemperature = bbqTempValue;
 
-    // Debugging statements
-    dbSerial.println("BBQTempValue: " + String(bbqTempValue));
-    dbSerial.println("SystemStatus BBQ Temperature: " + String(systemStatus->bbqTemperature));
-    dbSerial.println("Exiting setBBQTempPopCallback");
+    _logger.logMessage("BBQTempValue: " + String(bbqTempValue));
+    _logger.logMessage("SystemStatus BBQ Temperature: " + String(systemStatus->bbqTemperature));
+    _logger.logMessage("Exiting setBBQTempPopCallback");
     monitor.show();
 }
 
 void setChunkTempPushCallback(void *ptr)
 {
-    dbSerial.println("Entering setChunkTempPopCallback");
+    _logger.logMessage("Entering setChunkTempPopCallback");
 
-    // Check if the pointer is valid
     if (ptr == nullptr)
     {
-        dbSerial.println("Error: ptr is null");
+        _logger.logMessage("Error: ptr is null");
         return;
     }
 
-    // Cast the pointer to SystemStatus
     SystemStatus *systemStatus = static_cast<SystemStatus *>(ptr);
 
-    // Get the value from setBBQTemp
     uint32_t value;
     bool success = setChunkTemp.getValue(&value);
 
     if (!success)
     {
-        dbSerial.println("Error: Failed to get value from setChunkTemp");
+        _logger.logMessage("Error: Failed to get value from setChunkTemp");
         return;
     }
 
-    // Cast value to int and set it to the bbqTemperature
     int chunkTempValue = static_cast<int>(value);
     systemStatus->proteinTemperature = chunkTempValue;
 
-    // Debugging statements
-    dbSerial.println("BBQTempValue: " + String(chunkTempValue));
-    dbSerial.println("SystemStatus Chunk Temperature: " + String(systemStatus->proteinTemperature));
-    dbSerial.println("Exiting setChunkTempPopCallback");
+    _logger.logMessage("ChunkTempValue: " + String(chunkTempValue));
+    _logger.logMessage("SystemStatus Chunk Temperature: " + String(systemStatus->proteinTemperature));
+    _logger.logMessage("Exiting setChunkTempPopCallback");
     monitor.show();
 }
 
 void setStopPushCallback(void *ptr)
 {
-    dbSerial.println("Entering setStopPushCallback");
+    _logger.logMessage("Entering setStopPushCallback");
 
-    // Check if the pointer is valid
     if (ptr == nullptr)
     {
-        dbSerial.println("Error: ptr is null");
+        _logger.logMessage("Error: ptr is null");
         return;
     }
 
-    // Cast the pointer to SystemStatus
     SystemStatus *systemStatus = static_cast<SystemStatus *>(ptr);
 
     resetSystem(*systemStatus);
 
-    dbSerial.println("Exiting setStopPushCallback");
+    _logger.logMessage("Exiting setStopPushCallback");
 }
 
 void setCaliPushCallback(void *ptr)
 {
-    dbSerial.println("Entering setCaliPushCallback");
+    _logger.logMessage("Entering setCaliPushCallback");
 
-    // Check if the pointer is valid
     if (ptr == nullptr)
     {
-        dbSerial.println("Error: ptr is null");
+        _logger.logMessage("Error: ptr is null");
         return;
     }
 
-    // Cast the pointer to SystemStatus
     SystemStatus *systemStatus = static_cast<SystemStatus *>(ptr);
 
-    // Get the value from caliBBQTemp
     uint32_t bbq;
     bool successBBQ = caliBBQTemp.getValue(&bbq);
 
     if (!successBBQ)
     {
-        dbSerial.println("Error: Failed to get value from Cali BBQ");
+        _logger.logMessage("Error: Failed to get value from Cali BBQ");
         return;
     }
 
-    // Get the value from caliChunkTemp
     uint32_t chunk;
     bool successChunk = caliChunkTemp.getValue(&chunk);
 
     if (!successChunk)
     {
-        dbSerial.println("Error: Failed to get value from Cali Chunk");
+        _logger.logMessage("Error: Failed to get value from Cali Chunk");
         return;
     }
 
-    // Cast value to int and set it to the tempCalibration
     int caliBBQValue = static_cast<int>(bbq);
     systemStatus->tempCalibration = caliBBQValue;
 
-        // Cast value to int and set it to the tempCalibrationP
     int caliChunkValue = static_cast<int>(chunk);
     systemStatus->tempCalibrationP = caliChunkValue;
 
-    // Debugging statements
-    dbSerial.println("CaliBBQValue: " + String(caliBBQValue));
-    dbSerial.println("SystemStatus tempCalibration: " + String(systemStatus->tempCalibration));
-    dbSerial.println("CaliChunkValue: " + String(caliChunkValue));
-    dbSerial.println("SystemStatus tempCalibrationP: " + String(systemStatus->tempCalibrationP));
-    dbSerial.println("Exiting setChunkTempPopCallback");
+    _logger.logMessage("CaliBBQValue: " + String(caliBBQValue));
+    _logger.logMessage("SystemStatus tempCalibration: " + String(systemStatus->tempCalibration));
+    _logger.logMessage("CaliChunkValue: " + String(caliChunkValue));
+    _logger.logMessage("SystemStatus tempCalibrationP: " + String(systemStatus->tempCalibrationP));
+    _logger.logMessage("Exiting setCaliPushCallback");
     menu.show();
 }
 
@@ -229,6 +213,7 @@ void initNextion(SystemStatus &sysStat)
     stopPush.attachPush(setStopPushCallback, &sysStat);
     setCaliPush.attachPush(setCaliPushCallback, &sysStat);
 
+    _logger.logMessage("Nextion initialized");
 
     delay(500);
 }
@@ -242,7 +227,6 @@ uint8_t getCurrentPageId()
     nexSerial.write(0xff);
     nexSerial.write(0xff);
 
-    // Wait a little for the response
     delay(100);
 
     if (nexSerial.available() >= 5)
@@ -256,8 +240,7 @@ uint8_t getCurrentPageId()
         }
     }
 
-    // dbSerial.print("Current Page ID: ");
-    // dbSerial.println(pageId);
+    _logger.logMessage("Current Page ID: " + String(pageId));
 
     return pageId;
 }
@@ -269,40 +252,38 @@ void setPageBackground(const char *pageName, uint32_t img_id)
         nexSerial.read();
     }
 
-    // Construct the command to change the background image
     String cmd = String(pageName) + ".pic=" + String(img_id);
-    // dbSerial.println("Command: " + cmd);
+    _logger.logMessage("Command: " + cmd);
     nexSerial.print(cmd);
     nexSerial.write(0xFF);
     nexSerial.write(0xFF);
     nexSerial.write(0xFF);
-    delay(50); // Pequeno delay para garantir que o comando seja processado
+    delay(50);
 }
 
-// Function to update a Nextion number component if the value has changed or forceUpdate is true
 void updateNumberComponent(NexNumber &component, float &lastValue, float newValue, const char *componentName, bool forceUpdate)
 {
     if (lastValue != newValue || forceUpdate)
     {
         component.setValue(static_cast<int32_t>(newValue)); // Use int32_t to support negative values
         lastValue = newValue;
+        _logger.logMessage(String(componentName) + " updated to: " + String(newValue));
     }
 }
-
 
 void updateNextionMonitorVariables(SystemStatus &sysStat)
 {
     uint32_t currentPageId = getCurrentPageId();
-    bool forceUpdate = (currentPageId != lastPageId); // Force update if the page has changed
+    bool forceUpdate = (currentPageId != lastPageId);
 
-    // Check if the current page is the monitor page
-    if (currentPageId != 3) // Assuming page ID 3 is the monitor page
+    if (currentPageId != 3)
     {
         lastPageId = currentPageId;
-        return; // Exit if the current page is not the monitor page
+        return;
     }
 
-   // dbSerial.println("-------------------------");
+    _logger.logMessage("Updating Nextion Monitor Variables...");
+
     updateNumberComponent(bbqTempSet, lastBbqTempSet, sysStat.bbqTemperature, "bbqTempSet", forceUpdate);
     updateNumberComponent(bbqTemp, lastBbqTemp, sysStat.calibratedTemp, "bbqTemp", forceUpdate);
     updateNumberComponent(chunkTempSet, lastChunkTempSet, sysStat.proteinTemperature, "chunkTempSet", forceUpdate);
@@ -311,128 +292,107 @@ void updateNextionMonitorVariables(SystemStatus &sysStat)
 
     if (sysStat.isRelayOn != lastRelayState || forceUpdate)
     {
-        // dbSerial.print("Updating relay state from ");
-        // dbSerial.print(lastRelayState);
-        // dbSerial.print(" to ");
-        // dbSerial.println(sysStat.isRelayOn);
-
+        _logger.logMessage("Updating relay state to: " + String(sysStat.isRelayOn ? "ON" : "OFF"));
         if (sysStat.isRelayOn)
         {
-            // relayStatePic.setPic(0);
             setPageBackground("monitor", 4);
         }
         else
         {
-            // relayStatePic.setPic(6);
             setPageBackground("monitor", 1);
         }
         lastRelayState = sysStat.isRelayOn;
     }
-    else
-    {
-      //  dbSerial.print("No update needed for relay state, value remains ");
-       // dbSerial.println(lastRelayState);
-    }
 
-   // dbSerial.println("-------------------------");
-
-    // Update the last page ID
     lastPageId = currentPageId;
 }
 
 void updateNextionSetBBQVariables(SystemStatus &sysStat)
 {
     uint32_t currentPageId = getCurrentPageId();
-    bool forceUpdate = (currentPageId != lastPageIdBBQ); // Force update if the page has changed
+    bool forceUpdate = (currentPageId != lastPageIdBBQ);
 
-    // Check if the current page is the set BBQ page
     if (currentPageId != 4)
     {
         lastPageIdBBQ = currentPageId;
-        initialUpdateDoneBBQ = false; // Reset the initial update flag when leaving the page
+        initialUpdateDoneBBQ = false;
         return;
     }
 
-    if (!initialUpdateDoneBBQ) // Perform the update only once when the page is loaded
+    if (!initialUpdateDoneBBQ)
     {
-        int value = sysStat.bbqTemperature; 
+        int value = sysStat.bbqTemperature;
 
         if (value == 0)
         {
-            value = sysStat.minBBQTemp; 
+            value = sysStat.minBBQTemp;
         }
 
-        setBBQTemp.setValue(value);    // Set the value on the Nextion component
-        initialUpdateDoneBBQ = true; // Set the flag to true to prevent further updates
+        setBBQTemp.setValue(value);
+        initialUpdateDoneBBQ = true;
+        _logger.logMessage("BBQTemp page initialized with value: " + String(value));
     }
 
-   // dbSerial.println("-------------------------");
     updateNumberComponent(minBBQTemp, lastMinBBQTemp, sysStat.minBBQTemp, "minBBQTemp", forceUpdate);
     updateNumberComponent(maxBBQTemp, lastMaxBBQTemp, sysStat.maxBBQTemp, "maxBBQTemp", forceUpdate);
-   // dbSerial.println("-------------------------");
 
-    // Update the last page ID
     lastPageIdBBQ = currentPageId;
 }
 
 void updateNextionSetChunkVariables(SystemStatus &sysStat)
 {
     uint32_t currentPageId = getCurrentPageId();
-    bool forceUpdate = (currentPageId != lastPageIdChunk); // Force update if the page has changed
+    bool forceUpdate = (currentPageId != lastPageIdChunk);
 
-    // Check if the current page is the set Chunk page
     if (currentPageId != 5)
     {
         lastPageIdChunk = currentPageId;
-        initialUpdateDoneChunk = false; // Reset the initial update flag when leaving the page
+        initialUpdateDoneChunk = false;
         return;
     }
 
-    if (!initialUpdateDoneChunk) // Perform the update only once when the page is loaded
+    if (!initialUpdateDoneChunk)
     {
-        int value = sysStat.proteinTemperature; // Get the value from sysStat.proteinTemperature
+        int value = sysStat.proteinTemperature;
 
         if (value == 0)
         {
-            value = sysStat.minPrtTemp; // Use sysStat.minPrtTemp if avgChunkTemp is zero
+            value = sysStat.minPrtTemp;
         }
 
-        setChunkTemp.setValue(value);    // Set the value on the Nextion component
-        
-        initialUpdateDoneChunk = true; // Set the flag to true to prevent further updates
+        setChunkTemp.setValue(value);
+        initialUpdateDoneChunk = true;
+        _logger.logMessage("ChunkTemp page initialized with value: " + String(value));
     }
 
-    
     updateNumberComponent(minChunkTemp, lastMinChunkTemp, sysStat.minPrtTemp, "minChunkTemp", forceUpdate);
     updateNumberComponent(maxChunkTemp, lastMaxChunkTemp, sysStat.maxPrtTemp, "maxChunkTemp", forceUpdate);
-   
 
-    // Update the last page ID
     lastPageIdChunk = currentPageId;
 }
 
 void updateNextionSetCaliVariables(SystemStatus &sysStat)
 {
     uint32_t currentPageId = getCurrentPageId();
-    bool forceUpdate = (currentPageId != lastPageIdCali); // Force update if the page has changed
+    bool forceUpdate = (currentPageId != lastPageIdCali);
 
-    // Check if the current page is the set Chunk page
     if (currentPageId != 6)
     {
         lastPageIdCali = currentPageId;
-        initialUpdateDoneCali = false; // Reset the initial update flag when leaving the page
+        initialUpdateDoneCali = false;
         return;
     }
 
-    if (!initialUpdateDoneCali) // Perform the update only once when the page is loaded
+    if (!initialUpdateDoneCali)
     {
-        int32_t bbq = static_cast<int32_t>(sysStat.tempCalibration); // Get the value from sysStat.tempCalibration
-        int32_t chunk = static_cast<int32_t>(sysStat.tempCalibrationP); // Get the value from sysStat.tempCalibrationP
+        int32_t bbq = static_cast<int32_t>(sysStat.tempCalibration);
+        int32_t chunk = static_cast<int32_t>(sysStat.tempCalibrationP);
 
-        caliBBQTemp.setValue(bbq);    // Set the value on the Nextion component
-        caliChunkTemp.setValue(chunk);    // Set the value on the Nextion component
-        
-        initialUpdateDoneCali = true; // Set the flag to true to prevent further updates
+        caliBBQTemp.setValue(bbq);
+        caliChunkTemp.setValue(chunk);
+
+        initialUpdateDoneCali = true;
+        _logger.logMessage("Calibration page initialized with BBQ: " + String(bbq) + " Chunk: " + String(chunk));
     }
 
     updateNumberComponent(minCaliBBQTemp, lastMinCaliBBQ, static_cast<int32_t>(sysStat.minCaliTemp), "minCaliBBQTemp", forceUpdate);
@@ -440,6 +400,5 @@ void updateNextionSetCaliVariables(SystemStatus &sysStat)
     updateNumberComponent(minCaliChuTemp, lastMinCaliChunk, static_cast<int32_t>(sysStat.minCaliTempP), "minCaliChuTemp", forceUpdate);
     updateNumberComponent(maxCaliChuTemp, lastMaxCaliChunk, sysStat.maxCaliTempP, "maxCaliChuTemp", forceUpdate);
 
-    // Update the last page ID
     lastPageIdCali = currentPageId;
 }

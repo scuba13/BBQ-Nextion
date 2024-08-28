@@ -1,50 +1,47 @@
 #include "EnergyEndpoints.h"
 #include <ArduinoJson.h>
+#include "LogHandler.h"       // Inclua o novo LogHandler aqui
+#include "ResponseHelper.h"   // Inclua o ResponseHelper aqui
 #include <Nextion.h>
 
-
 void registerEnergyEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, LogHandler& logger) {
-    server.on("/getEnergy", HTTP_GET, [&systemStatus](AsyncWebServerRequest *request) {
-        JsonDocument doc;
+    server.on("/api/v1/energy", HTTP_GET, [&systemStatus, &logger](AsyncWebServerRequest *request) {
+        // Log da requisição utilizando o novo LogHandler
+        logger.logRequest(request, "Fetching energy data");
+
+        DynamicJsonDocument doc(1024);
         doc["power"] = systemStatus.power;
         doc["energy"] = systemStatus.energy;
         doc["cost"] = systemStatus.cost;
         doc["kWhCost"] = systemStatus.kWhCost;
 
-        String jsonResponse;
-        serializeJson(doc, jsonResponse);
-        request->send(200, "application/json", jsonResponse);
+        // Utilizando ResponseHelper para enviar a resposta
+        ResponseHelper::sendJsonResponse(request, 200, "Energy data fetched successfully", doc.as<JsonObject>());
+        
+        // Log da mensagem de sucesso utilizando o novo LogHandler
+        logger.logMessage("Energy data fetched successfully");
     });
 
-    server.on("/setEnergyCost", HTTP_POST, [&systemStatus, &logger](AsyncWebServerRequest *request) {
-        dbSerial.println("Requisição recebida Set EnergyCost");
-        logger.logMessage("Requisição recebida Set EnergyCost");
+    server.on("/api/v1/energy/cost", HTTP_POST, [&systemStatus, &logger](AsyncWebServerRequest *request) {
+        // Log da requisição utilizando o novo LogHandler
+        logger.logRequest(request, "Setting energy cost");
 
         if (request->hasParam("kWhCost", true)) {
             float receivedNumber = request->getParam("kWhCost", true)->value().toFloat();
             systemStatus.kWhCost = receivedNumber;
-            dbSerial.println("EnergyCost recebida: " + String(systemStatus.kWhCost));
-            logger.logMessage("EnergyCost recebida: " + String(systemStatus.kWhCost));
 
-            AsyncResponseStream *response = request->beginResponseStream("application/json");
-            JsonDocument jsonDoc;
+            logger.logMessage("Energy cost received: " + String(systemStatus.kWhCost));
+
+            // Utilizando ResponseHelper para enviar a resposta
+            DynamicJsonDocument jsonDoc(1024);
             jsonDoc["status"] = "success";
             jsonDoc["kWhCost"] = systemStatus.kWhCost;
-            serializeJson(jsonDoc, *response);
-            request->send(response);
-            dbSerial.println("EnergyCost definida: " + String(systemStatus.kWhCost));
-            logger.logMessage("EnergyCost definida: " + String(systemStatus.kWhCost));
+            ResponseHelper::sendJsonResponse(request, 200, "Energy cost set successfully", jsonDoc.as<JsonObject>());
 
+            logger.logMessage("Energy cost set successfully: " + String(systemStatus.kWhCost));
         } else {
-            dbSerial.println("Parâmetro 'kWhCost' não encontrado na solicitação.");
-            AsyncResponseStream *response = request->beginResponseStream("application/json");
-            JsonDocument jsonDoc;
-            jsonDoc["status"] = "error";
-            jsonDoc["message"] = "Parameter 'kWhCost' not found in the request.";
-            serializeJson(jsonDoc, *response);
-            request->send(response);
-            dbSerial.println("Parâmetro 'kWhCost' não encontrado na solicitação.");
-            logger.logMessage("Parâmetro 'kWhCost' não encontrado na solicitação.");
+            logger.logError("Parameter 'kWhCost' not found in the request");
+            ResponseHelper::sendErrorResponse(request, 400, "Parameter 'kWhCost' not found in the request");
         }
     });
 }

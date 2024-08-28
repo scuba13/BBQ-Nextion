@@ -3,13 +3,40 @@
 #include <LittleFS.h>
 #include <Nextion.h>
 
+LogHandler::LogHandler() {
+    // Inicializa o LittleFS se ainda não estiver inicializado
+    if (!LittleFS.begin()) {
+        dbSerial.println("Falha ao montar o sistema de arquivos!");
+    }
+}
 
-// Defina o tamanho máximo do arquivo de log em bytes (por exemplo, 1 MB)
-const unsigned long MAX_LOG_SIZE = 1 * 1024 * 1024; // 1 MB
+void LogHandler::logRequest(AsyncWebServerRequest *request, const String &message) {
+    String logMsg = formatLogMessage("[LOG]", request->client()->remoteIP().toString(), request->methodToString(), request->url(), message);
+    logToSerial(logMsg);
+    logToFile(logMsg);
+}
 
-LogHandler::LogHandler() {}
+void LogHandler::logMessage(const String &message) {
+    String logMsg = "[LOG] " + message;
+    logToSerial(logMsg);
+    logToFile(logMsg);
+}
 
-void LogHandler::logMessage(const String& message) {
+void LogHandler::logError(const String &message) {
+    String logMsg = "[ERROR] " + message;
+    logToSerial(logMsg);
+    logToFile(logMsg);
+}
+
+String LogHandler::formatLogMessage(const String& level, const String& clientIP, const String& method, const String& url, const String& message) {
+    return level + " " + clientIP + ": " + method + " " + url + " - " + message;
+}
+
+void LogHandler::logToSerial(const String &message) {
+    dbSerial.println(message);
+}
+
+void LogHandler::logToFile(const String &message) {
     // Verifica se o arquivo de log existe e seu tamanho
     if (LittleFS.exists("/log.txt")) {
         File logFile = LittleFS.open("/log.txt", "r");

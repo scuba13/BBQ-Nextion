@@ -1,11 +1,16 @@
 #include "MonitorEndpoints.h"
+#include "LogHandler.h"       // Inclua o novo LogHandler aqui
+#include "ResponseHelper.h"   // Inclua o ResponseHelper aqui
 #include <ArduinoJson.h>
 
-void registerMonitorEndpoints(AsyncWebServer &server, SystemStatus &systemStatus)
+void registerMonitorEndpoints(AsyncWebServer &server, SystemStatus &systemStatus, LogHandler &logger)
 {
-    server.on("/monitorando", HTTP_GET, [&systemStatus](AsyncWebServerRequest *request)
+    server.on("/api/v1/monitor", HTTP_GET, [&systemStatus, &logger](AsyncWebServerRequest *request)
     {
-        JsonDocument doc; // Ajuste o tamanho conforme necessário
+        // Log da requisição utilizando o novo LogHandler
+        logger.logRequest(request, "Fetching monitoring data");
+
+        DynamicJsonDocument doc(1024); // Ajuste o tamanho conforme necessário
         doc["currentTemp"] = systemStatus.calibratedTemp;
         doc["setTemp"] = systemStatus.bbqTemperature;
         doc["proteinTemp"] = systemStatus.calibratedTempP;
@@ -22,8 +27,10 @@ void registerMonitorEndpoints(AsyncWebServer &server, SystemStatus &systemStatus
         doc["minCaliTempP"] = systemStatus.minCaliTempP;
         doc["maxCaliTempP"] = systemStatus.maxCaliTempP;
 
-        String jsonResponse;
-        serializeJson(doc, jsonResponse);
-        request->send(200, "application/json", jsonResponse);
+        // Utilizando ResponseHelper para enviar a resposta
+        ResponseHelper::sendJsonResponse(request, 200, "Monitoring data fetched successfully", doc.as<JsonObject>());
+        
+        // Log da mensagem de sucesso utilizando o novo LogHandler
+        logger.logMessage("Monitoring data fetched successfully");
     });
 }

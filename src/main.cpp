@@ -13,7 +13,6 @@
 #include "NextionHandler.h"
 #include "TaskHandler.h"
 #include "WiFiHandler.h"
-#include "/home/edu/.platformio/packages/framework-arduinoespressif32/libraries/SD/src/SD.h"
 
 // Instanciação dos objetos das classes
 SystemStatus sysStat;
@@ -24,106 +23,89 @@ LogHandler logHandler;
 AsyncWebServer server(80);
 WebServerControl webServerControl(sysStat, fileSystem, logHandler, server);
 MQTTHandler mqttHandler(net, client, sysStat, logHandler);
+LogHandler _logger; 
 
 void setup()
 {
-
-    dbSerial.println("Iniciando App ..");
-
-    // colocar chamada pagina inicial
+    logHandler.logMessage("Iniciando App ..");
 
     // Inicialização do Nextion
-    dbSerial.println("Iniciando Nextion");
+    logHandler.logMessage("Iniciando Nextion");
     initNextion(sysStat);
-    dbSerial.println("Nextion Iniciado");
+    logHandler.logMessage("Nextion Iniciado");
 
     // Obtenção e exibição do endereço MAC
     String mac = WiFi.macAddress();
-    dbSerial.println("Endereço MAC: " + mac);
+    logHandler.logMessage("Endereço MAC: " + mac);
 
     // Inicialização do sistema de arquivos
-    dbSerial.println("Inicializando FileSystem");
+    logHandler.logMessage("Inicializando FileSystem");
     fileSystem.initializeAndLoadConfig(sysStat, mac);
-    dbSerial.println("FileSystem inicializado");
+    logHandler.logMessage("FileSystem inicializado");
 
     // Inicialização do LogHandler
-    dbSerial.println("Inicializando LogHandler");
+    logHandler.logMessage("Inicializando LogHandler");
     logHandler.logMessage("Log Inicializado");
-    dbSerial.println("LogHandler inicializado");
+    logHandler.logMessage("LogHandler inicializado");
 
     // Configuração do pino do relé
-    dbSerial.println("Iniciando Pino do Rele");
+    logHandler.logMessage("Iniciando Pino do Rele");
     pinMode(RELAY_PIN, OUTPUT);
     digitalWrite(RELAY_PIN, LOW);
-    dbSerial.println("Pino do Rele Iniciado");
+    logHandler.logMessage("Pino do Rele Iniciado");
 
     // Criação das tarefas para obter as temperaturas calibradas
-    dbSerial.println("Criando tarefas...");
+    logHandler.logMessage("Criando tarefas...");
     createTasks();
-    dbSerial.println("Tarefas criadas");
+    logHandler.logMessage("Tarefas criadas");
 
     // Verificação da disponibilidade do MQTT Broker
     mqttHandler.verifyAndReconnect(sysStat);
 
     // Verificação e validação do sistema de arquivos
-    dbSerial.println("Validando arquivos...");
     logHandler.logMessage("Validando arquivos...");
     fileSystem.verifyFileSystem();
-    dbSerial.println("Arquivos validados");
     logHandler.logMessage("Arquivos validados");
 
     // Conexão WiFi
-    dbSerial.println("Iniciando WiFi");
+    logHandler.logMessage("Iniciando WiFi");
     initWiFi(sysStat, logHandler);
-    dbSerial.println("WiFi Iniciado");
+    logHandler.logMessage("WiFi Iniciado");
 
     // Inicialização do servidor web
-    dbSerial.println("Inicializando servidor web...");
+    logHandler.logMessage("Inicializando servidor web...");
     webServerControl.begin();
-    dbSerial.println("Servidor Web iniciado com sucesso");
     logHandler.logMessage("Servidor Web iniciado com sucesso");
 
     // Verifique se a PSRAM está disponível
     if (psramFound())
     {
-        dbSerial.println("PSRAM found and initialized.");
+        logHandler.logMessage("PSRAM found and initialized.");
     }
     else
     {
-        dbSerial.println("PSRAM not found.");
+        logHandler.logMessage("PSRAM not found.");
     }
 
     // Verifique o tamanho da PSRAM
-    dbSerial.print("PSRAM size: ");
-    dbSerial.print(ESP.getPsramSize() / 1024);
-    dbSerial.println(" KB");
+    logHandler.logMessage("PSRAM size: " + String(ESP.getPsramSize() / 1024) + " KB");
 
     // Verifique a memória PSRAM livre
-    dbSerial.print("Free PSRAM: ");
-    dbSerial.print(ESP.getFreePsram() / 1024);
-    dbSerial.println(" KB");
+    logHandler.logMessage("Free PSRAM: " + String(ESP.getFreePsram() / 1024) + " KB");
 
     // Verifique o tamanho total da RAM interna
-    dbSerial.print("Total heap size: ");
-    dbSerial.print(ESP.getHeapSize() / 1024);
-    dbSerial.println(" KB");
+    logHandler.logMessage("Total heap size: " + String(ESP.getHeapSize() / 1024) + " KB");
 
     // Verifique a memória RAM interna livre
-    dbSerial.print("Free heap size: ");
-    dbSerial.print(ESP.getFreeHeap() / 1024);
-    dbSerial.println(" KB");
+    logHandler.logMessage("Free heap size: " + String(ESP.getFreeHeap() / 1024) + " KB");
 
     // Verifique o tamanho total da DRAM interna
-    dbSerial.print("Total DRAM: ");
-    dbSerial.print(ESP.getMaxAllocHeap() / 1024);
-    dbSerial.println(" KB");
+    logHandler.logMessage("Total DRAM: " + String(ESP.getMaxAllocHeap() / 1024) + " KB");
 
     // Verifique o tamanho total da memória de código
-    dbSerial.print("Total instruction RAM: ");
-    dbSerial.print(ESP.getFlashChipSize() / 1024);
-    dbSerial.println(" KB");
+    logHandler.logMessage("Total instruction RAM: " + String(ESP.getFlashChipSize() / 1024) + " KB");
 
-    dbSerial.println("App Iniciada");
+    logHandler.logMessage("App Iniciada");
     neopixelWrite(RGB_BUILTIN, 0, RGB_BRIGHTNESS, 0); // Green
     delay(1000);
     neopixelWrite(RGB_BUILTIN, 0, 0, 0); // Off / black
@@ -134,13 +116,12 @@ const unsigned long updateInterval = 500; // Intervalo de tempo desejado (em mil
 
 void loop()
 {
-
     // Atualizar os valores das variáveis do Nextion com intervalo
     unsigned long currentTime = millis();
     if (currentTime - lastUpdateTime >= updateInterval)
     {
         lastUpdateTime = currentTime;
-        //     // Loop do Nextion
+        // Loop do Nextion
         nexLoop(nex_listen_list);
         updateNextionMonitorVariables(sysStat);
         updateNextionSetBBQVariables(sysStat);

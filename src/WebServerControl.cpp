@@ -22,7 +22,7 @@ void WebServerControl::begin() {
     registerGeneralEndpoints(_server, _systemStatus, _logger, _otaHandler);
     registerAIEndpoints(_server, _systemStatus, _logger, _fileSystem);
     registerSystemEndpoints(_server, _systemStatus, _logger);
-    registerMonitorEndpoints(_server, _systemStatus);
+    registerMonitorEndpoints(_server, _systemStatus, _logger);
 
     // Servindo arquivos JavaScript, CSS e favicon
     _server.serveStatic("/static/js/", LittleFS, "/static/js/");

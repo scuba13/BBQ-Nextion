@@ -1,58 +1,49 @@
 #include "TemperatureEndpoints.h"
-#include "TemperatureControl.h"
-#include <ArduinoJson.h>
-#include <Nextion.h>
-
-
+#include "LogHandler.h"      // Inclua o novo LogHandler aqui
+#include "ResponseHelper.h"  // Inclua o ResponseHelper aqui
 
 void registerTemperatureEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, LogHandler& logger) {
-    server.on("/setTemp", HTTP_POST, [&systemStatus, &logger](AsyncWebServerRequest *request) {
-        dbSerial.println("Requisição recebida Set BBQ Temperature");
-        if (request->hasParam("temp", true)) {
-            int receivedNumber = request->getParam("temp", true)->value().toInt();
-            systemStatus.bbqTemperature = receivedNumber;
-            dbSerial.println("Temperatura definida recebida: " + String(systemStatus.bbqTemperature));
-            logger.logMessage("Temperatura definida recebida: " + String(systemStatus.bbqTemperature));
+    server.on("/api/v1/temperature/config", HTTP_GET, [&](AsyncWebServerRequest *request) {
+        // Log da requisição utilizando o novo LogHandler
+        logger.logRequest(request, "Fetching temperature config");
 
-            AsyncResponseStream *response = request->beginResponseStream("application/json");
-            JsonDocument jsonDoc;
-            jsonDoc["status"] = "success";
-            jsonDoc["temp"] = systemStatus.bbqTemperature;
-            serializeJson(jsonDoc, *response);
-            request->send(response);
-        } else {
-            dbSerial.println("Parâmetro 'temp' não encontrado na solicitação.");
-            AsyncResponseStream *response = request->beginResponseStream("application/json");
-            JsonDocument jsonDoc;
-            jsonDoc["status"] = "error";
-            jsonDoc["message"] = "Parameter 'temp' not found in the request.";
-            serializeJson(jsonDoc, *response);
-            request->send(response);
-        }
+        DynamicJsonDocument data(1024);
+        data["minBBQTemp"] = systemStatus.minBBQTemp;
+        data["maxBBQTemp"] = systemStatus.maxBBQTemp;
+
+        // Utilizando ResponseHelper para enviar a resposta
+        ResponseHelper::sendJsonResponse(request, 200, "Temperature config fetched successfully", data.as<JsonObject>());
+        
+        // Log da mensagem de sucesso utilizando o novo LogHandler
+        logger.logMessage("Temperature config fetched successfully");
     });
 
-    server.on("/setProteinTemp", HTTP_POST, [&systemStatus, &logger](AsyncWebServerRequest *request) {
-        dbSerial.println("Requisição recebida Set Protein Temperature");
-        if (request->hasParam("proteinTemp", true)) {
-            int receivedNumber = request->getParam("proteinTemp", true)->value().toInt();
-            systemStatus.proteinTemperature = receivedNumber;
-            dbSerial.println("Protein temperature set to: " + String(systemStatus.proteinTemperature));
-            logger.logMessage("Protein temperature set to: " + String(systemStatus.proteinTemperature));
+    server.on("/api/v1/temperature/config", HTTP_POST, [&](AsyncWebServerRequest *request) {
+        // Log da requisição utilizando o novo LogHandler
+        logger.logRequest(request, "Updating temperature config");
 
-            AsyncResponseStream *response = request->beginResponseStream("application/json");
-            JsonDocument jsonDoc;
-            jsonDoc["status"] = "success";
-            jsonDoc["proteinTemp"] = systemStatus.proteinTemperature;
-            serializeJson(jsonDoc, *response);
-            request->send(response);
+        if (request->hasParam("minBBQTemp", true)) {
+            AsyncWebParameter* tempParam = request->getParam("minBBQTemp", true);
+            systemStatus.minBBQTemp = tempParam->value().toInt();
         } else {
-            dbSerial.println("Parâmetro 'proteinTemp' não encontrado na solicitação.");
-            AsyncResponseStream *response = request->beginResponseStream("application/json");
-            JsonDocument jsonDoc;
-            jsonDoc["status"] = "error";
-            jsonDoc["message"] = "Parameter 'proteinTemp' not found in the request.";
-            serializeJson(jsonDoc, *response);
-            request->send(response);
+            ResponseHelper::sendErrorResponse(request, 400, "Missing 'minBBQTemp' parameter");
+            // Log de erro utilizando o novo LogHandler
+            logger.logError("Missing 'minBBQTemp' parameter");
+            return;
         }
+
+        if (request->hasParam("maxBBQTemp", true)) {
+            AsyncWebParameter* tempParam = request->getParam("maxBBQTemp", true);
+            systemStatus.maxBBQTemp = tempParam->value().toInt();
+        } else {
+            ResponseHelper::sendErrorResponse(request, 400, "Missing 'maxBBQTemp' parameter");
+            // Log de erro utilizando o novo LogHandler
+            logger.logError("Missing 'maxBBQTemp' parameter");
+            return;
+        }
+
+        ResponseHelper::sendJsonResponse(request, 200, "Temperature config updated successfully");
+        // Log da mensagem de sucesso utilizando o novo LogHandler
+        logger.logMessage("Temperature config updated successfully");
     });
 }

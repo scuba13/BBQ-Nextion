@@ -2,24 +2,22 @@
 #include "TemperatureControl.h"
 #include <Nextion.h>
 
+extern LogHandler _logger;
 
 MQTTHandler::MQTTHandler(WiFiClient& net, PubSubClient& client, SystemStatus& systemStatus, LogHandler& logger)
     : net(net), client(client), systemStatus(systemStatus), _logger(logger) {
     // Construtor
 }
- 
-void MQTTHandler::connectMQTT() {
 
+void MQTTHandler::connectMQTT() {
     // Configura o servidor MQTT e porta
     client.setServer(systemStatus.mqttServer, systemStatus.mqttPort);
 
-    dbSerial.println("Connecting to MQTT Broker...");
     _logger.logMessage("Connecting to MQTT Broker...");
 
     while (!client.connected()) {
         // Tenta conectar com o usuário e senha
         if (client.connect("ESPDeviceClient", systemStatus.mqttUser, systemStatus.mqttPassword)) {
-            dbSerial.println("Connected to MQTT Broker");
             _logger.logMessage("Connected to MQTT Broker");
 
             client.subscribe("sensor/bbq_set_temperature/set");
@@ -29,20 +27,15 @@ void MQTTHandler::connectMQTT() {
             // Registra a função de callback para mensagens MQTT
             client.setCallback([this](char* topic, byte* payload, unsigned int length) { this->messageHandler(topic, payload, length); });
         } else {
-            dbSerial.print("Failed to connect to MQTT Broker, rc=");
-            _logger.logMessage("Failed to connect to MQTT Broker, rc=");
-            dbSerial.println(client.state());
-            _logger.logMessage(String(client.state()));
+            _logger.logMessage("Failed to connect to MQTT Broker, rc=" + String(client.state()));
             delay(5000); // Aguarda 5 segundos antes de tentar novamente
         }
     }
 }
 
-
 void MQTTHandler::messageHandler(char* topic, byte* payload, unsigned int length) {
     String receivedTopic = String(topic);
     String messageTemp = String((char*)payload, length);
-    dbSerial.println("Received [" + receivedTopic + "]: " + messageTemp);
     _logger.logMessage("Received [" + receivedTopic + "]: " + messageTemp);
 
     // Verifica se a mensagem é para setar a temperatura da BBQ
@@ -50,12 +43,8 @@ void MQTTHandler::messageHandler(char* topic, byte* payload, unsigned int length
         float bbqTempSet = messageTemp.toFloat();
         if (bbqTempSet >= 30 && bbqTempSet <= 250) {
             systemStatus.bbqTemperature = bbqTempSet;
-            dbSerial.print("Nova temperatura da BBQ setada: ");
-            _logger.logMessage("Nova temperatura da BBQ setada: ");
-            dbSerial.println(systemStatus.bbqTemperature);
-            _logger.logMessage(String(systemStatus.bbqTemperature));
+            _logger.logMessage("Nova temperatura da BBQ setada: " + String(systemStatus.bbqTemperature));
         } else {
-            dbSerial.println("Valor de BBQTempSet inválido!");
             _logger.logMessage("Valor de BBQTempSet inválido!");
         }
     }
@@ -64,12 +53,8 @@ void MQTTHandler::messageHandler(char* topic, byte* payload, unsigned int length
         float proteinTempSet = messageTemp.toFloat();
         if (proteinTempSet >= 25 && proteinTempSet <= 100) {
             systemStatus.proteinTemperature = proteinTempSet;
-            dbSerial.print("Nova temperatura da proteína setada: ");
-            _logger.logMessage("Nova temperatura da proteína setada: ");
-            dbSerial.println(systemStatus.proteinTemperature);
-            _logger.logMessage(String(systemStatus.proteinTemperature));
+            _logger.logMessage("Nova temperatura da proteína setada: " + String(systemStatus.proteinTemperature));
         } else {
-            dbSerial.println("Valor de ProteinTempSet inválido!");
             _logger.logMessage("Valor de ProteinTempSet inválido!");
         }
     }
@@ -78,73 +63,53 @@ void MQTTHandler::messageHandler(char* topic, byte* payload, unsigned int length
         // Executa a lógica de reset apenas se o payload for "reset"
         if (messageTemp == "RESET") {
             resetSystem(systemStatus);
-            dbSerial.println("Sistema Resetado");
             _logger.logMessage("Sistema Resetado");
         }
     }
 }
 
 void MQTTHandler::publishAllMessages(SystemStatus& systemStatus) {
-    // Publica a temperatura da BBQ
-    dbSerial.println("=======================================");
     _logger.logMessage("=======================================");
+
+    // Publica a temperatura da BBQ
     String bbqTemp = String(systemStatus.calibratedTemp);
     client.publish("sensor/bbq_temperature", bbqTemp.c_str());
-    dbSerial.println("BBQ temperature: " + bbqTemp);
     _logger.logMessage("BBQ temperature: " + bbqTemp);
 
     // Publica a temperatura setada para a BBQ
     String bbqTempSet = String(systemStatus.bbqTemperature);
     client.publish("sensor/bbq_set_temperature", bbqTempSet.c_str());
-    dbSerial.println("BBQ set temperature: " + bbqTempSet);
     _logger.logMessage("BBQ set temperature: " + bbqTempSet);
 
     // Publica o estado do relé
     String relayState = systemStatus.isRelayOn ? "electric" : "off";
     client.publish("relay/state", relayState.c_str());
-    dbSerial.println("Relay state: " + relayState);
     _logger.logMessage("Relay state: " + relayState);
 
     // Publica a temperatura da proteína
     String proteinTemp = String(systemStatus.calibratedTempP);
     client.publish("sensor/protein_temperature", proteinTemp.c_str());
-    dbSerial.println("Protein temperature: " + proteinTemp);
     _logger.logMessage("Protein temperature: " + proteinTemp);
 
-        // Publica a temperatura setada para a BBQ
+    // Publica a temperatura setada para a proteína
     String proteinTempSet = String(systemStatus.proteinTemperature);
     client.publish("sensor/protein_set_temperature", proteinTempSet.c_str());
-    dbSerial.println("Protein set temperature: " + proteinTempSet);
     _logger.logMessage("Protein set temperature: " + proteinTempSet);
 
-    // Publica o estado do relé proteína
+    // Publica o estado do relé para proteína
     String relayStateProtein = systemStatus.proteinTemperature > 0 ? "electric" : "off";
     client.publish("relay_protein/state", relayStateProtein.c_str());
-    dbSerial.println("Relay Protein state: " + relayStateProtein);
     _logger.logMessage("Relay Protein state: " + relayStateProtein);
 
     // Publica a média da temperatura da BBQ
     String bbqTempAvg = String(systemStatus.averageTemp);
     client.publish("sensor/bbq_average_temperature", bbqTempAvg.c_str());
-    dbSerial.println("BBQ average temperature: " + bbqTempAvg);
     _logger.logMessage("BBQ average temperature: " + bbqTempAvg);
 
-    // // Publica Reset
-    // String reset = "OFF";
-    // client.publish("func/reset", reset.c_str());
-    // dbSerial.println("Reset State: " + reset);
-
-
-
-    dbSerial.println("Published all messages to MQTT topics");
     _logger.logMessage("Published all messages to MQTT topics");
-    dbSerial.println("=======================================");
     _logger.logMessage("=======================================");
 }
 
-
-
-// New reconnection function
 void MQTTHandler::checkAndReconnectAwsIoT() {
     if (!client.connected()) {
         connectMQTT();
@@ -153,13 +118,11 @@ void MQTTHandler::checkAndReconnectAwsIoT() {
 }
 
 void MQTTHandler::verifyAndReconnect(SystemStatus& systemStatus) {
-    dbSerial.println("Verificando disponibilidade do MQTT Broker...");
+    _logger.logMessage("Verificando disponibilidade do MQTT Broker...");
     if (systemStatus.isHAAvailable) {
-        dbSerial.println("MQTT Broker disponível");
         _logger.logMessage("MQTT Broker disponível");
         connectMQTT();
     } else {
-        dbSerial.println("MQTT Broker não disponível");
         _logger.logMessage("MQTT Broker não disponível");
     }
 }
@@ -175,7 +138,6 @@ void MQTTHandler::managePublishing(SystemStatus& systemStatus) {
         if (systemStatus.isHAAvailable) {
             publishAllMessages(systemStatus);
         }
-        
     }
 
     if (systemStatus.isHAAvailable) {
