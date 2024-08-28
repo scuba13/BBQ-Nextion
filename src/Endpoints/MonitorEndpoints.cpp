@@ -18,6 +18,7 @@ void registerMonitorEndpoints(AsyncWebServer &server, SystemStatus &systemStatus
         doc["relayState"] = systemStatus.isRelayOn ? "ON" : "OFF";
         doc["avgTemp"] = systemStatus.averageTemp;
         doc["caliTemp"] = systemStatus.tempCalibration;
+        doc["caliTempP"] = systemStatus.tempCalibrationP;
         doc["minBBQTemp"] = systemStatus.minBBQTemp;
         doc["maxBBQTemp"] = systemStatus.maxBBQTemp;
         doc["minPrtTemp"] = systemStatus.minPrtTemp;

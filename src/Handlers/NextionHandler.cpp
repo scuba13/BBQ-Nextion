@@ -253,7 +253,7 @@ void setPageBackground(const char *pageName, uint32_t img_id)
     }
 
     String cmd = String(pageName) + ".pic=" + String(img_id);
-    _logger.logMessage("Command: " + cmd);
+   // _logger.logMessage("Command: " + cmd);
     nexSerial.print(cmd);
     nexSerial.write(0xFF);
     nexSerial.write(0xFF);
@@ -267,7 +267,7 @@ void updateNumberComponent(NexNumber &component, float &lastValue, float newValu
     {
         component.setValue(static_cast<int32_t>(newValue)); // Use int32_t to support negative values
         lastValue = newValue;
-        _logger.logMessage(String(componentName) + " updated to: " + String(newValue));
+       // _logger.logMessage(String(componentName) + " updated to: " + String(newValue));
     }
 }
 
@@ -282,7 +282,7 @@ void updateNextionMonitorVariables(SystemStatus &sysStat)
         return;
     }
 
-    _logger.logMessage("Updating Nextion Monitor Variables...");
+   // _logger.logMessage("Updating Nextion Monitor Variables...");
 
     updateNumberComponent(bbqTempSet, lastBbqTempSet, sysStat.bbqTemperature, "bbqTempSet", forceUpdate);
     updateNumberComponent(bbqTemp, lastBbqTemp, sysStat.calibratedTemp, "bbqTemp", forceUpdate);
@@ -330,7 +330,7 @@ void updateNextionSetBBQVariables(SystemStatus &sysStat)
 
         setBBQTemp.setValue(value);
         initialUpdateDoneBBQ = true;
-        _logger.logMessage("BBQTemp page initialized with value: " + String(value));
+       // _logger.logMessage("BBQTemp page initialized with value: " + String(value));
     }
 
     updateNumberComponent(minBBQTemp, lastMinBBQTemp, sysStat.minBBQTemp, "minBBQTemp", forceUpdate);
@@ -362,7 +362,7 @@ void updateNextionSetChunkVariables(SystemStatus &sysStat)
 
         setChunkTemp.setValue(value);
         initialUpdateDoneChunk = true;
-        _logger.logMessage("ChunkTemp page initialized with value: " + String(value));
+       // _logger.logMessage("ChunkTemp page initialized with value: " + String(value));
     }
 
     updateNumberComponent(minChunkTemp, lastMinChunkTemp, sysStat.minPrtTemp, "minChunkTemp", forceUpdate);
@@ -392,7 +392,7 @@ void updateNextionSetCaliVariables(SystemStatus &sysStat)
         caliChunkTemp.setValue(chunk);
 
         initialUpdateDoneCali = true;
-        _logger.logMessage("Calibration page initialized with BBQ: " + String(bbq) + " Chunk: " + String(chunk));
+       // _logger.logMessage("Calibration page initialized with BBQ: " + String(bbq) + " Chunk: " + String(chunk));
     }
 
     updateNumberComponent(minCaliBBQTemp, lastMinCaliBBQ, static_cast<int32_t>(sysStat.minCaliTemp), "minCaliBBQTemp", forceUpdate);
