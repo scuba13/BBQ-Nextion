@@ -92,16 +92,16 @@ void createTasks()
 
     _logger.logMessage("Task ControlTempTask created.");
 
-    xTaskCreate(
-        getCalibratedInternalTempTask, // Função que será executada pela tarefa. Esta função irá obter a temperatura interna calibrada.
-        "ControlInternalTempTask",      // Nome da tarefa (útil para fins de depuração).
-        4000,                   // Tamanho da pilha da tarefa. Reserva espaço para 2000 entradas.
-        NULL,                   // Parâmetros que são passados para a função da tarefa. No caso, nenhum parâmetro é passado.
-        1,                      // Prioridade da tarefa. Aqui, a tarefa tem uma prioridade de 1.
-        NULL                    // Pode armazenar o identificador da tarefa, mas não estamos armazenando aqui.
-    );
+    // xTaskCreate(
+    //     getCalibratedInternalTempTask, // Função que será executada pela tarefa. Esta função irá obter a temperatura interna calibrada.
+    //     "ControlInternalTempTask",      // Nome da tarefa (útil para fins de depuração).
+    //     2000,                   // Tamanho da pilha da tarefa. Reserva espaço para 2000 entradas.
+    //     NULL,                   // Parâmetros que são passados para a função da tarefa. No caso, nenhum parâmetro é passado.
+    //     1,                      // Prioridade da tarefa. Aqui, a tarefa tem uma prioridade de 1.
+    //     NULL                    // Pode armazenar o identificador da tarefa, mas não estamos armazenando aqui.
+    // );
 
-    _logger.logMessage("Task ControlInternalTempTask created.");
+    // _logger.logMessage("Task ControlInternalTempTask created.");
 
     _logger.logMessage("All tasks created successfully.");
 }

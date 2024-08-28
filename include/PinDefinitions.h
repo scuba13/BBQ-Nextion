@@ -11,7 +11,7 @@
 
 #define Ds18b2 4
 
-#define RELAY_PIN 5
+#define RELAY_PIN 1
 
 // 16 e 17 RX e TX sao para o display
 #endif // PIN_DEFINITIONS_H

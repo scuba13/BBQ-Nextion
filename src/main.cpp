@@ -116,13 +116,13 @@ const unsigned long updateInterval = 500; // Intervalo de tempo desejado (em mil
 
 void loop()
 {
+    nexLoop(nex_listen_list);
     // Atualizar os valores das variáveis do Nextion com intervalo
     unsigned long currentTime = millis();
     if (currentTime - lastUpdateTime >= updateInterval)
     {
         lastUpdateTime = currentTime;
         // Loop do Nextion
-        nexLoop(nex_listen_list);
         updateNextionMonitorVariables(sysStat);
         updateNextionSetBBQVariables(sysStat);
         updateNextionSetChunkVariables(sysStat);
