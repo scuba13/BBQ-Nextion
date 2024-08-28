@@ -23,6 +23,9 @@ void FileSystem::initializeAndLoadConfig(SystemStatus &status, String mac)
         }
     }
 
+    // Reseta o arquivo de log se ele existir
+    resetLogFile();
+
     if (!LittleFS.exists("/config.json"))
     {
         logHandler.logMessage("Criando config.json com valores padrão...");
@@ -180,5 +183,21 @@ void FileSystem::verifyFileSystem()
         // Como LittleFS não suporta diretórios, não precisamos verificar se é um diretório
         logHandler.logMessage("FILE: " + String(file.name()) + "  SIZE: " + String(file.size()));
         file = root.openNextFile(); // Vai para o próximo arquivo
+    }
+}
+
+void FileSystem::resetLogFile() {
+    if (LittleFS.exists("/log.txt")) {
+        logHandler.logMessage("Arquivo de log existente encontrado. Apagando e criando um novo...");
+        LittleFS.remove("/log.txt");
+    }
+
+    // Cria um novo arquivo de log vazio
+    File logFile = LittleFS.open("/log.txt", "w");
+    if (!logFile) {
+        logHandler.logMessage("Falha ao criar novo arquivo de log!");
+    } else {
+        logHandler.logMessage("Novo arquivo de log criado com sucesso.");
+        logFile.close();
     }
 }

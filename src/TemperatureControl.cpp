@@ -44,7 +44,7 @@ int getCalibratedTemp(MAX6675 &thermocouple, SystemStatus &sysStat)
   int newCalibratedTemp = (int)round(sum / sysStat.numSamples);
   sysStat.calibratedTemp = newCalibratedTemp;
 
-  logHandler.logMessage("Calibrated Temp: " + String(sysStat.calibratedTemp));
+  //logHandler.logMessage("Calibrated Temp: " + String(sysStat.calibratedTemp));
 
   return sysStat.calibratedTemp;
 }
@@ -69,7 +69,7 @@ int getCalibratedTempP(MAX6675 &thermocoupleP, SystemStatus &sysStat)
   int newCalibratedTempP = (int)round(sum / sysStat.numSamplesP);
   sysStat.calibratedTempP = newCalibratedTempP;
 
-  logHandler.logMessage("Calibrated TempP: " + String(sysStat.calibratedTempP));
+  //logHandler.logMessage("Calibrated TempP: " + String(sysStat.calibratedTempP));
 
   return sysStat.calibratedTempP;
 }
@@ -89,12 +89,12 @@ void updateRelayState(int temp, SystemStatus &sysStat)
     sysStat.isRelayOn = false;
   }
 
-  logHandler.logMessage("Relay state updated: " + String(sysStat.isRelayOn ? "ON" : "OFF"));
+  //logHandler.logMessage("Relay state updated: " + String(sysStat.isRelayOn ? "ON" : "OFF"));
 }
 
 void controlTemperature(SystemStatus &sysStat)
 {
-  logHandler.logMessage("Controlando temperatura...");
+  //logHandler.logMessage("Controlando temperatura...");
   int temp = sysStat.calibratedTemp;
 
   if (temp >= sysStat.bbqTemperature)

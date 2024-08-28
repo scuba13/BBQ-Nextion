@@ -240,7 +240,7 @@ uint8_t getCurrentPageId()
         }
     }
 
-    _logger.logMessage("Current Page ID: " + String(pageId));
+    //_logger.logMessage("Current Page ID: " + String(pageId));
 
     return pageId;
 }

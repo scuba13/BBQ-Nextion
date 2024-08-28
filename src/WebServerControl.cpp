@@ -14,17 +14,17 @@ WebServerControl::WebServerControl(SystemStatus& systemStatus, FileSystem& fileS
     : _systemStatus(systemStatus), _fileSystem(fileSystem), _logger(logger), _server(server), _otaHandler() {}
 
 void WebServerControl::begin() {
-    // Registering endpoints from separate files
-    registerTemperatureEndpoints(_server, _systemStatus, _logger);
-    registerMQTTConfigEndpoints(_server, _systemStatus, _fileSystem, _logger);
-    registerTempConfigEndpoints(_server, _systemStatus, _fileSystem, _logger);
-    registerEnergyEndpoints(_server, _systemStatus, _logger);
-    registerGeneralEndpoints(_server, _systemStatus, _logger, _otaHandler);
+    // Registrar endpoints antes de configurar arquivos estáticos
     registerAIEndpoints(_server, _systemStatus, _logger, _fileSystem);
     registerSystemEndpoints(_server, _systemStatus, _logger);
     registerMonitorEndpoints(_server, _systemStatus, _logger);
+    registerTemperatureEndpoints(_server, _systemStatus, _logger);
+    registerMQTTConfigEndpoints(_server, _systemStatus, _fileSystem, _logger);
+    registerTempConfigEndpoints(_server, _systemStatus, _fileSystem, _logger);
+    registerGeneralEndpoints(_server, _systemStatus, _logger, _otaHandler);
+    registerEnergyEndpoints(_server, _systemStatus, _logger);
 
-    // Servindo arquivos JavaScript, CSS e favicon
+    // Configurar arquivos estáticos
     _server.serveStatic("/static/js/", LittleFS, "/static/js/");
     _server.serveStatic("/static/css/", LittleFS, "/static/css/");
     _server.serveStatic("/favicon.ico", LittleFS, "/favicon.ico");
@@ -34,3 +34,4 @@ void WebServerControl::begin() {
 
     _server.begin();
 }
+

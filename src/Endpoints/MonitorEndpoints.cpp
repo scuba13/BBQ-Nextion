@@ -26,6 +26,7 @@ void registerMonitorEndpoints(AsyncWebServer &server, SystemStatus &systemStatus
         doc["maxCaliTemp"] = systemStatus.maxCaliTemp;
         doc["minCaliTempP"] = systemStatus.minCaliTempP;
         doc["maxCaliTempP"] = systemStatus.maxCaliTempP;
+        doc["internalTemp"] = systemStatus.calibratedTempInternal;
 
         // Utilizando ResponseHelper para enviar a resposta
         ResponseHelper::sendJsonResponse(request, 200, "Monitoring data fetched successfully", doc.as<JsonObject>());

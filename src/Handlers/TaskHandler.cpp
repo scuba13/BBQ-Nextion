@@ -62,7 +62,7 @@ void createTasks()
     xTaskCreate(
         getCalibratedTempTask, // Função que será executada pela tarefa. Esta função irá obter e calibrar a temperatura.
         "TempTask",            // Nome da tarefa (útil para fins de depuração).
-        2000,                  // Tamanho da pilha da tarefa. Reserva espaço para 2000 entradas.
+        4000,                  // Tamanho da pilha da tarefa. Reserva espaço para 2000 entradas.
         NULL,                  // Parâmetros que são passados para a função da tarefa. No caso, nenhum parâmetro é passado.
         1,                     // Prioridade da tarefa. Aqui, a tarefa tem uma prioridade de 1.
         NULL                   // Pode armazenar o identificador da tarefa, mas não estamos armazenando aqui.
@@ -73,7 +73,7 @@ void createTasks()
     xTaskCreate(
         getCalibratedTempPTask, // Função que será executada pela tarefa. Esta função irá obter e calibrar a temperatura.
         "TempPTask",            // Nome da tarefa (útil para fins de depuração).
-        2000,                   // Tamanho da pilha da tarefa. Reserva espaço para 2000 entradas.
+        4000,                   // Tamanho da pilha da tarefa. Reserva espaço para 2000 entradas.
         NULL,                   // Parâmetros que são passados para a função da tarefa. No caso, nenhum parâmetro é passado.
         1,                      // Prioridade da tarefa. Aqui, a tarefa tem uma prioridade de 1.
         NULL                    // Pode armazenar o identificador da tarefa, mas não estamos armazenando aqui.
@@ -84,7 +84,7 @@ void createTasks()
     xTaskCreate(
         controlTemperatureTask, // Função que será executada pela tarefa. Esta função irá controlar a temperatura.
         "ControlTempTask",      // Nome da tarefa (útil para fins de depuração).
-        2000,                   // Tamanho da pilha da tarefa. Reserva espaço para 2000 entradas.
+        4000,                   // Tamanho da pilha da tarefa. Reserva espaço para 2000 entradas.
         NULL,                   // Parâmetros que são passados para a função da tarefa. No caso, nenhum parâmetro é passado.
         1,                      // Prioridade da tarefa. Aqui, a tarefa tem uma prioridade de 1.
         NULL                    // Pode armazenar o identificador da tarefa, mas não estamos armazenando aqui.
@@ -95,7 +95,7 @@ void createTasks()
     xTaskCreate(
         getCalibratedInternalTempTask, // Função que será executada pela tarefa. Esta função irá obter a temperatura interna calibrada.
         "ControlInternalTempTask",      // Nome da tarefa (útil para fins de depuração).
-        2000,                   // Tamanho da pilha da tarefa. Reserva espaço para 2000 entradas.
+        4000,                   // Tamanho da pilha da tarefa. Reserva espaço para 2000 entradas.
         NULL,                   // Parâmetros que são passados para a função da tarefa. No caso, nenhum parâmetro é passado.
         1,                      // Prioridade da tarefa. Aqui, a tarefa tem uma prioridade de 1.
         NULL                    // Pode armazenar o identificador da tarefa, mas não estamos armazenando aqui.

@@ -11,6 +11,7 @@ void registerGeneralEndpoints(AsyncWebServer& server, SystemStatus& systemStatus
         // Log da requisição utilizando o novo LogHandler
         logger.logRequest(request, "Fetching log content");
 
+        // Abrindo o arquivo de log
         File logFile = LittleFS.open("/log.txt", "r");
         if (!logFile) {
             logger.logError("Log file not found");
@@ -18,35 +19,30 @@ void registerGeneralEndpoints(AsyncWebServer& server, SystemStatus& systemStatus
             return;
         }
 
-        String logContent = "";
+        // Lendo todas as linhas do arquivo
+        std::vector<String> lines;
         while (logFile.available()) {
-            logContent += logFile.readStringUntil('\n') + '\n';
+            String line = logFile.readStringUntil('\n');
+            lines.push_back(line);
         }
         logFile.close();
 
-        // Enviando o conteúdo do log
+        // Selecionando as últimas 100 linhas
+        String logContent = "";
+        int startLine = lines.size() > 200 ? lines.size() - 200 : 0;
+        for (int i = startLine; i < lines.size(); i++) {
+            logContent += lines[i] + '\n';
+        }
+
+        // Verificação se o conteúdo foi lido corretamente
+        if (logContent.length() == 0) {
+            logger.logError("Log content is empty after reading the file.");
+            ResponseHelper::sendErrorResponse(request, 500, "Log content is empty after reading the file.");
+            return;
+        }
+
+        // Enviando o conteúdo do log (últimas 100 linhas)
         request->send(200, "text/plain", logContent);
         logger.logMessage("Log content fetched successfully");
     });
-
-    server.on("/api/v1/system/reset", HTTP_POST, [&systemStatus, &logger](AsyncWebServerRequest *request) {
-        resetSystem(systemStatus);
-
-        logger.logMessage("System reset");
-
-        // Utilizando ResponseHelper para enviar a resposta
-        ResponseHelper::sendJsonResponse(request, 200, "System reset successfully");
-
-        logger.logMessage("System reset successfully");
-    });
-
-    server.on("/api/v1/firmware/update", HTTP_POST, [](AsyncWebServerRequest *request) {},
-        [&otaHandler, &logger](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
-            otaHandler.handleFirmwareUpload(request, filename, index, data, len, final);
-            if (final) {
-                logger.logMessage("Firmware update completed successfully: " + filename);
-            }
-        });
-
-    server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
 }
