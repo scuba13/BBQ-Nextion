@@ -27,6 +27,8 @@ LogHandler _logger;
 
 void setup()
 {
+    neopixelWrite(RGB_BUILTIN, 0, 0, RGB_BRIGHTNESS);  // Blue
+    // colocar tela inicio
     logHandler.logMessage("Iniciando App ..");
 
     // Inicialização do Nextion
@@ -112,7 +114,7 @@ void setup()
 }
 
 unsigned long lastUpdateTime = 0;         // Variável para armazenar o tempo da última atualização
-const unsigned long updateInterval = 500; // Intervalo de tempo desejado (em milissegundos)
+const unsigned long updateInterval = 1000; // Intervalo de tempo desejado (em milissegundos)
 
 void loop()
 {

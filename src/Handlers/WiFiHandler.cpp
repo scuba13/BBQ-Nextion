@@ -43,5 +43,6 @@ void initWiFi(SystemStatus &sysStat, LogHandler &logHandler)
     else
     {
         logHandler.logMessage("Falha na tentativa de autoConectar, entrando no modo AP.");
+        // tela conectar wifi
     }
 }

@@ -8,8 +8,10 @@ void registerTemperatureEndpoints(AsyncWebServer& server, SystemStatus& systemSt
         logger.logRequest(request, "Fetching temperature config");
 
         DynamicJsonDocument data(1024);
-        data["minBBQTemp"] = systemStatus.minBBQTemp;
-        data["maxBBQTemp"] = systemStatus.maxBBQTemp;
+        data["bbqTemperature"] = systemStatus.bbqTemperature;
+        data["proteinTemperature"] = systemStatus.proteinTemperature;
+        data["tempCalibration"] = systemStatus.tempCalibration;
+        data["tempCalibrationP"] = systemStatus.tempCalibrationP;
 
         // Utilizando ResponseHelper para enviar a resposta
         ResponseHelper::sendJsonResponse(request, 200, "Temperature config fetched successfully", data.as<JsonObject>());
@@ -22,28 +24,43 @@ void registerTemperatureEndpoints(AsyncWebServer& server, SystemStatus& systemSt
         // Log da requisição utilizando o novo LogHandler
         logger.logRequest(request, "Updating temperature config");
 
-        if (request->hasParam("minBBQTemp", true)) {
-            AsyncWebParameter* tempParam = request->getParam("minBBQTemp", true);
-            systemStatus.minBBQTemp = tempParam->value().toInt();
+        if (request->hasParam("bbqTemperature", true)) {
+            AsyncWebParameter* tempParam = request->getParam("bbqTemperature", true);
+            systemStatus.bbqTemperature = tempParam->value().toFloat();
         } else {
-            ResponseHelper::sendErrorResponse(request, 400, "Missing 'minBBQTemp' parameter");
-            // Log de erro utilizando o novo LogHandler
-            logger.logError("Missing 'minBBQTemp' parameter");
+            ResponseHelper::sendErrorResponse(request, 400, "Missing 'bbqTemperature' parameter");
+            logger.logError("Missing 'bbqTemperature' parameter");
             return;
         }
 
-        if (request->hasParam("maxBBQTemp", true)) {
-            AsyncWebParameter* tempParam = request->getParam("maxBBQTemp", true);
-            systemStatus.maxBBQTemp = tempParam->value().toInt();
+        if (request->hasParam("proteinTemperature", true)) {
+            AsyncWebParameter* tempParam = request->getParam("proteinTemperature", true);
+            systemStatus.proteinTemperature = tempParam->value().toFloat();
         } else {
-            ResponseHelper::sendErrorResponse(request, 400, "Missing 'maxBBQTemp' parameter");
-            // Log de erro utilizando o novo LogHandler
-            logger.logError("Missing 'maxBBQTemp' parameter");
+            ResponseHelper::sendErrorResponse(request, 400, "Missing 'proteinTemperature' parameter");
+            logger.logError("Missing 'proteinTemperature' parameter");
+            return;
+        }
+
+        if (request->hasParam("tempCalibration", true)) {
+            AsyncWebParameter* tempParam = request->getParam("tempCalibration", true);
+            systemStatus.tempCalibration = tempParam->value().toFloat();
+        } else {
+            ResponseHelper::sendErrorResponse(request, 400, "Missing 'tempCalibration' parameter");
+            logger.logError("Missing 'tempCalibration' parameter");
+            return;
+        }
+
+        if (request->hasParam("tempCalibrationP", true)) {
+            AsyncWebParameter* tempParam = request->getParam("tempCalibrationP", true);
+            systemStatus.tempCalibrationP = tempParam->value().toFloat();
+        } else {
+            ResponseHelper::sendErrorResponse(request, 400, "Missing 'tempCalibrationP' parameter");
+            logger.logError("Missing 'tempCalibrationP' parameter");
             return;
         }
 
         ResponseHelper::sendJsonResponse(request, 200, "Temperature config updated successfully");
-        // Log da mensagem de sucesso utilizando o novo LogHandler
         logger.logMessage("Temperature config updated successfully");
     });
 }

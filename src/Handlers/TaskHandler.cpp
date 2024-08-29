@@ -49,7 +49,7 @@ void getCalibratedInternalTempTask(void *parameter)
     _logger.logMessage("Task getCalibratedInternalTempTask started.");
     while (true)
     {
-        getCalibratedInternalTemp(sysStat);
+        //getCalibratedInternalTemp(sysStat);
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }

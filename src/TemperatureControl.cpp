@@ -85,7 +85,7 @@ void updateRelayState(int temp, SystemStatus &sysStat)
   else if (temp > sysStat.bbqTemperature)
   {
     digitalWrite(RELAY_PIN, LOW);
-   // neopixelWrite(RGB_BUILTIN, 0, 0, RGB_BRIGHTINESS);  // Blue
+    neopixelWrite(RGB_BUILTIN, 0, 0, RGB_BRIGHTNESS);  // Blue
     sysStat.isRelayOn = false;
   }
 
