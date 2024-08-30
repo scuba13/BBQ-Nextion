@@ -27,13 +27,15 @@ LogHandler _logger;
 
 void setup()
 {
+   
+    
     neopixelWrite(RGB_BUILTIN, 0, 0, RGB_BRIGHTNESS);  // Blue
-    // colocar tela inicio
     logHandler.logMessage("Iniciando App ..");
 
     // Inicialização do Nextion
     logHandler.logMessage("Iniciando Nextion");
     initNextion(sysStat);
+    initial.show();
     logHandler.logMessage("Nextion Iniciado");
 
     // Obtenção e exibição do endereço MAC

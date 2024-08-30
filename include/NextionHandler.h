@@ -8,6 +8,8 @@
 // Definição dos componentes Nextion
 extern NexPage wifi;
 extern NexPage welcome;
+extern NexPage ap;
+extern NexPage initial;
 extern NexTouch *nex_listen_list[];
 
 // Função de inicialização do Nextion

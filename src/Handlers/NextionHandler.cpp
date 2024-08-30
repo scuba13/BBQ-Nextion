@@ -41,6 +41,8 @@ NexPage monitor = NexPage(3, 0, "monitor");
 NexPage BBQTemp = NexPage(4, 0, "BBQTemp");
 NexPage ChunkTemp = NexPage(5, 0, "ChunkTemp");
 NexPage energyPg = NexPage(6, 0, "energyPg");
+NexPage ap = NexPage(7, 0, "ap");
+NexPage initial = NexPage(8, 0, "init");
 
 // Page Monitor
 NexNumber bbqTempSet = NexNumber(3, 10, "bbqTempSet");
