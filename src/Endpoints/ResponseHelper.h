@@ -15,7 +15,15 @@ public:
         }
         String response;
         serializeJson(doc, response);
-        request->send(statusCode, "application/json", response);
+
+        // Criação da resposta com cabeçalhos CORS
+        AsyncWebServerResponse *responseObj = request->beginResponse(statusCode, "application/json", response);
+        responseObj->addHeader("Access-Control-Allow-Origin", "*");
+        responseObj->addHeader("Access-Control-Allow-Methods", "PATCH, POST, GET, OPTIONS");
+        responseObj->addHeader("Access-Control-Allow-Headers", "Content-Type");
+
+        // Envio da resposta
+        request->send(responseObj);
     }
 
     static void sendErrorResponse(AsyncWebServerRequest *request, int statusCode, const String &message) {
@@ -24,7 +32,15 @@ public:
         doc["message"] = message;
         String response;
         serializeJson(doc, response);
-        request->send(statusCode, "application/json", response);
+
+        // Criação da resposta com cabeçalhos CORS
+        AsyncWebServerResponse *responseObj = request->beginResponse(statusCode, "application/json", response);
+        responseObj->addHeader("Access-Control-Allow-Origin", "*");
+        responseObj->addHeader("Access-Control-Allow-Methods", "PATCH, POST, GET, OPTIONS");
+        responseObj->addHeader("Access-Control-Allow-Headers", "Content-Type");
+
+        // Envio da resposta
+        request->send(responseObj);
     }
 };
 

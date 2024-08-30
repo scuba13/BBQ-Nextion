@@ -26,73 +26,64 @@ void registerTempConfigEndpoints(AsyncWebServer& server, SystemStatus& systemSta
         logger.logMessage("TempConfig configuration fetched successfully");
     });
 
-    server.on("/api/v1/temp/config", HTTP_POST, [&systemStatus, &fileSystem, &logger](AsyncWebServerRequest *request) {
+    server.on("/api/v1/temp/config", HTTP_PATCH, [&systemStatus, &fileSystem, &logger](AsyncWebServerRequest *request) {
         // Log da requisição utilizando o novo LogHandler
         logger.logRequest(request, "Updating TempConfig configuration");
 
-        int newMinBBQTemp, newMaxBBQTemp, newMinPrtTemp, newMaxPrtTemp, newMinCaliTemp, newMaxCaliTemp, newMinCaliTempP, newMaxCaliTempP;
+        int newMinBBQTemp = systemStatus.minBBQTemp;
+        int newMaxBBQTemp = systemStatus.maxBBQTemp;
+        int newMinPrtTemp = systemStatus.minPrtTemp;
+        int newMaxPrtTemp = systemStatus.maxPrtTemp;
+        int newMinCaliTemp = systemStatus.minCaliTemp;
+        int newMaxCaliTemp = systemStatus.maxCaliTemp;
+        int newMinCaliTempP = systemStatus.minCaliTempP;
+        int newMaxCaliTempP = systemStatus.maxCaliTempP;
+
+        bool updated = false;
 
         if (request->hasParam("minBBQTemp", true)) {
             newMinBBQTemp = request->getParam("minBBQTemp", true)->value().toInt();
-        } else {
-            logger.logError("minBBQTemp parameter is missing");
-            ResponseHelper::sendErrorResponse(request, 400, "minBBQTemp parameter is missing");
-            return;
+            updated = true;
         }
 
         if (request->hasParam("maxBBQTemp", true)) {
             newMaxBBQTemp = request->getParam("maxBBQTemp", true)->value().toInt();
-        } else {
-            logger.logError("maxBBQTemp parameter is missing");
-            ResponseHelper::sendErrorResponse(request, 400, "maxBBQTemp parameter is missing");
-            return;
+            updated = true;
         }
 
         if (request->hasParam("minPrtTemp", true)) {
             newMinPrtTemp = request->getParam("minPrtTemp", true)->value().toInt();
-        } else {
-            logger.logError("minPrtTemp parameter is missing");
-            ResponseHelper::sendErrorResponse(request, 400, "minPrtTemp parameter is missing");
-            return;
+            updated = true;
         }
 
         if (request->hasParam("maxPrtTemp", true)) {
             newMaxPrtTemp = request->getParam("maxPrtTemp", true)->value().toInt();
-        } else {
-            logger.logError("maxPrtTemp parameter is missing");
-            ResponseHelper::sendErrorResponse(request, 400, "maxPrtTemp parameter is missing");
-            return;
+            updated = true;
         }
 
         if (request->hasParam("minCaliTemp", true)) {
             newMinCaliTemp = request->getParam("minCaliTemp", true)->value().toInt();
-        } else {
-            logger.logError("minCaliTemp parameter is missing");
-            ResponseHelper::sendErrorResponse(request, 400, "minCaliTemp parameter is missing");
-            return;
+            updated = true;
         }
 
         if (request->hasParam("maxCaliTemp", true)) {
             newMaxCaliTemp = request->getParam("maxCaliTemp", true)->value().toInt();
-        } else {
-            logger.logError("maxCaliTemp parameter is missing");
-            ResponseHelper::sendErrorResponse(request, 400, "maxCaliTemp parameter is missing");
-            return;
+            updated = true;
         }
 
         if (request->hasParam("minCaliTempP", true)) {
             newMinCaliTempP = request->getParam("minCaliTempP", true)->value().toInt();
-        } else {
-            logger.logError("minCaliTempP parameter is missing");
-            ResponseHelper::sendErrorResponse(request, 400, "minCaliTempP parameter is missing");
-            return;
+            updated = true;
         }
 
         if (request->hasParam("maxCaliTempP", true)) {
             newMaxCaliTempP = request->getParam("maxCaliTempP", true)->value().toInt();
-        } else {
-            logger.logError("maxCaliTempP parameter is missing");
-            ResponseHelper::sendErrorResponse(request, 400, "maxCaliTempP parameter is missing");
+            updated = true;
+        }
+
+        if (!updated) {
+            logger.logError("No valid parameters provided for update");
+            ResponseHelper::sendErrorResponse(request, 400, "No valid parameters provided for update");
             return;
         }
 

@@ -29,7 +29,7 @@ void registerGeneralEndpoints(AsyncWebServer& server, SystemStatus& systemStatus
 
         // Selecionando as últimas 100 linhas
         String logContent = "";
-        int startLine = lines.size() > 200 ? lines.size() - 200 : 0;
+        int startLine = lines.size() > 100 ? lines.size() - 100 : 0;
         for (int i = startLine; i < lines.size(); i++) {
             logContent += lines[i] + '\n';
         }
@@ -41,8 +41,12 @@ void registerGeneralEndpoints(AsyncWebServer& server, SystemStatus& systemStatus
             return;
         }
 
-        // Enviando o conteúdo do log (últimas 100 linhas)
-        request->send(200, "text/plain", logContent);
+        // Criando um JsonObject para armazenar o logContent e passar para o ResponseHelper
+        DynamicJsonDocument doc(4096);
+        doc["logContent"] = logContent;
+
+        // Enviando o conteúdo do log usando o ResponseHelper
+        ResponseHelper::sendJsonResponse(request, 200, "Log content fetched successfully", doc.as<JsonObject>());
         logger.logMessage("Log content fetched successfully");
     });
 }

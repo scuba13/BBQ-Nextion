@@ -23,7 +23,7 @@ void registerMQTTConfigEndpoints(AsyncWebServer& server, SystemStatus& systemSta
         logger.logMessage("MQTT configuration fetched successfully");
     });
 
-    server.on("/api/v1/mqtt/config", HTTP_POST, [&systemStatus, &fileSystem, &logger](AsyncWebServerRequest *request) {
+    server.on("/api/v1/mqtt/config", HTTP_PATCH, [&systemStatus, &fileSystem, &logger](AsyncWebServerRequest *request) {
         // Log da requisição utilizando o novo LogHandler
         logger.logRequest(request, "Updating MQTT configuration");
 

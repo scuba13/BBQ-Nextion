@@ -20,46 +20,39 @@ void registerTemperatureEndpoints(AsyncWebServer& server, SystemStatus& systemSt
         logger.logMessage("Temperature config fetched successfully");
     });
 
-    server.on("/api/v1/temperature/config", HTTP_POST, [&](AsyncWebServerRequest *request) {
+    server.on("/api/v1/temperature/config", HTTP_PATCH, [&](AsyncWebServerRequest *request) {
         // Log da requisição utilizando o novo LogHandler
         logger.logRequest(request, "Updating temperature config");
 
+        bool updated = false;
+
         if (request->hasParam("bbqTemperature", true)) {
-            AsyncWebParameter* tempParam = request->getParam("bbqTemperature", true);
-            systemStatus.bbqTemperature = tempParam->value().toFloat();
-        } else {
-            ResponseHelper::sendErrorResponse(request, 400, "Missing 'bbqTemperature' parameter");
-            logger.logError("Missing 'bbqTemperature' parameter");
-            return;
+            systemStatus.bbqTemperature = request->getParam("bbqTemperature", true)->value().toFloat();
+            updated = true;
         }
 
         if (request->hasParam("proteinTemperature", true)) {
-            AsyncWebParameter* tempParam = request->getParam("proteinTemperature", true);
-            systemStatus.proteinTemperature = tempParam->value().toFloat();
-        } else {
-            ResponseHelper::sendErrorResponse(request, 400, "Missing 'proteinTemperature' parameter");
-            logger.logError("Missing 'proteinTemperature' parameter");
-            return;
+            systemStatus.proteinTemperature = request->getParam("proteinTemperature", true)->value().toFloat();
+            updated = true;
         }
 
         if (request->hasParam("tempCalibration", true)) {
-            AsyncWebParameter* tempParam = request->getParam("tempCalibration", true);
-            systemStatus.tempCalibration = tempParam->value().toFloat();
-        } else {
-            ResponseHelper::sendErrorResponse(request, 400, "Missing 'tempCalibration' parameter");
-            logger.logError("Missing 'tempCalibration' parameter");
-            return;
+            systemStatus.tempCalibration = request->getParam("tempCalibration", true)->value().toFloat();
+            updated = true;
         }
 
         if (request->hasParam("tempCalibrationP", true)) {
-            AsyncWebParameter* tempParam = request->getParam("tempCalibrationP", true);
-            systemStatus.tempCalibrationP = tempParam->value().toFloat();
-        } else {
-            ResponseHelper::sendErrorResponse(request, 400, "Missing 'tempCalibrationP' parameter");
-            logger.logError("Missing 'tempCalibrationP' parameter");
+            systemStatus.tempCalibrationP = request->getParam("tempCalibrationP", true)->value().toFloat();
+            updated = true;
+        }
+
+        if (!updated) {
+            ResponseHelper::sendErrorResponse(request, 400, "No valid parameters provided for update");
+            logger.logError("No valid parameters provided for update");
             return;
         }
 
+        // Utilizando ResponseHelper para enviar a resposta
         ResponseHelper::sendJsonResponse(request, 200, "Temperature config updated successfully");
         logger.logMessage("Temperature config updated successfully");
     });

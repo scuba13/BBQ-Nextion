@@ -14,6 +14,7 @@ WebServerControl::WebServerControl(SystemStatus& systemStatus, FileSystem& fileS
     : _systemStatus(systemStatus), _fileSystem(fileSystem), _logger(logger), _server(server), _otaHandler() {}
 
 void WebServerControl::begin() {
+
     // Registrar endpoints antes de configurar arquivos estáticos
     registerAIEndpoints(_server, _systemStatus, _logger, _fileSystem);
     registerSystemEndpoints(_server, _systemStatus, _logger);
@@ -23,6 +24,19 @@ void WebServerControl::begin() {
     registerTempConfigEndpoints(_server, _systemStatus, _fileSystem, _logger);
     registerGeneralEndpoints(_server, _systemStatus, _logger, _otaHandler);
     registerEnergyEndpoints(_server, _systemStatus, _logger);
+
+    // Adicionar handler global para OPTIONS
+    _server.onNotFound([](AsyncWebServerRequest *request){
+        if (request->method() == HTTP_OPTIONS) {
+            AsyncWebServerResponse *response = request->beginResponse(204); // No Content
+            response->addHeader("Access-Control-Allow-Origin", "*");
+            response->addHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
+            response->addHeader("Access-Control-Allow-Headers", "Content-Type");
+            request->send(response);
+        } else {
+            request->send(404, "text/plain", "Not Found");
+        }
+    });
 
     // Configurar arquivos estáticos
     _server.serveStatic("/static/js/", LittleFS, "/static/js/");
@@ -34,4 +48,3 @@ void WebServerControl::begin() {
 
     _server.begin();
 }
-

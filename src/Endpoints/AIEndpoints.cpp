@@ -20,7 +20,7 @@ void registerAIEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, Log
         logger.logMessage("AI configuration fetched successfully");
     });
 
-    server.on("/api/v1/ai/config", HTTP_POST, [&systemStatus, &logger, &fileSystem](AsyncWebServerRequest *request) {
+    server.on("/api/v1/ai/config", HTTP_PATCH, [&systemStatus, &logger, &fileSystem](AsyncWebServerRequest *request) {
         // Log da requisição utilizando o novo LogHandler
         logger.logRequest(request, "Updating AI configuration");
 

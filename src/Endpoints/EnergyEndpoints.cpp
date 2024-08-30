@@ -22,9 +22,9 @@ void registerEnergyEndpoints(AsyncWebServer& server, SystemStatus& systemStatus,
         logger.logMessage("Energy data fetched successfully");
     });
 
-    server.on("/api/v1/energy/cost", HTTP_POST, [&systemStatus, &logger](AsyncWebServerRequest *request) {
+    server.on("/api/v1/energy/cost", HTTP_PATCH, [&systemStatus, &logger](AsyncWebServerRequest *request) {
         // Log da requisição utilizando o novo LogHandler
-        logger.logRequest(request, "Setting energy cost");
+        logger.logRequest(request, "Updating energy cost");
 
         if (request->hasParam("kWhCost", true)) {
             float receivedNumber = request->getParam("kWhCost", true)->value().toFloat();
@@ -36,9 +36,9 @@ void registerEnergyEndpoints(AsyncWebServer& server, SystemStatus& systemStatus,
             DynamicJsonDocument jsonDoc(1024);
             jsonDoc["status"] = "success";
             jsonDoc["kWhCost"] = systemStatus.kWhCost;
-            ResponseHelper::sendJsonResponse(request, 200, "Energy cost set successfully", jsonDoc.as<JsonObject>());
+            ResponseHelper::sendJsonResponse(request, 200, "Energy cost updated successfully", jsonDoc.as<JsonObject>());
 
-            logger.logMessage("Energy cost set successfully: " + String(systemStatus.kWhCost));
+            logger.logMessage("Energy cost updated successfully: " + String(systemStatus.kWhCost));
         } else {
             logger.logError("Parameter 'kWhCost' not found in the request");
             ResponseHelper::sendErrorResponse(request, 400, "Parameter 'kWhCost' not found in the request");
