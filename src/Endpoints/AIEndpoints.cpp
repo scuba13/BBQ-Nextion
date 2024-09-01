@@ -21,43 +21,33 @@ void registerAIEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, Log
     });
 
     server.on("/api/v1/ai/config", HTTP_PATCH, [&systemStatus, &logger, &fileSystem](AsyncWebServerRequest *request) {
-        // Log da requisição utilizando o novo LogHandler
-        logger.logRequest(request, "Updating AI configuration");
+    logger.logRequest(request, "Updating AI configuration");
 
-        String aiKey;
-        String tip;
+    String aiKey;
+    String tip;
 
-        if (request->hasParam("aiKey", true)) {
-            aiKey = request->getParam("aiKey", true)->value();
-        } else {
-            ResponseHelper::sendErrorResponse(request, 400, "aiKey parameter is missing");
-            // Log de erro utilizando o novo LogHandler
-            logger.logError("Missing 'aiKey' parameter");
-            return;
-        }
+    if (request->hasParam("aiKey", true)) {
+        aiKey = request->getParam("aiKey", true)->value();
+    } else {
+        ResponseHelper::sendErrorResponse(request, 400, "aiKey parameter is missing");
+        logger.logError("Missing 'aiKey' parameter");
+        return;
+    }
 
-        if (request->hasParam("tip", true)) {
-            tip = request->getParam("tip", true)->value();
-        } else {
-            ResponseHelper::sendErrorResponse(request, 400, "tip parameter is missing");
-            // Log de erro utilizando o novo LogHandler
-            logger.logError("Missing 'tip' parameter");
-            return;
-        }
+    if (request->hasParam("tip", true)) {
+        tip = request->getParam("tip", true)->value();
+    } else {
+        ResponseHelper::sendErrorResponse(request, 400, "tip parameter is missing");
+        logger.logError("Missing 'tip' parameter");
+        return;
+    }
 
-        // Atualiza os valores em systemStatus
-        strncpy(systemStatus.aiKey, aiKey.c_str(), sizeof(systemStatus.aiKey) - 1);
-        systemStatus.aiKey[sizeof(systemStatus.aiKey) - 1] = '\0';
+    // Salva diretamente no banco de dados, e o SystemStatus é atualizado automaticamente
+    fileSystem.saveConfigToDatabase("aiKey", aiKey.c_str(), systemStatus);
+    fileSystem.saveConfigToDatabase("tip", tip.c_str(), systemStatus);
 
-        strncpy(systemStatus.tip, tip.c_str(), sizeof(systemStatus.tip) - 1);
-        systemStatus.tip[sizeof(systemStatus.tip) - 1] = '\0';
+    ResponseHelper::sendJsonResponse(request, 200, "AI configuration updated successfully");
+    logger.logMessage("AI configuration updated successfully");
+});
 
-        fileSystem.saveConfigToFile(systemStatus);
-
-        // Utilizando ResponseHelper para enviar a resposta
-        ResponseHelper::sendJsonResponse(request, 200, "AI configuration updated successfully");
-        
-        // Log da mensagem de sucesso utilizando o novo LogHandler
-        logger.logMessage("AI configuration updated successfully");
-    });
 }

@@ -1,12 +1,11 @@
-#include <ArduinoJson.h>
-#include <FS.h>
+#include <sqlite3.h>
 #include <LittleFS.h>
 #include "SystemStatus.h"
 #include "FileSystem.h"
 #include <Nextion.h>
 #include "LogHandler.h"
 
-extern LogHandler logHandler; // Certifique-se de que o logHandler esteja declarado externamente ou passado como argumento
+extern LogHandler logHandler;
 
 void FileSystem::initializeAndLoadConfig(SystemStatus &status, String mac)
 {
@@ -16,6 +15,7 @@ void FileSystem::initializeAndLoadConfig(SystemStatus &status, String mac)
         if (!LittleFS.begin(true))
         {
             logHandler.logMessage("Falha ao formatar e montar o sistema LittleFS!");
+            return;
         }
         else
         {
@@ -26,139 +26,203 @@ void FileSystem::initializeAndLoadConfig(SystemStatus &status, String mac)
     // Reseta o arquivo de log se ele existir
     resetLogFile();
 
-    if (!LittleFS.exists("/config.json"))
-    {
-        logHandler.logMessage("Criando config.json com valores padrão...");
-        File configFile = LittleFS.open("/config.json", "w");
-        if (!configFile)
-        {
-            logHandler.logMessage("Falha ao criar config.json!");
-            return;
-        }
-
-        JsonDocument doc;
-        doc["isHAAvailable"] = false;
-        doc["mqttServer"] = "homeassistant.local";
-        doc["mqttPort"] = 1883;
-        doc["mqttUser"] = "mqtt-user";
-        doc["mqttPassword"] = "mqtt-user";
-        doc["minBBQTemp"] = 30;
-        doc["maxBBQTemp"] = 200;
-        doc["minPrtTemp"] = 40;
-        doc["maxPrtTemp"] = 99;
-        doc["minCaliTemp"] = -20;
-        doc["maxCaliTemp"] = 20;
-        doc["minCaliTempP"] = -20;
-        doc["maxCaliTempP"] = 20;
-        doc["aiKey"] = "AIzaSyDf9K8Ya3djc2PO0YMmJmADRhuYFHMrgbc";
-        doc["tip"] = "Me de 1 dica e 1 receita de Churrasco americano no total de 200 palavras. Estruture o texto com Cabecalho, Dica, Cabecalho com o nome da receita, Receita."; 
-        
-        mac.replace(":", "");  // Remove os dois pontos do endereço MAC
-        doc["deviceId"] = mac; // Adiciona o deviceId ao documento JSON
-
-        if (serializeJson(doc, configFile) == 0)
-        {
-            logHandler.logMessage("Falha ao escrever em config.json!");
-        }
-        configFile.close();
-    }
-
-    File configFile = LittleFS.open("/config.json", "r");
-    if (!configFile)
-    {
-        logHandler.logMessage("Falha ao abrir config.json para leitura!");
-        return;
-    }
-
-    size_t size = configFile.size();
-    std::unique_ptr<char[]> buf(new char[size + 1]);
-    configFile.readBytes(buf.get(), size);
-    buf[size] = '\0';
-
-    JsonDocument doc;
-    auto error = deserializeJson(doc, buf.get());
-
-    if (error)
-    {
-        logHandler.logMessage("Falha ao deserializeJson config.json!");
-        return;
-    }
-    logHandler.logMessage("Configurações sendo Carregadas.");
-    status.isHAAvailable = doc["isHAAvailable"].as<bool>();
-    strlcpy(status.mqttServer, doc["mqttServer"].as<const char *>(), sizeof(status.mqttServer));
-    status.mqttPort = doc["mqttPort"].as<int>();
-    strlcpy(status.mqttUser, doc["mqttUser"].as<const char *>(), sizeof(status.mqttUser));
-    strlcpy(status.mqttPassword, doc["mqttPassword"].as<const char *>(), sizeof(status.mqttPassword));
-    strlcpy(status.deviceId, doc["deviceId"].as<const char *>(), sizeof(status.deviceId));
-    status.minBBQTemp = doc["minBBQTemp"].as<int>();
-    status.maxBBQTemp = doc["maxBBQTemp"].as<int>();
-    status.minPrtTemp = doc["minPrtTemp"].as<int>();
-    status.maxPrtTemp = doc["maxPrtTemp"].as<int>();
-    status.minCaliTemp = doc["minCaliTemp"].as<int>();
-    status.maxCaliTemp = doc["maxCaliTemp"].as<int>();
-    status.minCaliTempP = doc["minCaliTempP"].as<int>();
-    status.maxCaliTempP = doc["maxCaliTempP"].as<int>();
-    strlcpy(status.aiKey, doc["aiKey"].as<const char *>(), sizeof(status.aiKey));
-    strlcpy(status.tip, doc["tip"].as<const char *>(), sizeof(status.tip));
-
-    logHandler.logMessage("isHAAvailable: " + String(status.isHAAvailable ? "true" : "false"));
-    logHandler.logMessage("mqttServer: " + String(status.mqttServer));
-    logHandler.logMessage("mqttPort: " + String(status.mqttPort));
-    logHandler.logMessage("mqttUser: " + String(status.mqttUser));
-    logHandler.logMessage("mqttPassword: " + String(status.mqttPassword));
-    logHandler.logMessage("deviceId: " + String(status.deviceId));
-    logHandler.logMessage("minBBQTemp: " + String(status.minBBQTemp));
-    logHandler.logMessage("maxBBQTemp: " + String(status.maxBBQTemp));
-    logHandler.logMessage("minPrtTemp: " + String(status.minPrtTemp));
-    logHandler.logMessage("maxPrtTemp: " + String(status.maxPrtTemp));
-    logHandler.logMessage("minCaliTemp: " + String(status.minCaliTemp));
-    logHandler.logMessage("maxCaliTemp: " + String(status.maxCaliTemp));
-    logHandler.logMessage("minCaliTempP: " + String(status.minCaliTempP));
-    logHandler.logMessage("maxCaliTempP: " + String(status.maxCaliTempP));
-    logHandler.logMessage("aiKey: " + String(status.aiKey));
-    logHandler.logMessage("tip: " + String(status.tip));
-
-    logHandler.logMessage("Configurações carregadas com sucesso.");
+    initializeDatabase(status);
+    loadConfigFromDatabase(status, mac);
 }
 
-void FileSystem::saveConfigToFile(const SystemStatus &status)
+void FileSystem::initializeDatabase(SystemStatus &status)
 {
-    File configFile = LittleFS.open("/config.json", "w");
-    if (!configFile)
+    sqlite3 *db;
+    char *zErrMsg = 0;
+    int rc;
+
+    rc = sqlite3_open("/littlefs/config.db", &db);
+    if (rc)
     {
-        logHandler.logMessage("Failed to open config file for writing");
+        logHandler.logMessage("Não foi possível abrir o banco de dados: " + String(sqlite3_errmsg(db)));
         return;
-    }
-
-    JsonDocument doc;
-    doc["isHAAvailable"] = status.isHAAvailable;
-    doc["mqttServer"] = status.mqttServer;
-    doc["mqttPort"] = status.mqttPort;
-    doc["mqttUser"] = status.mqttUser;
-    doc["mqttPassword"] = status.mqttPassword;
-
-    doc["minBBQTemp"] = status.minBBQTemp;
-    doc["maxBBQTemp"] = status.maxBBQTemp;
-    doc["minPrtTemp"] = status.minPrtTemp;
-    doc["maxPrtTemp"] = status.maxPrtTemp;
-    doc["minCaliTemp"] = status.minCaliTemp;
-    doc["maxCaliTemp"] = status.maxCaliTemp;
-    doc["minCaliTempP"] = status.minCaliTempP;
-    doc["maxCaliTempP"] = status.maxCaliTempP;
-    
-    doc["aiKey"] = status.aiKey;
-    doc["tip"] = status.tip;
-
-    if (serializeJson(doc, configFile) == 0)
-    {
-        logHandler.logMessage("Failed to write to config file");
     }
     else
     {
-        logHandler.logMessage("Configuration saved successfully");
+        logHandler.logMessage("Banco de dados aberto com sucesso");
     }
 
-    configFile.close();
+    // Criação da tabela de configurações
+    const char *sql = "CREATE TABLE IF NOT EXISTS Configurations (" \
+                      "key TEXT PRIMARY KEY," \
+                      "value TEXT NOT NULL);";
+
+    rc = sqlite3_exec(db, sql, 0, 0, &zErrMsg);
+    if (rc != SQLITE_OK)
+    {
+        logHandler.logMessage("Erro ao criar tabela de configurações: " + String(zErrMsg));
+        sqlite3_free(zErrMsg);
+    }
+    else
+    {
+        logHandler.logMessage("Tabela de configurações criada com sucesso");
+    }
+
+    // Verifica se há registros na tabela, caso contrário, insere os valores padrão
+    const char *check_sql = "SELECT COUNT(*) FROM Configurations;";
+    sqlite3_stmt *stmt;
+
+    rc = sqlite3_prepare_v2(db, check_sql, -1, &stmt, NULL);
+    if (rc == SQLITE_OK && sqlite3_step(stmt) == SQLITE_ROW)
+    {
+        int count = sqlite3_column_int(stmt, 0);
+        if (count == 0)
+        {
+            logHandler.logMessage("Nenhuma configuração encontrada, inserindo valores padrão.");
+            insertDefaultConfigValues(db, status);
+        }
+        else
+        {
+            logHandler.logMessage("Configurações existentes encontradas no banco de dados.");
+        }
+        sqlite3_finalize(stmt);
+    }
+    else
+    {
+        logHandler.logMessage("Erro ao verificar configurações: " + String(sqlite3_errmsg(db)));
+    }
+
+    sqlite3_close(db);
+}
+
+void FileSystem::insertDefaultConfigValues(sqlite3 *db, SystemStatus &status)
+{
+    saveConfigToDatabase("isHAAvailable", "false", status);
+    saveConfigToDatabase("mqttServer", "homeassistant.local", status);
+    saveConfigToDatabase("mqttPort", "1883", status);
+    saveConfigToDatabase("mqttUser", "mqtt-user", status);
+    saveConfigToDatabase("mqttPassword", "mqtt-user", status);
+
+    saveConfigToDatabase("minBBQTemp", "30", status);
+    saveConfigToDatabase("maxBBQTemp", "200", status);
+    saveConfigToDatabase("minPrtTemp", "40", status);
+    saveConfigToDatabase("maxPrtTemp", "99", status);
+    saveConfigToDatabase("minCaliTemp", "-20", status);
+    saveConfigToDatabase("maxCaliTemp", "20", status);
+    saveConfigToDatabase("minCaliTempP", "-20", status);
+    saveConfigToDatabase("maxCaliTempP", "20", status);
+
+    saveConfigToDatabase("aiKey", "AIzaSyDf9K8Ya3djc2PO0YMmJmADRhuYFHMrgbc", status);
+    saveConfigToDatabase("tip", "Me de 1 dica e 1 receita de Churrasco americano no total de 200 palavras. Estruture o texto com Cabecalho, Dica, Cabecalho com o nome da receita, Receita.", status);
+}
+
+void FileSystem::loadConfigFromDatabase(SystemStatus &status, String mac)
+{
+    sqlite3 *db;
+    sqlite3_stmt *stmt;
+
+    int rc = sqlite3_open("/littlefs/config.db", &db);
+    if (rc)
+    {
+        logHandler.logMessage("Não foi possível abrir o banco de dados: " + String(sqlite3_errmsg(db)));
+        return;
+    }
+
+    const char* keys[] = {
+        "isHAAvailable", "mqttServer", "mqttPort", "mqttUser", "mqttPassword",
+        "minBBQTemp", "maxBBQTemp", "minPrtTemp", "maxPrtTemp",
+        "minCaliTemp", "maxCaliTemp", "minCaliTempP", "maxCaliTempP",
+        "aiKey", "tip", "deviceId"
+    };
+
+    for (const char* key : keys)
+    {
+        String sql = "SELECT value FROM Configurations WHERE key = '";
+        sql += key;
+        sql += "';";
+
+        rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, NULL);
+        if (rc == SQLITE_OK)
+        {
+            if (sqlite3_step(stmt) == SQLITE_ROW)
+            {
+                String value = String((const char*)sqlite3_column_text(stmt, 0));
+                logHandler.logMessage("Carregado: " + String(key) + " = " + value);
+                setStatusValue(status, key, value);
+            }
+            sqlite3_finalize(stmt);
+        }
+        else
+        {
+            logHandler.logMessage("Erro ao carregar configuração: " + String(sqlite3_errmsg(db)));
+        }
+    }
+
+    // Se a configuração "deviceId" não estiver presente, vamos adicionar o MAC ao banco de dados
+    String sql = "SELECT COUNT(*) FROM Configurations WHERE key = 'deviceId';";
+    rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, NULL);
+    if (rc == SQLITE_OK && sqlite3_step(stmt) == SQLITE_ROW)
+    {
+        int count = sqlite3_column_int(stmt, 0);
+        if (count == 0)
+        {
+            mac.replace(":", "");  // Remove os dois pontos do endereço MAC
+            saveConfigToDatabase("deviceId", mac.c_str(), status);
+            strlcpy(status.deviceId, mac.c_str(), sizeof(status.deviceId));
+        }
+        sqlite3_finalize(stmt);
+    }
+
+    sqlite3_close(db);
+}
+
+void FileSystem::setStatusValue(SystemStatus &status, const String &key, const String &value)
+{
+    if (key == "isHAAvailable") status.isHAAvailable = (value == "true");
+    else if (key == "mqttServer") strlcpy(status.mqttServer, value.c_str(), sizeof(status.mqttServer));
+    else if (key == "mqttPort") status.mqttPort = value.toInt();
+    else if (key == "mqttUser") strlcpy(status.mqttUser, value.c_str(), sizeof(status.mqttUser));
+    else if (key == "mqttPassword") strlcpy(status.mqttPassword, value.c_str(), sizeof(status.mqttPassword));
+    else if (key == "minBBQTemp") status.minBBQTemp = value.toInt();
+    else if (key == "maxBBQTemp") status.maxBBQTemp = value.toInt();
+    else if (key == "minPrtTemp") status.minPrtTemp = value.toInt();
+    else if (key == "maxPrtTemp") status.maxPrtTemp = value.toInt();
+    else if (key == "minCaliTemp") status.minCaliTemp = value.toInt();
+    else if (key == "maxCaliTemp") status.maxCaliTemp = value.toInt();
+    else if (key == "minCaliTempP") status.minCaliTempP = value.toInt();
+    else if (key == "maxCaliTempP") status.maxCaliTempP = value.toInt();
+    else if (key == "aiKey") strlcpy(status.aiKey, value.c_str(), sizeof(status.aiKey));
+    else if (key == "tip") strlcpy(status.tip, value.c_str(), sizeof(status.tip));
+    else if (key == "deviceId") strlcpy(status.deviceId, value.c_str(), sizeof(status.deviceId));
+}
+
+void FileSystem::saveConfigToDatabase(const char* key, const char* value, SystemStatus &systemStatus)
+{
+    sqlite3 *db;
+    char *zErrMsg = 0;
+    int rc;
+
+    rc = sqlite3_open("/littlefs/config.db", &db);
+    if (rc)
+    {
+        logHandler.logMessage("Não foi possível abrir o banco de dados: " + String(sqlite3_errmsg(db)));
+        return;
+    }
+
+    String sql = "INSERT OR REPLACE INTO Configurations (key, value) VALUES ('";
+    sql += key;
+    sql += "', '";
+    sql += value;
+    sql += "');";
+
+    rc = sqlite3_exec(db, sql.c_str(), 0, 0, &zErrMsg);
+    if (rc != SQLITE_OK)
+    {
+        logHandler.logMessage("Erro ao salvar configuração: " + String(zErrMsg));
+        sqlite3_free(zErrMsg);
+    }
+    else
+    {
+        logHandler.logMessage("Configuração salva com sucesso: " + String(key) + " = " + String(value));
+        setStatusValue(systemStatus, key, value); // Atualiza o SystemStatus aqui
+    }
+
+    sqlite3_close(db);
 }
 
 void FileSystem::verifyFileSystem()
@@ -173,14 +237,10 @@ void FileSystem::verifyFileSystem()
         return;
     }
 
-    // LittleFS não suporta diretórios, então a checagem de diretório é desnecessária
-    // e sempre retornará false. Removemos a checagem de diretório.
-
     // Enumera todos os arquivos no diretório (raiz, neste caso)
     File file = root.openNextFile();
     while (file)
     {
-        // Como LittleFS não suporta diretórios, não precisamos verificar se é um diretório
         logHandler.logMessage("FILE: " + String(file.name()) + "  SIZE: " + String(file.size()));
         file = root.openNextFile(); // Vai para o próximo arquivo
     }
