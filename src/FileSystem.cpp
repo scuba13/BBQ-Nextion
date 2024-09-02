@@ -5,7 +5,46 @@
 #include <Nextion.h>
 #include "LogHandler.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <SPI.h>
+#include <FS.h>
+
 extern LogHandler logHandler;
+
+const char* data = "Callback function called";
+
+static int callback(void *data, int argc, char **argv, char **azColName) {
+    int i;
+    logHandler.logMessage(String((const char*)data) + ":");
+    for (i = 0; i < argc; i++) {
+        logHandler.logMessage(String(azColName[i]) + " = " + (argv[i] ? argv[i] : "NULL"));
+    }
+    return 0;
+}
+
+int db_open(const char *filename, sqlite3 **db) {
+    int rc = sqlite3_open(filename, db);
+    if (rc) {
+        logHandler.logMessage("Can't open database: " + String(sqlite3_errmsg(*db)));
+        return rc;
+    } else {
+        logHandler.logMessage("Opened database successfully");
+    }
+    return rc;
+}
+
+int db_exec(sqlite3 *db, const char *sql) {
+    char *zErrMsg = 0;
+    int rc = sqlite3_exec(db, sql, callback, (void*)data, &zErrMsg);
+    if (rc != SQLITE_OK) {
+        logHandler.logMessage("SQL error: " + String(zErrMsg));
+        sqlite3_free(zErrMsg);
+    } else {
+        logHandler.logMessage("Operation done successfully");
+    }
+    return rc;
+}
 
 void FileSystem::initializeAndLoadConfig(SystemStatus &status, String mac)
 {
@@ -26,64 +65,67 @@ void FileSystem::initializeAndLoadConfig(SystemStatus &status, String mac)
     // Reseta o arquivo de log se ele existir
     resetLogFile();
 
+    // Inicializa o SQLite antes de qualquer operação com o banco de dados
+    sqlite3_initialize();
+
     initializeDatabase(status);
     loadConfigFromDatabase(status, mac);
+    
+    // Teste para verificar se está gravando corretamente
+    delay(1000);
+    saveConfigToDatabase("mqttPort", 1111, status);
 }
 
 void FileSystem::initializeDatabase(SystemStatus &status)
 {
     sqlite3 *db;
-    char *zErrMsg = 0;
     int rc;
 
-    rc = sqlite3_open("/littlefs/config.db", &db);
-    if (rc)
-    {
-        logHandler.logMessage("Não foi possível abrir o banco de dados: " + String(sqlite3_errmsg(db)));
+    if (db_open("/littlefs/config.db", &db))
+        return;
+
+// Definindo a tabela com campos de tipos específicos
+const char *sql = "CREATE TABLE IF NOT EXISTS Configurations ("
+                  "key TEXT PRIMARY KEY," // Chave primária para identificar a configuração
+                  "isHAAvailable INTEGER," // BOOLEANO representado como INTEGER (0 ou 1)
+                  "mqttServer TEXT," // Texto para o servidor MQTT
+                  "mqttPort INTEGER," // Inteiro para a porta MQTT
+                  "mqttUser TEXT," // Texto para o usuário MQTT
+                  "mqttPassword TEXT," // Texto para a senha MQTT
+                  "minBBQTemp INTEGER," // Inteiro para a temperatura mínima do BBQ
+                  "maxBBQTemp INTEGER," // Inteiro para a temperatura máxima do BBQ
+                  "minPrtTemp INTEGER," // Inteiro para a temperatura mínima da proteína
+                  "maxPrtTemp INTEGER," // Inteiro para a temperatura máxima da proteína
+                  "minCaliTemp INTEGER," // Inteiro para a temperatura mínima de calibração
+                  "maxCaliTemp INTEGER," // Inteiro para a temperatura máxima de calibração
+                  "minCaliTempP INTEGER," // Inteiro para a temperatura mínima de calibração da proteína
+                  "maxCaliTempP INTEGER," // Inteiro para a temperatura máxima de calibração da proteína
+                  "aiKey TEXT," // Texto para a chave AI
+                  "tip TEXT," // Texto para a dica
+                  "deviceId TEXT" // Texto para o ID do dispositivo
+                  ");";
+
+
+    rc = db_exec(db, sql);
+    if (rc != SQLITE_OK) {
+        sqlite3_close(db);
         return;
     }
-    else
-    {
-        logHandler.logMessage("Banco de dados aberto com sucesso");
-    }
 
-    // Criação da tabela de configurações
-    const char *sql = "CREATE TABLE IF NOT EXISTS Configurations (" \
-                      "key TEXT PRIMARY KEY," \
-                      "value TEXT NOT NULL);";
-
-    rc = sqlite3_exec(db, sql, 0, 0, &zErrMsg);
-    if (rc != SQLITE_OK)
-    {
-        logHandler.logMessage("Erro ao criar tabela de configurações: " + String(zErrMsg));
-        sqlite3_free(zErrMsg);
-    }
-    else
-    {
-        logHandler.logMessage("Tabela de configurações criada com sucesso");
-    }
-
-    // Verifica se há registros na tabela, caso contrário, insere os valores padrão
     const char *check_sql = "SELECT COUNT(*) FROM Configurations;";
     sqlite3_stmt *stmt;
 
-    rc = sqlite3_prepare_v2(db, check_sql, -1, &stmt, NULL);
-    if (rc == SQLITE_OK && sqlite3_step(stmt) == SQLITE_ROW)
-    {
+    rc = sqlite3_prepare_v2(db, check_sql, -1, &stmt, nullptr);
+    if (rc == SQLITE_OK && sqlite3_step(stmt) == SQLITE_ROW) {
         int count = sqlite3_column_int(stmt, 0);
-        if (count == 0)
-        {
+        if (count == 0) {
             logHandler.logMessage("Nenhuma configuração encontrada, inserindo valores padrão.");
             insertDefaultConfigValues(db, status);
-        }
-        else
-        {
+        } else {
             logHandler.logMessage("Configurações existentes encontradas no banco de dados.");
         }
         sqlite3_finalize(stmt);
-    }
-    else
-    {
+    } else {
         logHandler.logMessage("Erro ao verificar configurações: " + String(sqlite3_errmsg(db)));
     }
 
@@ -94,18 +136,18 @@ void FileSystem::insertDefaultConfigValues(sqlite3 *db, SystemStatus &status)
 {
     saveConfigToDatabase("isHAAvailable", "false", status);
     saveConfigToDatabase("mqttServer", "homeassistant.local", status);
-    saveConfigToDatabase("mqttPort", "1883", status);
+    saveConfigToDatabase("mqttPort", 1883, status); // Agora como inteiro
     saveConfigToDatabase("mqttUser", "mqtt-user", status);
     saveConfigToDatabase("mqttPassword", "mqtt-user", status);
 
-    saveConfigToDatabase("minBBQTemp", "30", status);
-    saveConfigToDatabase("maxBBQTemp", "200", status);
-    saveConfigToDatabase("minPrtTemp", "40", status);
-    saveConfigToDatabase("maxPrtTemp", "99", status);
-    saveConfigToDatabase("minCaliTemp", "-20", status);
-    saveConfigToDatabase("maxCaliTemp", "20", status);
-    saveConfigToDatabase("minCaliTempP", "-20", status);
-    saveConfigToDatabase("maxCaliTempP", "20", status);
+    saveConfigToDatabase("minBBQTemp", 30, status); // Agora como inteiro
+    saveConfigToDatabase("maxBBQTemp", 200, status); // Agora como inteiro
+    saveConfigToDatabase("minPrtTemp", 40, status); // Agora como inteiro
+    saveConfigToDatabase("maxPrtTemp", 99, status); // Agora como inteiro
+    saveConfigToDatabase("minCaliTemp", -20, status); // Agora como inteiro
+    saveConfigToDatabase("maxCaliTemp", 20, status); // Agora como inteiro
+    saveConfigToDatabase("minCaliTempP", -20, status); // Agora como inteiro
+    saveConfigToDatabase("maxCaliTempP", 20, status); // Agora como inteiro
 
     saveConfigToDatabase("aiKey", "AIzaSyDf9K8Ya3djc2PO0YMmJmADRhuYFHMrgbc", status);
     saveConfigToDatabase("tip", "Me de 1 dica e 1 receita de Churrasco americano no total de 200 palavras. Estruture o texto com Cabecalho, Dica, Cabecalho com o nome da receita, Receita.", status);
@@ -116,12 +158,8 @@ void FileSystem::loadConfigFromDatabase(SystemStatus &status, String mac)
     sqlite3 *db;
     sqlite3_stmt *stmt;
 
-    int rc = sqlite3_open("/littlefs/config.db", &db);
-    if (rc)
-    {
-        logHandler.logMessage("Não foi possível abrir o banco de dados: " + String(sqlite3_errmsg(db)));
+    if (db_open("/littlefs/config.db", &db))
         return;
-    }
 
     const char* keys[] = {
         "isHAAvailable", "mqttServer", "mqttPort", "mqttUser", "mqttPassword",
@@ -136,7 +174,7 @@ void FileSystem::loadConfigFromDatabase(SystemStatus &status, String mac)
         sql += key;
         sql += "';";
 
-        rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, NULL);
+        int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
         if (rc == SQLITE_OK)
         {
             if (sqlite3_step(stmt) == SQLITE_ROW)
@@ -153,15 +191,14 @@ void FileSystem::loadConfigFromDatabase(SystemStatus &status, String mac)
         }
     }
 
-    // Se a configuração "deviceId" não estiver presente, vamos adicionar o MAC ao banco de dados
     String sql = "SELECT COUNT(*) FROM Configurations WHERE key = 'deviceId';";
-    rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, NULL);
+    int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
     if (rc == SQLITE_OK && sqlite3_step(stmt) == SQLITE_ROW)
     {
         int count = sqlite3_column_int(stmt, 0);
         if (count == 0)
         {
-            mac.replace(":", "");  // Remove os dois pontos do endereço MAC
+            mac.replace(":", "");
             saveConfigToDatabase("deviceId", mac.c_str(), status);
             strlcpy(status.deviceId, mac.c_str(), sizeof(status.deviceId));
         }
@@ -191,18 +228,14 @@ void FileSystem::setStatusValue(SystemStatus &status, const String &key, const S
     else if (key == "deviceId") strlcpy(status.deviceId, value.c_str(), sizeof(status.deviceId));
 }
 
+
+
 void FileSystem::saveConfigToDatabase(const char* key, const char* value, SystemStatus &systemStatus)
 {
     sqlite3 *db;
-    char *zErrMsg = 0;
-    int rc;
 
-    rc = sqlite3_open("/littlefs/config.db", &db);
-    if (rc)
-    {
-        logHandler.logMessage("Não foi possível abrir o banco de dados: " + String(sqlite3_errmsg(db)));
+    if (db_open("/littlefs/config.db", &db))
         return;
-    }
 
     String sql = "INSERT OR REPLACE INTO Configurations (key, value) VALUES ('";
     sql += key;
@@ -210,16 +243,9 @@ void FileSystem::saveConfigToDatabase(const char* key, const char* value, System
     sql += value;
     sql += "');";
 
-    rc = sqlite3_exec(db, sql.c_str(), 0, 0, &zErrMsg);
-    if (rc != SQLITE_OK)
-    {
-        logHandler.logMessage("Erro ao salvar configuração: " + String(zErrMsg));
-        sqlite3_free(zErrMsg);
-    }
-    else
-    {
-        logHandler.logMessage("Configuração salva com sucesso: " + String(key) + " = " + String(value));
-        setStatusValue(systemStatus, key, value); // Atualiza o SystemStatus aqui
+    int rc = db_exec(db, sql.c_str());
+    if (rc == SQLITE_OK) {
+        setStatusValue(systemStatus, key, value);
     }
 
     sqlite3_close(db);
@@ -229,7 +255,6 @@ void FileSystem::verifyFileSystem()
 {
     logHandler.logMessage("Verificando o sistema de arquivos LittleFS...");
 
-    // Abre o diretório raiz no LittleFS
     File root = LittleFS.open("/", "r");
     if (!root)
     {
@@ -237,12 +262,11 @@ void FileSystem::verifyFileSystem()
         return;
     }
 
-    // Enumera todos os arquivos no diretório (raiz, neste caso)
     File file = root.openNextFile();
     while (file)
     {
         logHandler.logMessage("FILE: " + String(file.name()) + "  SIZE: " + String(file.size()));
-        file = root.openNextFile(); // Vai para o próximo arquivo
+        file = root.openNextFile();
     }
 }
 
@@ -252,7 +276,6 @@ void FileSystem::resetLogFile() {
         LittleFS.remove("/log.txt");
     }
 
-    // Cria um novo arquivo de log vazio
     File logFile = LittleFS.open("/log.txt", "w");
     if (!logFile) {
         logHandler.logMessage("Falha ao criar novo arquivo de log!");
