@@ -14,6 +14,8 @@ void configModeCallback(WiFiManager *myWiFiManager) {
     _logger.logMessage("Entrando no modo AP.");
     _logger.logMessage("SSID do AP: " + myWiFiManager->getConfigPortalSSID());
     _logger.logMessage("Endereço IP do AP: " + WiFi.softAPIP().toString());
+
+    digitalWrite(RGB_BUILTIN, HIGH);  // Turn the RGB LED white
     
     // Exibir tela informando que o dispositivo está em modo AP
    ap.show();
