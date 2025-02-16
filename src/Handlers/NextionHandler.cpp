@@ -1,39 +1,18 @@
 #include "NextionHandler.h"
-#include "LogHandler.h"
+#include "AppContext.h"
 
-extern LogHandler _logger; // Certifique-se de que o logHandler esteja declarado externamente ou passado como argumento
+extern AppContext app; // Certifique-se de que o app esteja declarado externamente ou passado como argumento
 
 // Define nexSerial
 #define nexSerial Serial2
 
-// Store the last known values to check for changes
-float lastBbqTempSet = 0;
-float lastBbqTemp = 0;
-float lastChunkTempSet = 0;
-float lastChunkTemp = 0;
-float lastBbqTempAvg = 0;
-bool lastRelayState = false;
-uint32_t lastPageId = -1;
+// Declaração antecipada de funções
+void setPageBackground(const char *pageName, uint32_t img_id);
+void updateNumberComponent(NexNumber &component, float &lastValue, float newValue, bool forceUpdate);
+uint32_t getCurrentPageId();
 
-static float lastMinBBQTemp = 0;
-static float lastMaxBBQTemp = 0;
-uint32_t lastPageIdBBQ = -1;
-bool initialUpdateDoneBBQ = false; // Variable to check if the initial update is done
-
-static float lastMinChunkTemp = 0;
-static float lastMaxChunkTemp = 0;
-uint32_t lastPageIdChunk = -1;
-bool initialUpdateDoneChunk = false; // Variable to check if the initial update is done
-
-static float lastMinCaliBBQ = 0;
-static float lastMaxCaliBBQ = 0;
-static float lastMinCaliChunk = 0;
-static float lastMaxCaliChunk = 0;
-uint32_t lastPageIdCali = -1;
-bool initialUpdateDoneCali = false;
-
-
-// Definition of Nextion components
+// Declaração dos componentes Nextion
+// Pages
 NexPage wifi = NexPage(0, 0, "wifi");
 NexPage welcome = NexPage(1, 0, "welcome");
 NexPage menu = NexPage(2, 0, "menu");
@@ -44,7 +23,7 @@ NexPage energyPg = NexPage(6, 0, "energyPg");
 NexPage ap = NexPage(7, 0, "ap");
 NexPage initial = NexPage(8, 0, "init");
 
-// Page Monitor
+// Monitor page components
 NexNumber bbqTempSet = NexNumber(3, 10, "bbqTempSet");
 NexNumber bbqTemp = NexNumber(3, 1, "bbqTemp");
 NexNumber chunkTempSet = NexNumber(3, 11, "chunkTempSet");
@@ -52,76 +31,159 @@ NexNumber chunkTemp = NexNumber(3, 2, "chunkTemp");
 NexNumber bbqTempAvg = NexNumber(3, 8, "bbqTempAvg");
 NexButton stopPush = NexButton(3, 18, "stop");
 
-// Page BBQTemp
+// BBQ Temperature page components
 NexNumber setBBQTemp = NexNumber(4, 1, "setBBQTemp");
 NexNumber minBBQTemp = NexNumber(4, 6, "minBBQTemp");
 NexNumber maxBBQTemp = NexNumber(4, 7, "maxBBQTemp");
 NexButton setBBQTempPush = NexButton(4, 8, "setBBQ");
 
-// Page ChunkTemp
+// Chunk Temperature page components
 NexNumber setChunkTemp = NexNumber(5, 1, "setChunkTemp");
 NexNumber minChunkTemp = NexNumber(5, 6, "minChunkTemp");
 NexNumber maxChunkTemp = NexNumber(5, 7, "maxChunkTemp");
 NexButton setChunkTempPush = NexButton(5, 8, "setChunk");
 
-
-// Page Calibration
+// Calibration page components
 NexNumber caliBBQTemp = NexNumber(6, 4, "caliBBQTemp");
 NexNumber minCaliBBQTemp = NexNumber(6, 12, "minCaliBBQTemp");
 NexNumber maxCaliBBQTemp = NexNumber(6, 13, "maxCaliBBQTemp");
-
 NexNumber caliChunkTemp = NexNumber(6, 7, "caliChunkTemp");
 NexNumber minCaliChuTemp = NexNumber(6, 14, "minCaliChuTemp");
 NexNumber maxCaliChuTemp = NexNumber(6, 15, "maxCaliChuTemp");
-
 NexButton setCaliPush = NexButton(6, 10, "setCali");
 
+// Lista de componentes touch
 NexTouch *nex_listen_list[] = {
     &setBBQTempPush,
     &setChunkTempPush,
     &stopPush,
     &setCaliPush,
-    NULL};
+    NULL
+};
 
-char buffer[100] = {0};
+// Variáveis de estado para as páginas
+static struct {
+    float lastMinBBQTemp = 0;
+    float lastMaxBBQTemp = 0;
+    uint32_t lastPageIdBBQ = -1;
+    bool initialUpdateDoneBBQ = false;
 
-void setBBQTempPushCallback(void *ptr)
-{
-    _logger.logMessage("Entering setBBQTempPopCallback");
+    float lastMinChunkTemp = 0;
+    float lastMaxChunkTemp = 0;
+    uint32_t lastPageIdChunk = -1;
+    bool initialUpdateDoneChunk = false;
 
-    if (ptr == nullptr)
-    {
-        _logger.logMessage("Error: ptr is null");
+    float lastMinCaliBBQ = 0;
+    float lastMaxCaliBBQ = 0;
+    float lastMinCaliChunk = 0;
+    float lastMaxCaliChunk = 0;
+    uint32_t lastPageIdCali = -1;
+    bool initialUpdateDoneCali = false;
+} pageState;
+
+// Cache de valores para reduzir atualizações desnecessárias
+static struct {
+    float bbqTempSet = 0;
+    float bbqTemp = 0;
+    float chunkTempSet = 0;
+    float chunkTemp = 0;
+    float bbqTempAvg = 0;
+    bool relayState = false;
+    uint32_t pageId = -1;
+    unsigned long lastUpdate = 0;
+} displayCache;
+
+// Constantes para otimização
+constexpr unsigned long UPDATE_INTERVAL = 250;  // 4 atualizações por segundo
+constexpr float TEMP_THRESHOLD = 0.5;  // Limiar para atualização de temperatura
+
+// Função auxiliar para atualizar componente numérico com threshold
+inline bool shouldUpdateNumber(float lastValue, float newValue) {
+    return abs(lastValue - newValue) >= TEMP_THRESHOLD;
+}
+
+// Otimizar atualização de componentes numéricos
+void updateNumberComponent(NexNumber &component, float &lastValue, float newValue, bool forceUpdate) {
+    if (forceUpdate || shouldUpdateNumber(lastValue, newValue)) {
+        component.setValue(static_cast<int32_t>(newValue));
+        lastValue = newValue;
+    }
+}
+
+// Otimizar verificação de página atual
+uint32_t getCurrentPageId() {
+    static unsigned long lastCheck = 0;
+    static uint32_t lastPageId = -1;
+    
+    unsigned long now = millis();
+    if (now - lastCheck < 100) {  // Limitar verificações a cada 100ms
+        return lastPageId;
+    }
+    
+    lastCheck = now;
+    nexSerial.print("sendme");
+    nexSerial.write(0xFF);
+    nexSerial.write(0xFF);
+    nexSerial.write(0xFF);
+    
+    if (nexSerial.available()) {
+        lastPageId = nexSerial.read();
+        // Limpar buffer
+        while (nexSerial.available()) {
+            nexSerial.read();
+        }
+    }
+    
+    return lastPageId;
+}
+
+void updateNextionMonitorVariables(SystemStatus &sysStat) {
+    unsigned long now = millis();
+    if (now - displayCache.lastUpdate < UPDATE_INTERVAL) {
+        return;  // Limitar taxa de atualização
+    }
+    displayCache.lastUpdate = now;
+    
+    uint32_t currentPageId = getCurrentPageId();
+    if (currentPageId != 3) {  // Página do monitor
+        displayCache.pageId = currentPageId;
         return;
     }
+    
+    bool forceUpdate = (currentPageId != displayCache.pageId);
+    
+    // Atualizar componentes apenas se necessário
+    updateNumberComponent(bbqTempSet, displayCache.bbqTempSet, sysStat.bbqTemperature, forceUpdate);
+    updateNumberComponent(bbqTemp, displayCache.bbqTemp, sysStat.calibratedTemp, forceUpdate);
+    updateNumberComponent(chunkTempSet, displayCache.chunkTempSet, sysStat.proteinTemperature, forceUpdate);
+    updateNumberComponent(chunkTemp, displayCache.chunkTemp, sysStat.calibratedTempP, forceUpdate);
+    updateNumberComponent(bbqTempAvg, displayCache.bbqTempAvg, sysStat.averageTemp, forceUpdate);
+    
+    // Atualizar estado do relé apenas se mudou
+    if (forceUpdate || sysStat.isRelayOn != displayCache.relayState) {
+        setPageBackground("monitor", sysStat.isRelayOn ? 4 : 1);
+        displayCache.relayState = sysStat.isRelayOn;
+    }
+    
+    displayCache.pageId = currentPageId;
+}
 
-    SystemStatus *systemStatus = static_cast<SystemStatus *>(ptr);
-
+// Otimizar callbacks
+void setBBQTempPushCallback(void *ptr) {
     uint32_t value;
-    bool success = setBBQTemp.getValue(&value);
-
-    if (!success)
-    {
-        _logger.logMessage("Error: Failed to get value from setBBQTemp");
-        return;
+    if (setBBQTemp.getValue(&value)) {
+        app.sysStat.bbqTemperature = static_cast<int>(value);
+        monitor.show();
     }
-
-    int bbqTempValue = static_cast<int>(value);
-    systemStatus->bbqTemperature = bbqTempValue;
-
-    _logger.logMessage("BBQTempValue: " + String(bbqTempValue));
-    _logger.logMessage("SystemStatus BBQ Temperature: " + String(systemStatus->bbqTemperature));
-    _logger.logMessage("Exiting setBBQTempPopCallback");
-    monitor.show();
 }
 
 void setChunkTempPushCallback(void *ptr)
 {
-    _logger.logMessage("Entering setChunkTempPopCallback");
+    app.logHandler.logMessage("Entering setChunkTempPopCallback");
 
     if (ptr == nullptr)
     {
-        _logger.logMessage("Error: ptr is null");
+        app.logHandler.logMessage("Error: ptr is null");
         return;
     }
 
@@ -132,26 +194,26 @@ void setChunkTempPushCallback(void *ptr)
 
     if (!success)
     {
-        _logger.logMessage("Error: Failed to get value from setChunkTemp");
+        app.logHandler.logMessage("Error: Failed to get value from setChunkTemp");
         return;
     }
 
     int chunkTempValue = static_cast<int>(value);
     systemStatus->proteinTemperature = chunkTempValue;
 
-    _logger.logMessage("ChunkTempValue: " + String(chunkTempValue));
-    _logger.logMessage("SystemStatus Chunk Temperature: " + String(systemStatus->proteinTemperature));
-    _logger.logMessage("Exiting setChunkTempPopCallback");
+    app.logHandler.logMessage("ChunkTempValue: " + String(chunkTempValue));
+    app.logHandler.logMessage("SystemStatus Chunk Temperature: " + String(systemStatus->proteinTemperature));
+    app.logHandler.logMessage("Exiting setChunkTempPopCallback");
     monitor.show();
 }
 
 void setStopPushCallback(void *ptr)
 {
-    _logger.logMessage("Entering setStopPushCallback");
+    app.logHandler.logMessage("Entering setStopPushCallback");
 
     if (ptr == nullptr)
     {
-        _logger.logMessage("Error: ptr is null");
+        app.logHandler.logMessage("Error: ptr is null");
         return;
     }
 
@@ -159,16 +221,16 @@ void setStopPushCallback(void *ptr)
 
     resetSystem(*systemStatus);
 
-    _logger.logMessage("Exiting setStopPushCallback");
+    app.logHandler.logMessage("Exiting setStopPushCallback");
 }
 
 void setCaliPushCallback(void *ptr)
 {
-    _logger.logMessage("Entering setCaliPushCallback");
+    app.logHandler.logMessage("Entering setCaliPushCallback");
 
     if (ptr == nullptr)
     {
-        _logger.logMessage("Error: ptr is null");
+        app.logHandler.logMessage("Error: ptr is null");
         return;
     }
 
@@ -179,7 +241,7 @@ void setCaliPushCallback(void *ptr)
 
     if (!successBBQ)
     {
-        _logger.logMessage("Error: Failed to get value from Cali BBQ");
+        app.logHandler.logMessage("Error: Failed to get value from Cali BBQ");
         return;
     }
 
@@ -188,7 +250,7 @@ void setCaliPushCallback(void *ptr)
 
     if (!successChunk)
     {
-        _logger.logMessage("Error: Failed to get value from Cali Chunk");
+        app.logHandler.logMessage("Error: Failed to get value from Cali Chunk");
         return;
     }
 
@@ -198,11 +260,11 @@ void setCaliPushCallback(void *ptr)
     int caliChunkValue = static_cast<int>(chunk);
     systemStatus->tempCalibrationP = caliChunkValue;
 
-    _logger.logMessage("CaliBBQValue: " + String(caliBBQValue));
-    _logger.logMessage("SystemStatus tempCalibration: " + String(systemStatus->tempCalibration));
-    _logger.logMessage("CaliChunkValue: " + String(caliChunkValue));
-    _logger.logMessage("SystemStatus tempCalibrationP: " + String(systemStatus->tempCalibrationP));
-    _logger.logMessage("Exiting setCaliPushCallback");
+    app.logHandler.logMessage("CaliBBQValue: " + String(caliBBQValue));
+    app.logHandler.logMessage("SystemStatus tempCalibration: " + String(systemStatus->tempCalibration));
+    app.logHandler.logMessage("CaliChunkValue: " + String(caliChunkValue));
+    app.logHandler.logMessage("SystemStatus tempCalibrationP: " + String(systemStatus->tempCalibrationP));
+    app.logHandler.logMessage("Exiting setCaliPushCallback");
     menu.show();
 }
 
@@ -215,36 +277,9 @@ void initNextion(SystemStatus &sysStat)
     stopPush.attachPush(setStopPushCallback, &sysStat);
     setCaliPush.attachPush(setCaliPushCallback, &sysStat);
 
-    _logger.logMessage("Nextion initialized");
+    app.logHandler.logMessage("Nextion initialized");
 
     delay(500);
-}
-
-uint8_t getCurrentPageId()
-{
-    uint8_t pageId = 0xFF; // Default to invalid page ID
-    String cmd = "sendme";
-    nexSerial.print(cmd);
-    nexSerial.write(0xff);
-    nexSerial.write(0xff);
-    nexSerial.write(0xff);
-
-    delay(100);
-
-    if (nexSerial.available() >= 5)
-    {
-        if (nexSerial.read() == 0x66)
-        {
-            pageId = nexSerial.read();
-            nexSerial.read(); // Consume 0xff
-            nexSerial.read(); // Consume 0xff
-            nexSerial.read(); // Consume 0xff
-        }
-    }
-
-    //_logger.logMessage("Current Page ID: " + String(pageId));
-
-    return pageId;
 }
 
 void setPageBackground(const char *pageName, uint32_t img_id)
@@ -263,65 +298,19 @@ void setPageBackground(const char *pageName, uint32_t img_id)
     delay(50);
 }
 
-void updateNumberComponent(NexNumber &component, float &lastValue, float newValue, const char *componentName, bool forceUpdate)
-{
-    if (lastValue != newValue || forceUpdate)
-    {
-        component.setValue(static_cast<int32_t>(newValue)); // Use int32_t to support negative values
-        lastValue = newValue;
-       // _logger.logMessage(String(componentName) + " updated to: " + String(newValue));
-    }
-}
-
-void updateNextionMonitorVariables(SystemStatus &sysStat)
-{
-    uint32_t currentPageId = getCurrentPageId();
-    bool forceUpdate = (currentPageId != lastPageId);
-
-    if (currentPageId != 3)
-    {
-        lastPageId = currentPageId;
-        return;
-    }
-
-   // _logger.logMessage("Updating Nextion Monitor Variables...");
-
-    updateNumberComponent(bbqTempSet, lastBbqTempSet, sysStat.bbqTemperature, "bbqTempSet", forceUpdate);
-    updateNumberComponent(bbqTemp, lastBbqTemp, sysStat.calibratedTemp, "bbqTemp", forceUpdate);
-    updateNumberComponent(chunkTempSet, lastChunkTempSet, sysStat.proteinTemperature, "chunkTempSet", forceUpdate);
-    updateNumberComponent(chunkTemp, lastChunkTemp, sysStat.calibratedTempP, "chunkTemp", forceUpdate);
-    updateNumberComponent(bbqTempAvg, lastBbqTempAvg, sysStat.averageTemp, "bbqTempAvg", forceUpdate);
-
-    if (sysStat.isRelayOn != lastRelayState || forceUpdate)
-    {
-        _logger.logMessage("Updating relay state to: " + String(sysStat.isRelayOn ? "ON" : "OFF"));
-        if (sysStat.isRelayOn)
-        {
-            setPageBackground("monitor", 4);
-        }
-        else
-        {
-            setPageBackground("monitor", 1);
-        }
-        lastRelayState = sysStat.isRelayOn;
-    }
-
-    lastPageId = currentPageId;
-}
-
 void updateNextionSetBBQVariables(SystemStatus &sysStat)
 {
     uint32_t currentPageId = getCurrentPageId();
-    bool forceUpdate = (currentPageId != lastPageIdBBQ);
+    bool forceUpdate = (currentPageId != pageState.lastPageIdBBQ);
 
     if (currentPageId != 4)
     {
-        lastPageIdBBQ = currentPageId;
-        initialUpdateDoneBBQ = false;
+        pageState.lastPageIdBBQ = currentPageId;
+        pageState.initialUpdateDoneBBQ = false;
         return;
     }
 
-    if (!initialUpdateDoneBBQ)
+    if (!pageState.initialUpdateDoneBBQ)
     {
         int value = sysStat.bbqTemperature;
 
@@ -331,29 +320,29 @@ void updateNextionSetBBQVariables(SystemStatus &sysStat)
         }
 
         setBBQTemp.setValue(value);
-        initialUpdateDoneBBQ = true;
+        pageState.initialUpdateDoneBBQ = true;
        // _logger.logMessage("BBQTemp page initialized with value: " + String(value));
     }
 
-    updateNumberComponent(minBBQTemp, lastMinBBQTemp, sysStat.minBBQTemp, "minBBQTemp", forceUpdate);
-    updateNumberComponent(maxBBQTemp, lastMaxBBQTemp, sysStat.maxBBQTemp, "maxBBQTemp", forceUpdate);
+    updateNumberComponent(minBBQTemp, pageState.lastMinBBQTemp, sysStat.minBBQTemp, forceUpdate);
+    updateNumberComponent(maxBBQTemp, pageState.lastMaxBBQTemp, sysStat.maxBBQTemp, forceUpdate);
 
-    lastPageIdBBQ = currentPageId;
+    pageState.lastPageIdBBQ = currentPageId;
 }
 
 void updateNextionSetChunkVariables(SystemStatus &sysStat)
 {
     uint32_t currentPageId = getCurrentPageId();
-    bool forceUpdate = (currentPageId != lastPageIdChunk);
+    bool forceUpdate = (currentPageId != pageState.lastPageIdChunk);
 
     if (currentPageId != 5)
     {
-        lastPageIdChunk = currentPageId;
-        initialUpdateDoneChunk = false;
+        pageState.lastPageIdChunk = currentPageId;
+        pageState.initialUpdateDoneChunk = false;
         return;
     }
 
-    if (!initialUpdateDoneChunk)
+    if (!pageState.initialUpdateDoneChunk)
     {
         int value = sysStat.proteinTemperature;
 
@@ -363,29 +352,29 @@ void updateNextionSetChunkVariables(SystemStatus &sysStat)
         }
 
         setChunkTemp.setValue(value);
-        initialUpdateDoneChunk = true;
+        pageState.initialUpdateDoneChunk = true;
        // _logger.logMessage("ChunkTemp page initialized with value: " + String(value));
     }
 
-    updateNumberComponent(minChunkTemp, lastMinChunkTemp, sysStat.minPrtTemp, "minChunkTemp", forceUpdate);
-    updateNumberComponent(maxChunkTemp, lastMaxChunkTemp, sysStat.maxPrtTemp, "maxChunkTemp", forceUpdate);
+    updateNumberComponent(minChunkTemp, pageState.lastMinChunkTemp, sysStat.minPrtTemp, forceUpdate);
+    updateNumberComponent(maxChunkTemp, pageState.lastMaxChunkTemp, sysStat.maxPrtTemp, forceUpdate);
 
-    lastPageIdChunk = currentPageId;
+    pageState.lastPageIdChunk = currentPageId;
 }
 
 void updateNextionSetCaliVariables(SystemStatus &sysStat)
 {
     uint32_t currentPageId = getCurrentPageId();
-    bool forceUpdate = (currentPageId != lastPageIdCali);
+    bool forceUpdate = (currentPageId != pageState.lastPageIdCali);
 
     if (currentPageId != 6)
     {
-        lastPageIdCali = currentPageId;
-        initialUpdateDoneCali = false;
+        pageState.lastPageIdCali = currentPageId;
+        pageState.initialUpdateDoneCali = false;
         return;
     }
 
-    if (!initialUpdateDoneCali)
+    if (!pageState.initialUpdateDoneCali)
     {
         int32_t bbq = static_cast<int32_t>(sysStat.tempCalibration);
         int32_t chunk = static_cast<int32_t>(sysStat.tempCalibrationP);
@@ -393,14 +382,14 @@ void updateNextionSetCaliVariables(SystemStatus &sysStat)
         caliBBQTemp.setValue(bbq);
         caliChunkTemp.setValue(chunk);
 
-        initialUpdateDoneCali = true;
+        pageState.initialUpdateDoneCali = true;
        // _logger.logMessage("Calibration page initialized with BBQ: " + String(bbq) + " Chunk: " + String(chunk));
     }
 
-    updateNumberComponent(minCaliBBQTemp, lastMinCaliBBQ, static_cast<int32_t>(sysStat.minCaliTemp), "minCaliBBQTemp", forceUpdate);
-    updateNumberComponent(maxCaliBBQTemp, lastMaxCaliBBQ, sysStat.maxCaliTemp, "maxCaliBBQTemp", forceUpdate);
-    updateNumberComponent(minCaliChuTemp, lastMinCaliChunk, static_cast<int32_t>(sysStat.minCaliTempP), "minCaliChuTemp", forceUpdate);
-    updateNumberComponent(maxCaliChuTemp, lastMaxCaliChunk, sysStat.maxCaliTempP, "maxCaliChuTemp", forceUpdate);
+    updateNumberComponent(minCaliBBQTemp, pageState.lastMinCaliBBQ, static_cast<int32_t>(sysStat.minCaliTemp), forceUpdate);
+    updateNumberComponent(maxCaliBBQTemp, pageState.lastMaxCaliBBQ, sysStat.maxCaliTemp, forceUpdate);
+    updateNumberComponent(minCaliChuTemp, pageState.lastMinCaliChunk, static_cast<int32_t>(sysStat.minCaliTempP), forceUpdate);
+    updateNumberComponent(maxCaliChuTemp, pageState.lastMaxCaliChunk, sysStat.maxCaliTempP, forceUpdate);
 
-    lastPageIdCali = currentPageId;
+    pageState.lastPageIdCali = currentPageId;
 }

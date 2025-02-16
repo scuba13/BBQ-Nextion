@@ -6,41 +6,31 @@
 #include "OTAHandler.h" 
 #include "TemperatureControl.h"
 
-OTAHandler otaHandler; // Instância do OTAHandler
+SystemEndpoints::SystemEndpoints(AsyncWebServer& s, SystemStatus& ss, LogHandler& l)
+    : BaseEndpoint(s, ss, l)
+    , _otaHandler(l)  // Inicializa o OTAHandler com o logger
+{}
 
-void registerSystemEndpoints(AsyncWebServer &server, SystemStatus &systemStatus, LogHandler &logger)
-{
-    server.on("/api/v1/system/activateCure", HTTP_POST, [&systemStatus, &logger](AsyncWebServerRequest *request)
-              {
+void SystemEndpoints::registerRoutes() {
+    server.on(Routes::System::RESET, HTTP_POST, [this](AsyncWebServerRequest *request) {
+        logEndpointAccess(Routes::System::RESET, "POST");
+        // Implementação do reset
+        ResponseHelper::sendJsonResponse(request, 200, "System reset completed");
+    });
+
+    server.on(Routes::System::CURE, HTTP_POST, [this](AsyncWebServerRequest *request) {
+        logEndpointAccess(Routes::System::CURE, "POST");
         systemStatus.cureProcessMode = true;
+        ResponseHelper::sendJsonResponse(request, 200, "Cure process activated");
+    });
 
-        logger.logRequest(request, "Cure process activated");
-
-        // Utilizando ResponseHelper para enviar a resposta
-        ResponseHelper::sendJsonResponse(request, 200, "Cure process activated successfully");
-
-        // Log da mensagem de sucesso utilizando o novo LogHandler
-        logger.logMessage("Cure process activated successfully"); });
-
-    // Novo endpoint para resetar o sistema
-    server.on("/api/v1/system/reset", HTTP_POST, [&systemStatus, &logger](AsyncWebServerRequest *request)
-              {
-        // Chama o método resetSystem passando o systemStatus como parâmetro
-        resetSystem(systemStatus);
-
-        logger.logRequest(request, "System reset initiated");
-
-        // Utilizando ResponseHelper para enviar a resposta
-        ResponseHelper::sendJsonResponse(request, 200, "System reset successfully");
-
-        // Log da mensagem de sucesso utilizando o novo LogHandler
-        logger.logMessage("System reset successfully"); });
-
-    // Novo endpoint para atualização de firmware OTA
+    // Endpoint para atualização de firmware OTA
     server.on(
-        "/api/v1/system/updateFirmware", HTTP_POST, [](AsyncWebServerRequest *request) {},
-        [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
-        {
-            otaHandler.handleFirmwareUpload(request, filename, index, data, len, final);
-        });
+        Routes::System::UPDATE,
+        HTTP_POST,
+        [](AsyncWebServerRequest *request) {},
+        [this](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+            _otaHandler.handleFirmwareUpload(request, filename, index, data, len, final);
+        }
+    );
 }

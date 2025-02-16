@@ -1,58 +1,136 @@
 #include "OTAHandler.h"
 #include <esp_ota_ops.h>
-#include <Nextion.h>
+#include <esp_partition.h>
 
-OTAHandler::OTAHandler() : totalReceived(0), lastSuccessfulIndex(0) {}
+OTAHandler::OTAHandler(LogHandler& l) 
+    : logger(l), totalSize(0), writtenSize(0), updateStarted(false), lastProgressUpdate(0) {}
 
-void OTAHandler::handleFirmwareUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+void OTAHandler::handleFirmwareUpload(AsyncWebServerRequest *request, 
+                                    String filename, 
+                                    size_t index, 
+                                    uint8_t *data, 
+                                    size_t len, 
+                                    bool final) {
     if (!index) {
-        totalReceived = 0;  // Reinicia a contagem para novos uploads
-        dbSerial.println("\nRecebendo novo arquivo de firmware: " + filename);
-        if (filename.endsWith(".bin")) {
-            dbSerial.println("Arquivo válido recebido. Iniciando o processo de upload.");
-            if (!Update.begin(UPDATE_SIZE_UNKNOWN)) { // Se o tamanho do update é desconhecido
-                Update.printError(dbSerial);
-                request->send(500, "text/plain", "Não foi possível iniciar o update");
-                return;
-            }
-        } else {
-            dbSerial.println("Arquivo inválido. O upload requer um arquivo .bin.");
-            request->send(400, "text/plain", "400: Somente arquivos .bin são aceitos!");
+        if (!beginUpdate(filename, request)) {
             return;
         }
     }
 
-    totalReceived += len;
-    dbSerial.printf("Recebido %u de %u bytes\n", index + len, totalReceived); // Log de progresso
-
-    if (Update.write(data, len) != len) {
-        Update.printError(dbSerial);
-        request->send(500, "text/plain", "Erro durante o upload. Abortando...");
+    if (!writeUpdate(data, len)) {
+        sendResponse(request, 500, "Failed to write firmware chunk");
         Update.abort();
         return;
     }
 
     if (final) {
-        if (Update.end(true)) { // True to set the size to the current progress
-            dbSerial.printf("************Update Success: %uB *****************\n", totalReceived);
-            request->send(200, "text/plain", "Update Success. Rebooting...");
-            ESP.restart(); // Reinicia o dispositivo
-        } else {
-            Update.printError(dbSerial);
-            request->send(500, "text/plain", "Falha na atualização. Tentando recuperar...");
+        if (!finalizeUpdate(request)) {
             recoverToLastStableVersion();
         }
     }
 }
 
-void OTAHandler::recoverToLastStableVersion() {
-    const esp_partition_t* running = esp_ota_get_running_partition();
-    const esp_partition_t* next = esp_ota_get_next_update_partition(NULL);
+bool OTAHandler::beginUpdate(const String& filename, AsyncWebServerRequest *request) {
+    if (!filename.endsWith(".bin")) {
+        sendResponse(request, 400, "Invalid file type. Only .bin files are accepted");
+        return false;
+    }
 
-    if (esp_ota_set_boot_partition(next) == ESP_OK) {
-        dbSerial.println("Recovery successful! Rebooting to the last known good firmware...");
-        esp_restart();
-    } else {
-        dbSerial.println("Recovery failed! No valid firmware to revert to.");
+    if (!Update.begin(UPDATE_SIZE_UNKNOWN, U_FLASH)) {
+        logger.logError("OTA: Failed to begin update");
+        sendResponse(request, 500, "Failed to begin update");
+        return false;
+    }
+
+    updateStarted = true;
+    totalSize = 0;
+    writtenSize = 0;
+    lastProgressUpdate = 0;
+    logger.logMessage("OTA: Update started");
+    return true;
+}
+
+bool OTAHandler::writeUpdate(uint8_t *data, size_t len) {
+    if (!updateStarted) {
+        return false;
+    }
+
+    if (Update.write(data, len) != len) {
+        logger.logError("OTA: Write failed");
+        return false;
+    }
+
+    writtenSize += len;
+    updateProgress();
+    return true;
+}
+
+bool OTAHandler::finalizeUpdate(AsyncWebServerRequest *request) {
+    if (!Update.end(true)) {
+        logger.logError("OTA: Update end failed");
+        sendResponse(request, 500, "Update finalization failed");
+        return false;
+    }
+
+    if (!verifyFirmware()) {
+        logger.logError("OTA: Firmware verification failed");
+        sendResponse(request, 500, "Firmware verification failed");
+        return false;
+    }
+
+    logger.logMessage("OTA: Update successful");
+    sendResponse(request, 200, "Update successful. Rebooting...");
+    delay(1000);
+    ESP.restart();
+    return true;
+}
+
+bool OTAHandler::verifyFirmware() {
+    if (!Update.isFinished()) {
+        return false;
+    }
+
+    const esp_partition_t* running = esp_ota_get_running_partition();
+    const esp_partition_t* update = esp_ota_get_next_update_partition(NULL);
+    
+    if (!running || !update) {
+        return false;
+    }
+
+    return true;
+}
+
+bool OTAHandler::recoverToLastStableVersion() {
+    const esp_partition_t* running = esp_ota_get_running_partition();
+    const esp_partition_t* last_valid = esp_ota_get_last_invalid_partition();
+    
+    if (!running || !last_valid) {
+        logger.logError("OTA: No valid partition found for recovery");
+        return false;
+    }
+
+    if (esp_ota_set_boot_partition(last_valid) != ESP_OK) {
+        logger.logError("OTA: Failed to set recovery partition");
+        return false;
+    }
+
+    logger.logMessage("OTA: Recovery successful, rebooting...");
+    delay(1000);
+    ESP.restart();
+    return true;
+}
+
+void OTAHandler::sendResponse(AsyncWebServerRequest *request, int code, const char* message) {
+    AsyncWebServerResponse *response = request->beginResponse(code, "text/plain", message);
+    response->addHeader("Connection", "close");
+    request->send(response);
+}
+
+void OTAHandler::updateProgress() {
+    uint32_t now = millis();
+    if (now - lastProgressUpdate >= PROGRESS_INTERVAL) {
+        int progress = (writtenSize * 100) / totalSize;
+        logger.logMessage("OTA Progress: " + String(progress) + "%");
+        lastProgressUpdate = now;
     }
 }

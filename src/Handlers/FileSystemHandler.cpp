@@ -5,21 +5,20 @@
 #include "FileSystem.h"
 #include <Nextion.h>
 #include "LogHandler.h"
-
-extern LogHandler logHandler; // Certifique-se de que o logHandler esteja declarado externamente ou passado como argumento
+#include "AppContext.h"
 
 void FileSystem::initializeAndLoadConfig(SystemStatus &status, String mac)
 {
     if (!LittleFS.begin(true))
     {
-        logHandler.logMessage("Falha ao montar o sistema LittleFS. Tentando formatar...");
+        app.logHandler.logMessage("Falha ao montar o sistema LittleFS. Tentando formatar...");
         if (!LittleFS.begin(true))
         {
-            logHandler.logMessage("Falha ao formatar e montar o sistema LittleFS!");
+            app.logHandler.logMessage("Falha ao formatar e montar o sistema LittleFS!");
         }
         else
         {
-            logHandler.logMessage("Sistema de arquivos formatado e montado com sucesso.");
+            app.logHandler.logMessage("Sistema de arquivos formatado e montado com sucesso.");
         }
     }
 
@@ -28,11 +27,11 @@ void FileSystem::initializeAndLoadConfig(SystemStatus &status, String mac)
 
     if (!LittleFS.exists("/config.json"))
     {
-        logHandler.logMessage("Criando config.json com valores padrão...");
+        app.logHandler.logMessage("Criando config.json com valores padrão...");
         File configFile = LittleFS.open("/config.json", "w");
         if (!configFile)
         {
-            logHandler.logMessage("Falha ao criar config.json!");
+            app.logHandler.logMessage("Falha ao criar config.json!");
             return;
         }
 
@@ -58,7 +57,7 @@ void FileSystem::initializeAndLoadConfig(SystemStatus &status, String mac)
 
         if (serializeJson(doc, configFile) == 0)
         {
-            logHandler.logMessage("Falha ao escrever em config.json!");
+            app.logHandler.logMessage("Falha ao escrever em config.json!");
         }
         configFile.close();
     }
@@ -66,7 +65,7 @@ void FileSystem::initializeAndLoadConfig(SystemStatus &status, String mac)
     File configFile = LittleFS.open("/config.json", "r");
     if (!configFile)
     {
-        logHandler.logMessage("Falha ao abrir config.json para leitura!");
+        app.logHandler.logMessage("Falha ao abrir config.json para leitura!");
         return;
     }
 
@@ -80,10 +79,10 @@ void FileSystem::initializeAndLoadConfig(SystemStatus &status, String mac)
 
     if (error)
     {
-        logHandler.logMessage("Falha ao deserializeJson config.json!");
+        app.logHandler.logMessage("Falha ao deserializeJson config.json!");
         return;
     }
-    logHandler.logMessage("Configurações sendo Carregadas.");
+    app.logHandler.logMessage("Configurações sendo Carregadas.");
     status.isHAAvailable = doc["isHAAvailable"].as<bool>();
     strlcpy(status.mqttServer, doc["mqttServer"].as<const char *>(), sizeof(status.mqttServer));
     status.mqttPort = doc["mqttPort"].as<int>();
@@ -101,24 +100,24 @@ void FileSystem::initializeAndLoadConfig(SystemStatus &status, String mac)
     strlcpy(status.aiKey, doc["aiKey"].as<const char *>(), sizeof(status.aiKey));
     strlcpy(status.tip, doc["tip"].as<const char *>(), sizeof(status.tip));
 
-    logHandler.logMessage("isHAAvailable: " + String(status.isHAAvailable ? "true" : "false"));
-    logHandler.logMessage("mqttServer: " + String(status.mqttServer));
-    logHandler.logMessage("mqttPort: " + String(status.mqttPort));
-    logHandler.logMessage("mqttUser: " + String(status.mqttUser));
-    logHandler.logMessage("mqttPassword: " + String(status.mqttPassword));
-    logHandler.logMessage("deviceId: " + String(status.deviceId));
-    logHandler.logMessage("minBBQTemp: " + String(status.minBBQTemp));
-    logHandler.logMessage("maxBBQTemp: " + String(status.maxBBQTemp));
-    logHandler.logMessage("minPrtTemp: " + String(status.minPrtTemp));
-    logHandler.logMessage("maxPrtTemp: " + String(status.maxPrtTemp));
-    logHandler.logMessage("minCaliTemp: " + String(status.minCaliTemp));
-    logHandler.logMessage("maxCaliTemp: " + String(status.maxCaliTemp));
-    logHandler.logMessage("minCaliTempP: " + String(status.minCaliTempP));
-    logHandler.logMessage("maxCaliTempP: " + String(status.maxCaliTempP));
-    logHandler.logMessage("aiKey: " + String(status.aiKey));
-    logHandler.logMessage("tip: " + String(status.tip));
+    app.logHandler.logMessage("isHAAvailable: " + String(status.isHAAvailable ? "true" : "false"));
+    app.logHandler.logMessage("mqttServer: " + String(status.mqttServer));
+    app.logHandler.logMessage("mqttPort: " + String(status.mqttPort));
+    app.logHandler.logMessage("mqttUser: " + String(status.mqttUser));
+    app.logHandler.logMessage("mqttPassword: " + String(status.mqttPassword));
+    app.logHandler.logMessage("deviceId: " + String(status.deviceId));
+    app.logHandler.logMessage("minBBQTemp: " + String(status.minBBQTemp));
+    app.logHandler.logMessage("maxBBQTemp: " + String(status.maxBBQTemp));
+    app.logHandler.logMessage("minPrtTemp: " + String(status.minPrtTemp));
+    app.logHandler.logMessage("maxPrtTemp: " + String(status.maxPrtTemp));
+    app.logHandler.logMessage("minCaliTemp: " + String(status.minCaliTemp));
+    app.logHandler.logMessage("maxCaliTemp: " + String(status.maxCaliTemp));
+    app.logHandler.logMessage("minCaliTempP: " + String(status.minCaliTempP));
+    app.logHandler.logMessage("maxCaliTempP: " + String(status.maxCaliTempP));
+    app.logHandler.logMessage("aiKey: " + String(status.aiKey));
+    app.logHandler.logMessage("tip: " + String(status.tip));
 
-    logHandler.logMessage("Configurações carregadas com sucesso.");
+    app.logHandler.logMessage("Configurações carregadas com sucesso.");
 }
 
 void FileSystem::saveConfigToFile(const SystemStatus &status)
@@ -126,7 +125,7 @@ void FileSystem::saveConfigToFile(const SystemStatus &status)
     File configFile = LittleFS.open("/config.json", "w");
     if (!configFile)
     {
-        logHandler.logMessage("Failed to open config file for writing");
+        app.logHandler.logMessage("Failed to open config file for writing");
         return;
     }
 
@@ -151,11 +150,11 @@ void FileSystem::saveConfigToFile(const SystemStatus &status)
 
     if (serializeJson(doc, configFile) == 0)
     {
-        logHandler.logMessage("Failed to write to config file");
+        app.logHandler.logMessage("Failed to write to config file");
     }
     else
     {
-        logHandler.logMessage("Configuration saved successfully");
+        app.logHandler.logMessage("Configuration saved successfully");
     }
 
     configFile.close();
@@ -163,13 +162,13 @@ void FileSystem::saveConfigToFile(const SystemStatus &status)
 
 void FileSystem::verifyFileSystem()
 {
-    logHandler.logMessage("Verificando o sistema de arquivos LittleFS...");
+    app.logHandler.logMessage("Verificando o sistema de arquivos LittleFS...");
 
     // Abre o diretório raiz no LittleFS
     File root = LittleFS.open("/", "r");
     if (!root)
     {
-        logHandler.logMessage("Falha ao abrir o diretório raiz.");
+        app.logHandler.logMessage("Falha ao abrir o diretório raiz.");
         return;
     }
 
@@ -181,23 +180,23 @@ void FileSystem::verifyFileSystem()
     while (file)
     {
         // Como LittleFS não suporta diretórios, não precisamos verificar se é um diretório
-        logHandler.logMessage("FILE: " + String(file.name()) + "  SIZE: " + String(file.size()));
+        app.logHandler.logMessage("FILE: " + String(file.name()) + "  SIZE: " + String(file.size()));
         file = root.openNextFile(); // Vai para o próximo arquivo
     }
 }
 
 void FileSystem::resetLogFile() {
     if (LittleFS.exists("/log.txt")) {
-        logHandler.logMessage("Arquivo de log existente encontrado. Apagando e criando um novo...");
+        app.logHandler.logMessage("Arquivo de log existente encontrado. Apagando e criando um novo...");
         LittleFS.remove("/log.txt");
     }
 
     // Cria um novo arquivo de log vazio
     File logFile = LittleFS.open("/log.txt", "w");
     if (!logFile) {
-        logHandler.logMessage("Falha ao criar novo arquivo de log!");
+        app.logHandler.logMessage("Falha ao criar novo arquivo de log!");
     } else {
-        logHandler.logMessage("Novo arquivo de log criado com sucesso.");
+        app.logHandler.logMessage("Novo arquivo de log criado com sucesso.");
         logFile.close();
     }
 }

@@ -1,146 +1,170 @@
 #include "MQTTHandler.h"
 #include "TemperatureControl.h"
 #include <Nextion.h>
+#include <ArduinoJson.h>
 
 extern LogHandler _logger;
 
-MQTTHandler::MQTTHandler(WiFiClient& net, PubSubClient& client, SystemStatus& systemStatus, LogHandler& logger)
-    : net(net), client(client), systemStatus(systemStatus), _logger(logger) {
-    // Construtor
+MQTTHandler* MQTTHandler::_instance = nullptr;
+
+MQTTHandler::MQTTHandler(SystemStatus& status, LogHandler& logger, FileSystem& fs)
+    : _status(status)
+    , _logger(logger)
+    , _fs(fs)
+    , _mqttClient(_wifiClient)
+    , _enabled(false)
+    , _configured(false)
+    , _lastReconnectAttempt(0)
+    , _lastPublish(0)
+{
+    _instance = this;
+    _mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
+    _mqttClient.setCallback(callback);
+    begin();  // Inicializar automaticamente
 }
 
-void MQTTHandler::connectMQTT() {
-    // Configura o servidor MQTT e porta
-    client.setServer(systemStatus.mqttServer, systemStatus.mqttPort);
+bool MQTTHandler::begin() {
+    if (!configure()) {
+        _logger.logError("MQTT: Configuration failed");
+        return false;
+    }
+    
+    setupTopics();
+    _enabled = true;
+    return true;
+}
 
-    _logger.logMessage("Connecting to MQTT Broker...");
+void MQTTHandler::loop() {
+    if (!_enabled || !_configured) return;
 
-    while (!client.connected()) {
-        // Tenta conectar com o usuário e senha
-        if (client.connect("ESPDeviceClient", systemStatus.mqttUser, systemStatus.mqttPassword)) {
-            _logger.logMessage("Connected to MQTT Broker");
-
-            client.subscribe("sensor/bbq_set_temperature/set");
-            client.subscribe("sensor/protein_temperature/set");
-            client.subscribe("func/reset_cmd");
-
-            // Registra a função de callback para mensagens MQTT
-            client.setCallback([this](char* topic, byte* payload, unsigned int length) { this->messageHandler(topic, payload, length); });
-        } else {
-            _logger.logMessage("Failed to connect to MQTT Broker, rc=" + String(client.state()));
-            delay(5000); // Aguarda 5 segundos antes de tentar novamente
+    if (!_mqttClient.connected()) {
+        unsigned long now = millis();
+        if (now - _lastReconnectAttempt > RECONNECT_INTERVAL) {
+            _lastReconnectAttempt = now;
+            if (reconnect()) {
+                _lastReconnectAttempt = 0;
+            }
         }
-    }
-}
-
-void MQTTHandler::messageHandler(char* topic, byte* payload, unsigned int length) {
-    String receivedTopic = String(topic);
-    String messageTemp = String((char*)payload, length);
-    _logger.logMessage("Received [" + receivedTopic + "]: " + messageTemp);
-
-    // Verifica se a mensagem é para setar a temperatura da BBQ
-    if (receivedTopic == "sensor/bbq_set_temperature/set") {
-        float bbqTempSet = messageTemp.toFloat();
-        if (bbqTempSet >= 30 && bbqTempSet <= 250) {
-            systemStatus.bbqTemperature = bbqTempSet;
-            _logger.logMessage("Nova temperatura da BBQ setada: " + String(systemStatus.bbqTemperature));
-        } else {
-            _logger.logMessage("Valor de BBQTempSet inválido!");
-        }
-    }
-    // Verifica se a mensagem é para setar a temperatura da proteína
-    else if (receivedTopic == "sensor/protein_temperature/set") {
-        float proteinTempSet = messageTemp.toFloat();
-        if (proteinTempSet >= 25 && proteinTempSet <= 100) {
-            systemStatus.proteinTemperature = proteinTempSet;
-            _logger.logMessage("Nova temperatura da proteína setada: " + String(systemStatus.proteinTemperature));
-        } else {
-            _logger.logMessage("Valor de ProteinTempSet inválido!");
-        }
-    }
-    // Verifica se a mensagem é para resetar o sistema
-    else if (receivedTopic == "func/reset_cmd") {
-        // Executa a lógica de reset apenas se o payload for "reset"
-        if (messageTemp == "RESET") {
-            resetSystem(systemStatus);
-            _logger.logMessage("Sistema Resetado");
-        }
-    }
-}
-
-void MQTTHandler::publishAllMessages(SystemStatus& systemStatus) {
-    _logger.logMessage("=======================================");
-
-    // Publica a temperatura da BBQ
-    String bbqTemp = String(systemStatus.calibratedTemp);
-    client.publish("sensor/bbq_temperature", bbqTemp.c_str());
-    _logger.logMessage("BBQ temperature: " + bbqTemp);
-
-    // Publica a temperatura setada para a BBQ
-    String bbqTempSet = String(systemStatus.bbqTemperature);
-    client.publish("sensor/bbq_set_temperature", bbqTempSet.c_str());
-    _logger.logMessage("BBQ set temperature: " + bbqTempSet);
-
-    // Publica o estado do relé
-    String relayState = systemStatus.isRelayOn ? "electric" : "off";
-    client.publish("relay/state", relayState.c_str());
-    _logger.logMessage("Relay state: " + relayState);
-
-    // Publica a temperatura da proteína
-    String proteinTemp = String(systemStatus.calibratedTempP);
-    client.publish("sensor/protein_temperature", proteinTemp.c_str());
-    _logger.logMessage("Protein temperature: " + proteinTemp);
-
-    // Publica a temperatura setada para a proteína
-    String proteinTempSet = String(systemStatus.proteinTemperature);
-    client.publish("sensor/protein_set_temperature", proteinTempSet.c_str());
-    _logger.logMessage("Protein set temperature: " + proteinTempSet);
-
-    // Publica o estado do relé para proteína
-    String relayStateProtein = systemStatus.proteinTemperature > 0 ? "electric" : "off";
-    client.publish("relay_protein/state", relayStateProtein.c_str());
-    _logger.logMessage("Relay Protein state: " + relayStateProtein);
-
-    // Publica a média da temperatura da BBQ
-    String bbqTempAvg = String(systemStatus.averageTemp);
-    client.publish("sensor/bbq_average_temperature", bbqTempAvg.c_str());
-    _logger.logMessage("BBQ average temperature: " + bbqTempAvg);
-
-    _logger.logMessage("Published all messages to MQTT topics");
-    _logger.logMessage("=======================================");
-}
-
-void MQTTHandler::checkAndReconnectAwsIoT() {
-    if (!client.connected()) {
-        connectMQTT();
-    }
-    client.loop();
-}
-
-void MQTTHandler::verifyAndReconnect(SystemStatus& systemStatus) {
-    _logger.logMessage("Verificando disponibilidade do MQTT Broker...");
-    if (systemStatus.isHAAvailable) {
-        _logger.logMessage("MQTT Broker disponível");
-        connectMQTT();
     } else {
-        _logger.logMessage("MQTT Broker não disponível");
+        _mqttClient.loop();
+        
+        // Publicar atualizações periódicas
+        unsigned long now = millis();
+        if (now - _lastPublish > PUBLISH_INTERVAL) {
+            _lastPublish = now;
+            publishStatus();
+        }
     }
 }
 
-void MQTTHandler::managePublishing(SystemStatus& systemStatus) {
-    static unsigned long previousMillis = 0;
-    const long interval = 3000; // Intervalo de 3 segundos
-    unsigned long currentMillis = millis();
-
-    if (currentMillis - previousMillis >= interval) {
-        previousMillis = currentMillis;
-
-        if (systemStatus.isHAAvailable) {
-            publishAllMessages(systemStatus);
-        }
+bool MQTTHandler::reconnect() {
+    static uint8_t attempts = 0;
+    
+    if (attempts >= MAX_RECONNECT_ATTEMPTS) {
+        _logger.logError("MQTT: Max reconnection attempts reached");
+        _enabled = false;
+        attempts = 0;
+        return false;
     }
+    
+    _logger.logMessage("MQTT: Attempting connection...");
+    
+    String clientId = "BBQ-";
+    clientId += String(random(0xffff), HEX);
+    
+    if (_mqttClient.connect(clientId.c_str(), _status.mqttUser, _status.mqttPassword)) {
+        _logger.logMessage("MQTT: Connected");
+        _mqttClient.subscribe(Topics::COMMAND);
+        attempts = 0;
+        return true;
+    }
+    
+    attempts++;
+    _logger.logError("MQTT: Connection failed, rc=" + String(_mqttClient.state()));
+    return false;
+}
 
-    if (systemStatus.isHAAvailable) {
-        checkAndReconnectAwsIoT();
+void MQTTHandler::publish(const char* topic, const char* payload) {
+    if (!isConnected()) return;
+    
+    if (_mqttClient.publish(topic, payload)) {
+        _logger.logMessage("MQTT: Published to " + String(topic));
+    } else {
+        _logger.logError("MQTT: Failed to publish to " + String(topic));
+    }
+}
+
+bool MQTTHandler::configure() {
+    if (_status.mqttServer[0] == '\0' || _status.mqttPort == 0) {
+        return false;
+    }
+    
+    _mqttClient.setServer(_status.mqttServer, _status.mqttPort);
+    _configured = true;
+    return true;
+}
+
+void MQTTHandler::setupTopics() {
+    // Configurar tópicos MQTT aqui se necessário
+}
+
+void MQTTHandler::publishStatus() {
+    DynamicJsonDocument doc(256);
+    doc["bbq_temp"] = _status.calibratedTemp;
+    doc["protein_temp"] = _status.calibratedTempP;
+    doc["target_temp"] = _status.bbqTemperature;
+    doc["relay"] = _status.isRelayOn;
+    
+    String output;
+    serializeJson(doc, output);
+    publish(Topics::STATUS, output.c_str());
+    
+    publishTemperature();
+    publishEnergy();
+}
+
+void MQTTHandler::publishTemperature() {
+    publish(Topics::TEMPERATURE, String(_status.calibratedTemp).c_str());
+    publish(Topics::PROTEIN, String(_status.calibratedTempP).c_str());
+}
+
+void MQTTHandler::publishEnergy() {
+    DynamicJsonDocument doc(128);
+    doc["power"] = _status.power;
+    doc["energy"] = _status.energy;
+    doc["cost"] = _status.cost;
+    
+    String output;
+    serializeJson(doc, output);
+    publish(Topics::ENERGY, output.c_str());
+}
+
+void MQTTHandler::callback(char* topic, byte* payload, unsigned int length) {
+    if (_instance) {
+        _instance->handleCallback(topic, payload, length);
+    }
+}
+
+void MQTTHandler::handleCallback(char* topic, byte* payload, unsigned int length) {
+    // Converter payload para string
+    char message[length + 1];
+    memcpy(message, payload, length);
+    message[length] = '\0';
+    
+    _logger.logMessage("MQTT: Message received [" + String(topic) + "] " + String(message));
+    
+    if (strcmp(topic, Topics::COMMAND) == 0) {
+        DynamicJsonDocument doc(256);
+        DeserializationError error = deserializeJson(doc, message);
+        
+        if (error) {
+            _logger.logError("MQTT: JSON parsing failed");
+            return;
+        }
+        
+        // Processar comandos aqui
+        if (doc.containsKey("target_temp")) {
+            _status.bbqTemperature = doc["target_temp"];
+        }
     }
 }

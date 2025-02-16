@@ -1,59 +1,66 @@
 #include "TemperatureEndpoints.h"
 #include "LogHandler.h"      // Inclua o novo LogHandler aqui
 #include "ResponseHelper.h"  // Inclua o ResponseHelper aqui
+#include "BaseEndpoint.h"
+#include "RouteConstants.h"
+#include <ArduinoJson.h>
 
-void registerTemperatureEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, LogHandler& logger) {
-    server.on("/api/v1/temperature/config", HTTP_GET, [&](AsyncWebServerRequest *request) {
-        // Log da requisição utilizando o novo LogHandler
-        logger.logRequest(request, "Fetching temperature config");
+TemperatureEndpoints::TemperatureEndpoints(AsyncWebServer& s, SystemStatus& ss, LogHandler& l)
+    : BaseEndpoint(s, ss, l) {}
 
-        DynamicJsonDocument data(1024);
-        data["bbqTemperature"] = systemStatus.bbqTemperature;
-        data["proteinTemperature"] = systemStatus.proteinTemperature;
-        data["tempCalibration"] = systemStatus.tempCalibration;
-        data["tempCalibrationP"] = systemStatus.tempCalibrationP;
+void TemperatureEndpoints::registerRoutes() {
+    // GET config
+    server.on(Routes::Temperature::CONFIG, HTTP_GET, [this](AsyncWebServerRequest *request) {
+        logEndpointAccess(Routes::Temperature::CONFIG, "GET");
 
-        // Utilizando ResponseHelper para enviar a resposta
-        ResponseHelper::sendJsonResponse(request, 200, "Temperature config fetched successfully", data.as<JsonObject>());
-        
-        // Log da mensagem de sucesso utilizando o novo LogHandler
-        logger.logMessage("Temperature config fetched successfully");
+        DynamicJsonDocument doc(1024);
+        doc["bbqTemperature"] = systemStatus.bbqTemperature;
+        doc["proteinTemperature"] = systemStatus.proteinTemperature;
+        doc["tempCalibration"] = systemStatus.tempCalibration;
+        doc["tempCalibrationP"] = systemStatus.tempCalibrationP;
+        doc["minBBQTemp"] = systemStatus.minBBQTemp;
+        doc["maxBBQTemp"] = systemStatus.maxBBQTemp;
+        doc["minPrtTemp"] = systemStatus.minPrtTemp;
+        doc["maxPrtTemp"] = systemStatus.maxPrtTemp;
+        doc["minCaliTemp"] = systemStatus.minCaliTemp;
+        doc["maxCaliTemp"] = systemStatus.maxCaliTemp;
+        doc["minCaliTempP"] = systemStatus.minCaliTempP;
+        doc["maxCaliTempP"] = systemStatus.maxCaliTempP;
+
+        ResponseHelper::sendJsonResponse(request, 200, "Temperature config fetched", doc.as<JsonObject>());
     });
 
-    server.on("/api/v1/temperature/config", HTTP_PATCH, [&](AsyncWebServerRequest *request) {
-        // Log da requisição utilizando o novo LogHandler
-        logger.logRequest(request, "Updating temperature config");
+    // PATCH config
+    server.on(Routes::Temperature::CONFIG, HTTP_PATCH, [this](AsyncWebServerRequest *request) {
+        logEndpointAccess(Routes::Temperature::CONFIG, "PATCH");
 
         bool updated = false;
-
-        if (request->hasParam("bbqTemperature", true)) {
+        
+        if (validateParam(request, "bbqTemperature", false)) {
             systemStatus.bbqTemperature = request->getParam("bbqTemperature", true)->value().toFloat();
             updated = true;
         }
-
-        if (request->hasParam("proteinTemperature", true)) {
+        
+        if (validateParam(request, "proteinTemperature", false)) {
             systemStatus.proteinTemperature = request->getParam("proteinTemperature", true)->value().toFloat();
             updated = true;
         }
-
-        if (request->hasParam("tempCalibration", true)) {
+        
+        if (validateParam(request, "tempCalibration", false)) {
             systemStatus.tempCalibration = request->getParam("tempCalibration", true)->value().toFloat();
             updated = true;
         }
-
-        if (request->hasParam("tempCalibrationP", true)) {
+        
+        if (validateParam(request, "tempCalibrationP", false)) {
             systemStatus.tempCalibrationP = request->getParam("tempCalibrationP", true)->value().toFloat();
             updated = true;
         }
 
         if (!updated) {
-            ResponseHelper::sendErrorResponse(request, 400, "No valid parameters provided for update");
-            logger.logError("No valid parameters provided for update");
+            ResponseHelper::sendErrorResponse(request, 400, "No valid parameters provided");
             return;
         }
 
-        // Utilizando ResponseHelper para enviar a resposta
-        ResponseHelper::sendJsonResponse(request, 200, "Temperature config updated successfully");
-        logger.logMessage("Temperature config updated successfully");
+        ResponseHelper::sendJsonResponse(request, 200, "Temperature config updated");
     });
 }
