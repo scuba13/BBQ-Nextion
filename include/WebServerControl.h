@@ -18,7 +18,7 @@ private:
     FileSystem& _fileSystem;
     LogHandler& _logger;
     AsyncWebServer& _server; // Usando referência para o servidor
-    OTAHandler _otaHandler;  // Instância do OTAHandler
+    OTAHandler _otaHandler;  // Instância com inicialização no construtor
     DiagnosticsHandler& _diagnostics;  // Renomeado para seguir padrão
 };
 

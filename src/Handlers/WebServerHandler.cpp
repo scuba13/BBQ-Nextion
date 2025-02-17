@@ -20,14 +20,14 @@ WebServerControl::WebServerControl(SystemStatus& systemStatus,
     , _fileSystem(fileSystem)
     , _logger(logger)
     , _server(server)
-    , _otaHandler()
+    , _otaHandler(logger)
     , _diagnostics(diagnosticsHandler) {}
 
 void WebServerControl::begin() {
 
     // Registrar endpoints antes de configurar arquivos estáticos
     registerAIEndpoints(_server, _systemStatus, _logger, _fileSystem);
-    registerSystemEndpoints(_server, _systemStatus, _logger);
+    registerSystemEndpoints(_server, _systemStatus, _logger, _otaHandler);
     registerMonitorEndpoints(_server, _systemStatus, _logger);
     registerTemperatureEndpoints(_server, _systemStatus, _logger);
     registerMQTTConfigEndpoints(_server, _systemStatus, _fileSystem, _logger);
