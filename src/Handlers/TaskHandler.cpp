@@ -2,6 +2,8 @@
 #include <Arduino.h>
 #include <Nextion.h>
 #include "LogHandler.h"
+#include "NextionHandler.h"
+#include "TemperatureControl.h"
 
 // Declarações externas
 extern SystemStatus sysStat;
@@ -15,6 +17,123 @@ extern LogHandler _logger;
 #define CONTROL_TASK_STACK    2048  // Reduzido de 4000
 #define CONTROL_TASK_PRIORITY 1     // Prioridade menor
 #define CONTROL_TASK_CORE     0     // Core separado para controle
+
+// Handles apenas para tasks necessárias
+static TaskHandle_t tempTaskHandle = NULL;
+static TaskHandle_t mqttTaskHandle = NULL;
+static TaskHandle_t controlTaskHandle = NULL;
+
+// Referências globais
+static SystemStatus* systemStatus;
+static MQTTHandler* mqttHandler;
+
+// Task para leitura de temperatura (500ms)
+void temperatureTask(void *parameter) {
+    const TickType_t xDelay = pdMS_TO_TICKS(500);
+    while (true) {
+        getCalibratedTemp(thermocouple, *systemStatus);
+        getCalibratedTempP(thermocoupleP, *systemStatus);
+        getCalibratedInternalTemp(*systemStatus);
+        vTaskDelay(xDelay);
+    }
+}
+
+// Task para MQTT (3s) - Agora com verificação de disponibilidade
+void mqttTask(void *parameter) {
+    const TickType_t xDelay = pdMS_TO_TICKS(3000);
+    while (true) {
+        if (systemStatus->isHAAvailable) {  // Só executa se MQTT estiver disponível
+            mqttHandler->managePublishing(*systemStatus);
+        }
+        vTaskDelay(xDelay);
+    }
+}
+
+// Task para controle de temperatura (1s)
+void controlTask(void *parameter) {
+    const TickType_t xDelay = pdMS_TO_TICKS(1000);
+    while (true) {
+        controlTemperature(*systemStatus);
+        vTaskDelay(xDelay);
+    }
+}
+
+void initializeTasks(SystemStatus& sysStat, MQTTHandler& mqtt) {
+    systemStatus = &sysStat;
+    mqttHandler = &mqtt;
+
+    // Task de temperatura no core 0
+    xTaskCreatePinnedToCore(
+        temperatureTask,
+        "TempTask",
+        4096,
+        NULL,
+        2, // Prioridade alta
+        &tempTaskHandle,
+        0
+    );
+
+    // Task de controle no core 0
+    xTaskCreatePinnedToCore(
+        controlTask,
+        "ControlTask",
+        2048,
+        NULL,
+        1, // Prioridade média
+        &controlTaskHandle,
+        0
+    );
+
+    // Cria task MQTT apenas se estiver disponível
+    if (sysStat.isHAAvailable) {
+        xTaskCreatePinnedToCore(
+            mqttTask,
+            "MQTTTask",
+            4096,
+            NULL,
+            1, // Prioridade baixa
+            &mqttTaskHandle,
+            1
+        );
+        _logger.logMessage("MQTT task iniciada - HA disponível");
+    } else {
+        _logger.logMessage("MQTT task não iniciada - HA não disponível");
+    }
+}
+
+void stopTasks() {
+    if (tempTaskHandle) vTaskDelete(tempTaskHandle);
+    if (controlTaskHandle) vTaskDelete(controlTaskHandle);
+    if (mqttTaskHandle) {  // Só tenta parar se existir
+        vTaskDelete(mqttTaskHandle);
+        mqttTaskHandle = NULL;
+    }
+}
+
+// Função para iniciar MQTT posteriormente
+void startMQTTTask() {
+    if (!mqttTaskHandle && systemStatus->isHAAvailable) {
+        xTaskCreatePinnedToCore(
+            mqttTask,
+            "MQTTTask",
+            4096,
+            NULL,
+            1,
+            &mqttTaskHandle,
+            1
+        );
+        _logger.logMessage("MQTT task iniciada posteriormente");
+    }
+}
+
+// Função para parar MQTT
+void stopMQTTTask() {
+    if (mqttTaskHandle) {
+        vTaskDelete(mqttTaskHandle);
+        mqttTaskHandle = NULL;
+        _logger.logMessage("MQTT task parada");
+    }
+}
 
 // Task de temperatura do BBQ - otimizada
 void getCalibratedTempTask(void *parameter) {

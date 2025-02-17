@@ -1,12 +1,20 @@
-#ifndef TASKHANDLER_H
-#define TASKHANDLER_H
+#ifndef TASK_HANDLER_H
+#define TASK_HANDLER_H
 
 #include "SystemStatus.h"
-#include "TemperatureControl.h"
-//#include "NextionHandler.h"
+#include "MQTTHandler.h"
 
+// Inicializa as tasks principais
+void initializeTasks(SystemStatus& sysStat, MQTTHandler& mqtt);
 
-// Função para criar as tarefas
+// Para as tasks em execução
+void stopTasks();
+
+// Cria tasks específicas de temperatura
 void createTasks();
 
-#endif // TASKHANDLER_H
+// Controle específico do MQTT
+void startMQTTTask();
+void stopMQTTTask();
+
+#endif
