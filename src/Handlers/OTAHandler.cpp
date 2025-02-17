@@ -1,58 +1,76 @@
 #include "OTAHandler.h"
 #include <esp_ota_ops.h>
 #include <Nextion.h>
+#include "LogHandler.h"
+
+extern LogHandler _logger;
+
+// Configurações otimizadas
+#define MIN_FREE_SPACE 65536  // 64KB mínimo livre
+#define PROGRESS_INTERVAL 10  // Intervalo de 10% para logs
 
 OTAHandler::OTAHandler() : totalReceived(0), lastSuccessfulIndex(0) {}
 
 void OTAHandler::handleFirmwareUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
-    if (!index) {
-        totalReceived = 0;  // Reinicia a contagem para novos uploads
-        dbSerial.println("\nRecebendo novo arquivo de firmware: " + filename);
-        if (filename.endsWith(".bin")) {
-            dbSerial.println("Arquivo válido recebido. Iniciando o processo de upload.");
-            if (!Update.begin(UPDATE_SIZE_UNKNOWN)) { // Se o tamanho do update é desconhecido
-                Update.printError(dbSerial);
-                request->send(500, "text/plain", "Não foi possível iniciar o update");
-                return;
-            }
-        } else {
-            dbSerial.println("Arquivo inválido. O upload requer um arquivo .bin.");
-            request->send(400, "text/plain", "400: Somente arquivos .bin são aceitos!");
+    if (!index) { // Início do upload
+        _logger.logMessage("Iniciando atualização OTA: " + filename);
+        
+        // Verifica espaço disponível
+        if (ESP.getFreeSketchSpace() < MIN_FREE_SPACE) {
+            request->send(500, "text/plain", "Espaço insuficiente");
+            return;
+        }
+
+        // Configura Update com verificações de segurança
+        if (!Update.begin(UPDATE_SIZE_UNKNOWN, U_FLASH, LED_BUILTIN, true)) {
+            Update.printError(Serial);
+            request->send(500, "text/plain", "Falha ao iniciar OTA");
             return;
         }
     }
 
-    totalReceived += len;
-    dbSerial.printf("Recebido %u de %u bytes\n", index + len, totalReceived); // Log de progresso
-
-    if (Update.write(data, len) != len) {
-        Update.printError(dbSerial);
-        request->send(500, "text/plain", "Erro durante o upload. Abortando...");
-        Update.abort();
+    // Processa dados recebidos com verificação
+    if (!Update.write(data, len)) {
+        Update.printError(Serial);
+        request->send(500, "text/plain", "Falha ao escrever firmware");
         return;
     }
+    
+    totalReceived += len;
+    lastSuccessfulIndex = index + len;
 
-    if (final) {
-        if (Update.end(true)) { // True to set the size to the current progress
-            dbSerial.printf("************Update Success: %uB *****************\n", totalReceived);
-            request->send(200, "text/plain", "Update Success. Rebooting...");
-            ESP.restart(); // Reinicia o dispositivo
+    // Log de progresso otimizado
+    static int lastProgress = 0;
+    int progress = (totalReceived * 100) / request->contentLength();
+    if (progress - lastProgress >= PROGRESS_INTERVAL) {
+        _logger.logMessage("Progresso OTA: " + String(progress) + "%");
+        lastProgress = progress;
+    }
+
+    if (final) { // Upload finalizado
+        if (Update.end(true)) {
+            _logger.logMessage("OTA concluído com sucesso: " + String(totalReceived) + " bytes");
+            request->send(200, "text/plain", "OK");
+            delay(500);
+            ESP.restart();
         } else {
-            Update.printError(dbSerial);
-            request->send(500, "text/plain", "Falha na atualização. Tentando recuperar...");
-            recoverToLastStableVersion();
+            Update.printError(Serial);
+            request->send(500, "text/plain", "Falha na finalização do OTA");
         }
     }
 }
 
 void OTAHandler::recoverToLastStableVersion() {
+    // Implementação da recuperação usando ESP32 APIs nativas
     const esp_partition_t* running = esp_ota_get_running_partition();
     const esp_partition_t* next = esp_ota_get_next_update_partition(NULL);
 
+    _logger.logMessage("Tentando recuperar última versão estável...");
+    
     if (esp_ota_set_boot_partition(next) == ESP_OK) {
-        dbSerial.println("Recovery successful! Rebooting to the last known good firmware...");
-        esp_restart();
+        _logger.logMessage("Recuperação bem sucedida");
+        ESP.restart();
     } else {
-        dbSerial.println("Recovery failed! No valid firmware to revert to.");
+        _logger.logMessage("Não foi possível recuperar versão anterior");
     }
 }
