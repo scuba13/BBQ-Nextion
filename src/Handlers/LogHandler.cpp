@@ -4,61 +4,132 @@
 #include <Nextion.h>
 
 LogHandler::LogHandler() {
-    // Inicializa o LittleFS se ainda não estiver inicializado
-    if (!LittleFS.begin()) {
-        dbSerial.println("Falha ao montar o sistema de arquivos!");
+    memset(logBuffer, 0, LOG_BUFFER_SIZE);
+}
+
+void LogHandler::begin() {
+    if (!LittleFS.exists("/log.txt")) {
+        File file = LittleFS.open("/log.txt", "w");
+        if (file) {
+            file.close();
+            fileExists = true;
+            currentFileSize = 0;
+        }
+    } else {
+        File file = LittleFS.open("/log.txt", "r");
+        if (file) {
+            currentFileSize = file.size();
+            file.close();
+            fileExists = true;
+        }
     }
 }
 
 void LogHandler::logRequest(AsyncWebServerRequest *request, const String &message) {
-    String logMsg = formatLogMessage("[LOG]", request->client()->remoteIP().toString(), request->methodToString(), request->url(), message);
-    logToSerial(logMsg);
-    logToFile(logMsg);
+    String formattedMsg = formatLogMessage(
+        "[REQUEST]",
+        request->client()->remoteIP().toString(),
+        request->methodToString(),
+        request->url(),
+        message
+    );
+    dbSerial.println(formattedMsg);
+    logMessage(formattedMsg);
 }
 
-void LogHandler::logMessage(const String &message) {
-    String logMsg = "[LOG] " + message;
-    logToSerial(logMsg);
-    logToFile(logMsg);
+void LogHandler::logMessage(const String& message) {
+    // Formata a mensagem com timestamp
+    unsigned long now = millis();
+    String timeStamp = String(now/1000) + "s: ";
+    String fullMessage = timeStamp + message + "\n";
+    
+    // Imprime no dbSerial
+    dbSerial.print(fullMessage);
+    
+    // Verifica se há espaço no buffer
+    if (bufferIndex + fullMessage.length() >= LOG_BUFFER_SIZE) {
+        flushBuffer();
+    }
+    
+    // Adiciona ao buffer
+    memcpy(logBuffer + bufferIndex, fullMessage.c_str(), fullMessage.length());
+    bufferIndex += fullMessage.length();
+    
+    // Verifica se é hora de fazer flush
+    if (now - lastFlush >= FLUSH_INTERVAL) {
+        flushBuffer();
+    }
 }
 
 void LogHandler::logError(const String &message) {
-    String logMsg = "[ERROR] " + message;
-    logToSerial(logMsg);
-    logToFile(logMsg);
+    String errorMsg = "[ERROR] " + message;
+    dbSerial.println(errorMsg);
+    logMessage(errorMsg);
 }
 
-String LogHandler::formatLogMessage(const String& level, const String& clientIP, const String& method, const String& url, const String& message) {
-    return level + " " + clientIP + ": " + method + " " + url + " - " + message;
+String LogHandler::formatLogMessage(const String& level, const String& clientIP, 
+                                  const String& method, const String& url, 
+                                  const String& message) {
+    return level + " " + clientIP + " " + method + " " + url + " - " + message;
 }
 
-void LogHandler::logToSerial(const String &message) {
-    dbSerial.println(message);
+void LogHandler::flushBuffer() {
+    if (bufferIndex == 0) return;
+    
+    checkFileSize();
+    
+    File file = LittleFS.open("/log.txt", "a");
+    if (!file) return;
+    
+    file.write((uint8_t*)logBuffer, bufferIndex);
+    currentFileSize += bufferIndex;
+    
+    file.close();
+    memset(logBuffer, 0, LOG_BUFFER_SIZE);
+    bufferIndex = 0;
+    lastFlush = millis();
 }
 
-void LogHandler::logToFile(const String &message) {
-    // Verifica se o arquivo de log existe e seu tamanho
+void LogHandler::checkFileSize() {
+    if (currentFileSize + bufferIndex > MAX_LOG_SIZE) {
+        rotateLogFile();
+    }
+}
+
+void LogHandler::rotateLogFile() {
+    // Remove arquivo antigo de backup se existir
+    if (LittleFS.exists("/log.old")) {
+        LittleFS.remove("/log.old");
+    }
+    
+    // Renomeia arquivo atual para backup
     if (LittleFS.exists("/log.txt")) {
-        File logFile = LittleFS.open("/log.txt", "r");
-        if (logFile) {
-            size_t fileSize = logFile.size();
-            logFile.close();
-
-            // Se o arquivo de log exceder o tamanho máximo, exclua-o
-            if (fileSize > MAX_LOG_SIZE) {
-                LittleFS.remove("/log.txt"); // Remove o arquivo de log antigo
-            }
-        }
+        LittleFS.rename("/log.txt", "/log.old");
     }
-
-    // Abre o arquivo de log para adicionar a mensagem ou cria um novo se não existir
-    File logFile = LittleFS.open("/log.txt", "a"); // Modo de append para adicionar ao final do arquivo
-    if (!logFile) {
-        dbSerial.println("Falha ao abrir arquivo de log para escrita no LogHandler!");
-        return;
+    
+    // Cria novo arquivo
+    File file = LittleFS.open("/log.txt", "w");
+    if (file) {
+        file.close();
+        currentFileSize = 0;
     }
+}
 
-    // Escreve a mensagem no arquivo de log e fecha o arquivo
-    logFile.println(message);
-    logFile.close();
+void LogHandler::clearLogs() {
+    if (LittleFS.exists("/log.txt")) {
+        LittleFS.remove("/log.txt");
+    }
+    if (LittleFS.exists("/log.old")) {
+        LittleFS.remove("/log.old");
+    }
+    
+    File file = LittleFS.open("/log.txt", "w");
+    if (file) {
+        file.close();
+        currentFileSize = 0;
+    }
+    
+    memset(logBuffer, 0, LOG_BUFFER_SIZE);
+    bufferIndex = 0;
+    lastFlush = millis();
 }

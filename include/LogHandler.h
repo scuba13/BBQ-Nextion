@@ -1,32 +1,38 @@
-#ifndef LOGGING_H
-#define LOGGING_H
+#ifndef LOG_HANDLER_H
+#define LOG_HANDLER_H
 
 #include <Arduino.h>
-#include <ESPAsyncWebServer.h>
-#include <FS.h>
 #include <LittleFS.h>
-#include <Nextion.h>
+#include <ESPAsyncWebServer.h> // Necessário para AsyncWebServerRequest
 
 class LogHandler {
-public:
-    LogHandler();
-    
-    // Log a request with details about the client IP, HTTP method, and URL
-    void logRequest(AsyncWebServerRequest *request, const String &message);
-    
-    // Log a generic message
-    void logMessage(const String &message);
-    
-    // Log errors or warnings
-    void logError(const String &message);
-
 private:
-    void logToSerial(const String &message);
-    void logToFile(const String &message);
+    // Buffer circular para logs
+    static const size_t LOG_BUFFER_SIZE = 1024;
+    static const size_t MAX_LOG_SIZE = 50000; // 50KB máximo
+    char logBuffer[LOG_BUFFER_SIZE];
+    size_t bufferIndex = 0;
+    unsigned long lastFlush = 0;
+    const unsigned long FLUSH_INTERVAL = 5000; // 5 segundos
+
+    // Cache de status do arquivo
+    bool fileExists = false;
+    size_t currentFileSize = 0;
+
+    void flushBuffer();
+    void checkFileSize();
+    void rotateLogFile();
     String formatLogMessage(const String& level, const String& clientIP, const String& method, const String& url, const String& message);
 
-    // Define o tamanho máximo do arquivo de log em bytes (por exemplo, 1 MB)
-    const unsigned long MAX_LOG_SIZE = 1 * 1024 * 1024; // 1 MB
+public:
+    LogHandler();
+    void begin();
+    void logMessage(const String& message);
+    void clearLogs();
+
+    // Métodos adicionados de volta
+    void logRequest(AsyncWebServerRequest *request, const String &message);
+    void logError(const String &message);
 };
 
-#endif // LOGGING_H
+#endif

@@ -1,61 +1,40 @@
 #include "WiFiHandler.h"
 #include <Arduino.h>
 #include "NextionHandler.h"
-#include <Nextion.h>
 #include "LogHandler.h"
-#include <WiFiManager.h>
 
 extern LogHandler _logger;
 
-// Objeto WiFiManager
-WiFiManager wifiManager;
+// Configurações otimizadas de WiFi
+#define WIFI_CONNECT_TIMEOUT 10000  // 10 segundos timeout
+#define WIFI_RETRY_DELAY 500        // Delay entre tentativas
+#define MAX_CONNECTION_RETRIES 3    // Máximo de tentativas
 
 void configModeCallback(WiFiManager *myWiFiManager) {
-    _logger.logMessage("Entrando no modo AP.");
-    _logger.logMessage("SSID do AP: " + myWiFiManager->getConfigPortalSSID());
-    _logger.logMessage("Endereço IP do AP: " + WiFi.softAPIP().toString());
-
-    digitalWrite(RGB_BUILTIN, HIGH);  // Turn the RGB LED white
-    
-    // Exibir tela informando que o dispositivo está em modo AP
-   ap.show();
+    _logger.logMessage("Modo AP iniciado: " + myWiFiManager->getConfigPortalSSID());
+    digitalWrite(RGB_BUILTIN, HIGH);
+    ap.show();
 }
 
-void initWiFi(SystemStatus &sysStat, LogHandler &logHandler)
-{
-    logHandler.logMessage("Iniciando processo de conexão WiFi...");
+void initWiFi(SystemStatus &sysStat, LogHandler &logHandler) {
+    WiFi.mode(WIFI_STA);
+    WiFi.setSleep(false);
+    
     wifi.show();
     
-    // Set callback que será chamado quando o modo AP for iniciado
+    WiFiManager wifiManager;
     wifiManager.setAPCallback(configModeCallback);
+    wifiManager.setConfigPortalTimeout(120);
     
-    bool isConnected = wifiManager.autoConnect("LazyQ Inc.");
-    
-    logHandler.logMessage("Resultado do autoConnect: " + String(isConnected ? "Conectado" : "Falha na conexão"));
-
-    if (isConnected && WiFi.status() == WL_CONNECTED)
-    {
-        logHandler.logMessage("Conexão WiFi estabelecida!");
-        logHandler.logMessage("O IP da ESP32 é: " + WiFi.localIP().toString());
-
-        // Inicialização do MDNS
-        if (!MDNS.begin("bbq"))
-        {
-            logHandler.logMessage("Erro ao configurar o MDNS");
-            while (1)
-            {
-                delay(1000);
-            }
-        }
-        logHandler.logMessage("MDNS configurado com sucesso");
-        MDNS.addService("http", "tcp", 80);
-        delay(1000);
-        welcome.show();
+    if (wifiManager.autoConnect("LazyQ Inc.")) {
+        logHandler.logMessage("WiFi conectado - IP: " + WiFi.localIP().toString());
         
-    }
-    else
-    {
-        logHandler.logMessage("Falha na tentativa de autoConectar.");
-        // Exibir tela adicional, se necessário, quando a falha na conexão WiFi não resulta em modo AP
+        if (MDNS.begin("bbq")) {
+            MDNS.addService("http", "tcp", 80);
+        }
+        
+        welcome.show();
+    } else {
+        logHandler.logMessage("Falha na conexão WiFi");
     }
 }
