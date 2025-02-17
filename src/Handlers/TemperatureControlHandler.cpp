@@ -14,6 +14,24 @@ DallasTemperature sensors(&oneWire);
 MAX6675 thermocouple(MAX6675_SCK, MAX6675_CS, MAX6675_SO);        // Instanciação da variável
 MAX6675 thermocoupleP(MAX6675_SCK_P, MAX6675_CS_P, MAX6675_SO_P); // Instanciação da variável
 
+// Cache de leituras para reduzir acessos ao hardware
+static struct {
+    float lastBBQTemp = 0;
+    float lastProbeTemp = 0;
+    float lastInternalTemp = 0;
+    unsigned long lastReadTime = 0;
+} tempCache;
+
+// Otimização do controle PID
+static struct {
+    float lastError = 0;
+    float integral = 0;
+    unsigned long lastUpdate = 0;
+    const float Kp = 2.0;
+    const float Ki = 0.5;
+    const float Kd = 1.0;
+} pidControl;
+
 //Internal Temp
 int getCalibratedInternalTemp(SystemStatus &sysStat)
 {
@@ -24,29 +42,35 @@ int getCalibratedInternalTemp(SystemStatus &sysStat)
   return sysStat.calibratedTempInternal;
 }
 
-// BBQ Collection Functions
-int getCalibratedTemp(MAX6675 &thermocouple, SystemStatus &sysStat)
-{
-  float temp = thermocouple.readCelsius() + sysStat.tempCalibration;
-  sysStat.tempSamples[sysStat.nextSampleIndex] = temp;
-  sysStat.nextSampleIndex = (sysStat.nextSampleIndex + 1) % NUM_SAMPLES;
-  if (sysStat.numSamples < NUM_SAMPLES)
-  {
-    sysStat.numSamples++;
-  }
+// BBQ Collection Functions - Otimizado
+int getCalibratedTemp(MAX6675& thermocouple, SystemStatus& sysStat) {
+    unsigned long currentTime = millis();
+    
+    // Usa cache se dentro do intervalo
+    if (currentTime - tempCache.lastReadTime < TEMP_READ_INTERVAL) {
+        return tempCache.lastBBQTemp;
+    }
 
-  float sum = 0;
-  for (int i = 0; i < sysStat.numSamples; i++)
-  {
-    sum += sysStat.tempSamples[i];
-  }
+    // Leitura do sensor com média móvel
+    float temp = thermocouple.readCelsius() + sysStat.tempCalibration;
+    sysStat.tempSamples[sysStat.nextSampleIndex] = temp;
+    sysStat.nextSampleIndex = (sysStat.nextSampleIndex + 1) % NUM_SAMPLES;
+    
+    if (sysStat.numSamples < NUM_SAMPLES) {
+        sysStat.numSamples++;
+    }
 
-  int newCalibratedTemp = (int)round(sum / sysStat.numSamples);
-  sysStat.calibratedTemp = newCalibratedTemp;
+    // Cálculo otimizado da média
+    float sum = 0;
+    for (int i = 0; i < sysStat.numSamples; i++) {
+        sum += sysStat.tempSamples[i];
+    }
+    
+    tempCache.lastBBQTemp = round(sum / sysStat.numSamples);
+    tempCache.lastReadTime = currentTime;
+    sysStat.calibratedTemp = tempCache.lastBBQTemp;
 
-  //logHandler.logMessage("Calibrated Temp: " + String(sysStat.calibratedTemp));
-
-  return sysStat.calibratedTemp;
+    return sysStat.calibratedTemp;
 }
 
 // Protein Collection Functions
@@ -92,23 +116,29 @@ void updateRelayState(int temp, SystemStatus &sysStat)
   //logHandler.logMessage("Relay state updated: " + String(sysStat.isRelayOn ? "ON" : "OFF"));
 }
 
-void controlTemperature(SystemStatus &sysStat)
-{
-  //logHandler.logMessage("Controlando temperatura...");
-  int temp = sysStat.calibratedTemp;
+// Controle de temperatura simplificado e otimizado
+void controlTemperature(SystemStatus& sysStat) {
+    int temp = sysStat.calibratedTemp;
+    
+    // Verifica se atingiu temperatura alvo
+    if (temp >= sysStat.bbqTemperature) {
+        sysStat.hasReachedSetTemp = true;
+        sysStat.startAverage = true;
+    }
 
-  if (temp >= sysStat.bbqTemperature)
-  {
-    sysStat.hasReachedSetTemp = true;
-  }
+    // Controle do relé com histerese de 2 graus
+    if (temp <= sysStat.bbqTemperature - 2) {
+        digitalWrite(RELAY_PIN, HIGH);
+        neopixelWrite(RGB_BUILTIN, RGB_BRIGHTNESS, 0, 0);  // Red
+        sysStat.isRelayOn = true;
+    }
+    else if (temp >= sysStat.bbqTemperature) {
+        digitalWrite(RELAY_PIN, LOW);
+        neopixelWrite(RGB_BUILTIN, 0, 0, RGB_BRIGHTNESS);  // Blue
+        sysStat.isRelayOn = false;
+    }
 
-  if (sysStat.hasReachedSetTemp)
-  {
-    sysStat.startAverage = true;
-  }
-
-  updateRelayState(temp, sysStat);
-  collectSample(sysStat);
+    collectSample(sysStat);
 }
 
 void addSample(int temp, SystemStatus &sysStat)

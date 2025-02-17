@@ -3,43 +3,51 @@
 #include <Nextion.h>
 #include "LogHandler.h"
 
-// Declaração externa de sysStat para que as tarefas possam acessar
+// Declarações externas
 extern SystemStatus sysStat;
-extern LogHandler _logger; // Certifique-se de que o logHandler esteja declarado externamente ou passado como argumento
+extern LogHandler _logger;
 
-// Tarefa para obter a temperatura calibrada do termopar
-void getCalibratedTempTask(void *parameter)
-{
-    _logger.logMessage("Task getCalibratedTempTask started.");
-    while (true)
-    {
+// Configurações otimizadas para as tasks
+#define TEMP_TASK_STACK    3072  // Reduzido de 4000
+#define TEMP_TASK_PRIORITY 2     // Aumentado para prioridade maior
+#define TEMP_TASK_CORE     1     // Core dedicado para temperatura
+
+#define CONTROL_TASK_STACK    2048  // Reduzido de 4000
+#define CONTROL_TASK_PRIORITY 1     // Prioridade menor
+#define CONTROL_TASK_CORE     0     // Core separado para controle
+
+// Task de temperatura do BBQ - otimizada
+void getCalibratedTempTask(void *parameter) {
+    const TickType_t xFrequency = pdMS_TO_TICKS(500); // 2Hz é suficiente
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+
+    while (true) {
         getCalibratedTemp(thermocouple, sysStat);
-        vTaskDelay(pdMS_TO_TICKS(500)); 
+        vTaskDelayUntil(&xLastWakeTime, xFrequency); // Timing mais preciso
     }
 }
 
-// Tarefa para obter a temperatura calibrada do termopar de proteína
-void getCalibratedTempPTask(void *parameter)
-{
-    _logger.logMessage("Task getCalibratedTempPTask started.");
-    while (true)
-    {
+// Task de temperatura da sonda - otimizada
+void getCalibratedTempPTask(void *parameter) {
+    const TickType_t xFrequency = pdMS_TO_TICKS(500);
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+
+    while (true) {
         getCalibratedTempP(thermocoupleP, sysStat);
-        vTaskDelay(pdMS_TO_TICKS(500));
+        vTaskDelayUntil(&xLastWakeTime, xFrequency);
     }
 }
 
-// Tarefa para controlar a temperatura
-void controlTemperatureTask(void *parameter)
-{
-    _logger.logMessage("Task controlTemperatureTask started.");
-    while (true)
-    {
-        if (sysStat.bbqTemperature > 0)
-        {
+// Task de controle - otimizada
+void controlTemperatureTask(void *parameter) {
+    const TickType_t xFrequency = pdMS_TO_TICKS(1000); // 1Hz para controle
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+
+    while (true) {
+        if (sysStat.bbqTemperature > 0) {
             controlTemperature(sysStat);
         }
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelayUntil(&xLastWakeTime, xFrequency);
     }
 }
 
@@ -54,54 +62,42 @@ void getCalibratedInternalTempTask(void *parameter)
     }
 }
 
-// Função para criar as tarefas
-void createTasks()
-{
-    _logger.logMessage("Creating tasks...");
-    
-    xTaskCreate(
-        getCalibratedTempTask, // Função que será executada pela tarefa. Esta função irá obter e calibrar a temperatura.
-        "TempTask",            // Nome da tarefa (útil para fins de depuração).
-        4000,                  // Tamanho da pilha da tarefa. Reserva espaço para 2000 entradas.
-        NULL,                  // Parâmetros que são passados para a função da tarefa. No caso, nenhum parâmetro é passado.
-        1,                     // Prioridade da tarefa. Aqui, a tarefa tem uma prioridade de 1.
-        NULL                   // Pode armazenar o identificador da tarefa, mas não estamos armazenando aqui.
+// Função de criação das tasks otimizada
+void createTasks() {
+    _logger.logMessage("Iniciando criação das tasks...");
+
+    // Task de temperatura BBQ
+    xTaskCreatePinnedToCore(
+        getCalibratedTempTask,
+        "TempTask",
+        TEMP_TASK_STACK,
+        NULL,
+        TEMP_TASK_PRIORITY,
+        NULL,
+        TEMP_TASK_CORE
     );
 
-    _logger.logMessage("Task TempTask created.");
-
-    xTaskCreate(
-        getCalibratedTempPTask, // Função que será executada pela tarefa. Esta função irá obter e calibrar a temperatura.
-        "TempPTask",            // Nome da tarefa (útil para fins de depuração).
-        4000,                   // Tamanho da pilha da tarefa. Reserva espaço para 2000 entradas.
-        NULL,                   // Parâmetros que são passados para a função da tarefa. No caso, nenhum parâmetro é passado.
-        1,                      // Prioridade da tarefa. Aqui, a tarefa tem uma prioridade de 1.
-        NULL                    // Pode armazenar o identificador da tarefa, mas não estamos armazenando aqui.
+    // Task de temperatura Sonda
+    xTaskCreatePinnedToCore(
+        getCalibratedTempPTask,
+        "TempPTask",
+        TEMP_TASK_STACK,
+        NULL,
+        TEMP_TASK_PRIORITY,
+        NULL,
+        TEMP_TASK_CORE
     );
 
-    _logger.logMessage("Task TempPTask created.");
-
-    xTaskCreate(
-        controlTemperatureTask, // Função que será executada pela tarefa. Esta função irá controlar a temperatura.
-        "ControlTempTask",      // Nome da tarefa (útil para fins de depuração).
-        4000,                   // Tamanho da pilha da tarefa. Reserva espaço para 2000 entradas.
-        NULL,                   // Parâmetros que são passados para a função da tarefa. No caso, nenhum parâmetro é passado.
-        1,                      // Prioridade da tarefa. Aqui, a tarefa tem uma prioridade de 1.
-        NULL                    // Pode armazenar o identificador da tarefa, mas não estamos armazenando aqui.
+    // Task de controle
+    xTaskCreatePinnedToCore(
+        controlTemperatureTask,
+        "ControlTask",
+        CONTROL_TASK_STACK,
+        NULL,
+        CONTROL_TASK_PRIORITY,
+        NULL,
+        CONTROL_TASK_CORE
     );
 
-    _logger.logMessage("Task ControlTempTask created.");
-
-    // xTaskCreate(
-    //     getCalibratedInternalTempTask, // Função que será executada pela tarefa. Esta função irá obter a temperatura interna calibrada.
-    //     "ControlInternalTempTask",      // Nome da tarefa (útil para fins de depuração).
-    //     2000,                   // Tamanho da pilha da tarefa. Reserva espaço para 2000 entradas.
-    //     NULL,                   // Parâmetros que são passados para a função da tarefa. No caso, nenhum parâmetro é passado.
-    //     1,                      // Prioridade da tarefa. Aqui, a tarefa tem uma prioridade de 1.
-    //     NULL                    // Pode armazenar o identificador da tarefa, mas não estamos armazenando aqui.
-    // );
-
-    // _logger.logMessage("Task ControlInternalTempTask created.");
-
-    _logger.logMessage("All tasks created successfully.");
+    _logger.logMessage("Tasks criadas com sucesso");
 }

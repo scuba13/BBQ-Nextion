@@ -32,6 +32,17 @@ static float lastMaxCaliChunk = 0;
 uint32_t lastPageIdCali = -1;
 bool initialUpdateDoneCali = false;
 
+// Cache de valores para reduzir comunicação serial
+static struct {
+    int lastBBQTemp = -999;
+    int lastProbeTemp = -999;
+    int lastBBQTarget = -999;
+    int lastProbeTarget = -999;
+    int lastAvgTemp = -999;
+    bool lastRelayState = false;
+    uint32_t lastPageId = 0;
+    unsigned long lastUpdate = 0;
+} nexCache;
 
 // Definition of Nextion components
 NexPage wifi = NexPage(0, 0, "wifi");
@@ -208,16 +219,20 @@ void setCaliPushCallback(void *ptr)
 
 void initNextion(SystemStatus &sysStat)
 {
-    Serial2.begin(9600, SERIAL_8N1, 16, 17); // Configura a porta serial para o Nextion (pinos RX2 e TX2)
+    // Configura serial com buffer maior
+    Serial2.begin(9600, SERIAL_8N1, 16, 17, false, 256);
     nexInit();
+
+    // Registra callbacks
     setBBQTempPush.attachPush(setBBQTempPushCallback, &sysStat);
     setChunkTempPush.attachPush(setChunkTempPushCallback, &sysStat);
     stopPush.attachPush(setStopPushCallback, &sysStat);
     setCaliPush.attachPush(setCaliPushCallback, &sysStat);
 
-    _logger.logMessage("Nextion initialized");
-
-    delay(500);
+    // Reset do cache
+    nexCache = {};
+    
+    delay(100); // Pequeno delay para estabilização
 }
 
 uint8_t getCurrentPageId()
@@ -249,18 +264,19 @@ uint8_t getCurrentPageId()
 
 void setPageBackground(const char *pageName, uint32_t img_id)
 {
-    while (nexSerial.available())
-    {
+    static char cmdBuffer[50];
+    snprintf(cmdBuffer, sizeof(cmdBuffer), "%s.pic=%d", pageName, img_id);
+    
+    // Limpa buffer serial
+    while (nexSerial.available()) {
         nexSerial.read();
     }
-
-    String cmd = String(pageName) + ".pic=" + String(img_id);
-   // _logger.logMessage("Command: " + cmd);
-    nexSerial.print(cmd);
+    
+    // Envia comando
+    nexSerial.print(cmdBuffer);
     nexSerial.write(0xFF);
     nexSerial.write(0xFF);
     nexSerial.write(0xFF);
-    delay(50);
 }
 
 void updateNumberComponent(NexNumber &component, float &lastValue, float newValue, const char *componentName, bool forceUpdate)
@@ -275,38 +291,53 @@ void updateNumberComponent(NexNumber &component, float &lastValue, float newValu
 
 void updateNextionMonitorVariables(SystemStatus &sysStat)
 {
-    uint32_t currentPageId = getCurrentPageId();
-    bool forceUpdate = (currentPageId != lastPageId);
+    const unsigned long UPDATE_INTERVAL = 500; // Atualiza a cada 500ms
+    unsigned long currentTime = millis();
+    
+    // Verifica se está na hora de atualizar
+    if (currentTime - nexCache.lastUpdate < UPDATE_INTERVAL) {
+        return;
+    }
+    nexCache.lastUpdate = currentTime;
 
-    if (currentPageId != 3)
-    {
-        lastPageId = currentPageId;
+    // Verifica se está na página correta
+    uint32_t currentPage = getCurrentPageId();
+    if (currentPage != 3) { // Página do monitor
+        nexCache.lastPageId = currentPage;
         return;
     }
 
-   // _logger.logMessage("Updating Nextion Monitor Variables...");
-
-    updateNumberComponent(bbqTempSet, lastBbqTempSet, sysStat.bbqTemperature, "bbqTempSet", forceUpdate);
-    updateNumberComponent(bbqTemp, lastBbqTemp, sysStat.calibratedTemp, "bbqTemp", forceUpdate);
-    updateNumberComponent(chunkTempSet, lastChunkTempSet, sysStat.proteinTemperature, "chunkTempSet", forceUpdate);
-    updateNumberComponent(chunkTemp, lastChunkTemp, sysStat.calibratedTempP, "chunkTemp", forceUpdate);
-    updateNumberComponent(bbqTempAvg, lastBbqTempAvg, sysStat.averageTemp, "bbqTempAvg", forceUpdate);
-
-    if (sysStat.isRelayOn != lastRelayState || forceUpdate)
-    {
-        _logger.logMessage("Updating relay state to: " + String(sysStat.isRelayOn ? "ON" : "OFF"));
-        if (sysStat.isRelayOn)
-        {
-            setPageBackground("monitor", 4);
-        }
-        else
-        {
-            setPageBackground("monitor", 1);
-        }
-        lastRelayState = sysStat.isRelayOn;
+    // Atualiza apenas valores que mudaram
+    if (sysStat.calibratedTemp != nexCache.lastBBQTemp) {
+        bbqTemp.setValue(sysStat.calibratedTemp);
+        nexCache.lastBBQTemp = sysStat.calibratedTemp;
     }
 
-    lastPageId = currentPageId;
+    if (sysStat.calibratedTempP != nexCache.lastProbeTemp) {
+        chunkTemp.setValue(sysStat.calibratedTempP);
+        nexCache.lastProbeTemp = sysStat.calibratedTempP;
+    }
+
+    if (sysStat.bbqTemperature != nexCache.lastBBQTarget) {
+        bbqTempSet.setValue(sysStat.bbqTemperature);
+        nexCache.lastBBQTarget = sysStat.bbqTemperature;
+    }
+
+    if (sysStat.proteinTemperature != nexCache.lastProbeTarget) {
+        chunkTempSet.setValue(sysStat.proteinTemperature);
+        nexCache.lastProbeTarget = sysStat.proteinTemperature;
+    }
+
+    if (sysStat.averageTemp != nexCache.lastAvgTemp) {
+        bbqTempAvg.setValue(sysStat.averageTemp);
+        nexCache.lastAvgTemp = sysStat.averageTemp;
+    }
+
+    // Atualiza o fundo apenas se o estado do relé mudou
+    if (sysStat.isRelayOn != nexCache.lastRelayState) {
+        setPageBackground("monitor", sysStat.isRelayOn ? 4 : 1);
+        nexCache.lastRelayState = sysStat.isRelayOn;
+    }
 }
 
 void updateNextionSetBBQVariables(SystemStatus &sysStat)
