@@ -7,11 +7,21 @@
 #include "AIEndpoints.h"
 #include "SystemEndpoints.h"
 #include "MonitorEndpoints.h"
+#include "DiagnosticsEndpoints.h"
 #include <LittleFS.h>
 #include <FS.h>
 
-WebServerControl::WebServerControl(SystemStatus& systemStatus, FileSystem& fileSystem, LogHandler& logger, AsyncWebServer& server)
-    : _systemStatus(systemStatus), _fileSystem(fileSystem), _logger(logger), _server(server), _otaHandler() {}
+WebServerControl::WebServerControl(SystemStatus& systemStatus, 
+                                 FileSystem& fileSystem, 
+                                 LogHandler& logger, 
+                                 AsyncWebServer& server,
+                                 DiagnosticsHandler& diagnosticsHandler)
+    : _systemStatus(systemStatus)
+    , _fileSystem(fileSystem)
+    , _logger(logger)
+    , _server(server)
+    , _otaHandler()
+    , _diagnostics(diagnosticsHandler) {}
 
 void WebServerControl::begin() {
 
@@ -24,6 +34,7 @@ void WebServerControl::begin() {
     registerTempConfigEndpoints(_server, _systemStatus, _fileSystem, _logger);
     registerGeneralEndpoints(_server, _systemStatus, _logger, _otaHandler);
     registerEnergyEndpoints(_server, _systemStatus, _logger);
+    registerDiagnosticsEndpoints(_server, _diagnostics, _logger);
 
     // Adicionar handler global para OPTIONS
     _server.onNotFound([](AsyncWebServerRequest *request){

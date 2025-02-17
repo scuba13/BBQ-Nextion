@@ -4,10 +4,12 @@
 #include "LogHandler.h"
 #include "NextionHandler.h"
 #include "TemperatureControl.h"
+#include "DiagnosticsHandler.h"
 
 // Declarações externas
 extern SystemStatus sysStat;
 extern LogHandler _logger;
+extern DiagnosticsHandler diagnostics;  // Usar a instância global ao invés de criar uma nova
 
 // Configurações otimizadas para as tasks
 #define TEMP_TASK_STACK    3072  // Reduzido de 4000
@@ -98,6 +100,13 @@ void initializeTasks(SystemStatus& sysStat, MQTTHandler& mqtt) {
         _logger.logMessage("MQTT task iniciada - HA disponível");
     } else {
         _logger.logMessage("MQTT task não iniciada - HA não disponível");
+    }
+
+    // Registra tasks para monitoramento
+    diagnostics.registerTaskCheck(tempTaskHandle, "TempTask");
+    diagnostics.registerTaskCheck(controlTaskHandle, "ControlTask");
+    if (mqttTaskHandle) {
+        diagnostics.registerTaskCheck(mqttTaskHandle, "MQTTTask");
     }
 }
 

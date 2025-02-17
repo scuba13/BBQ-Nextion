@@ -12,6 +12,7 @@
 #include "NextionHandler.h"
 #include "TaskHandler.h"
 #include "WiFiHandler.h"
+#include "DiagnosticsHandler.h"
 
 // Instanciação dos objetos globais
 SystemStatus sysStat;
@@ -21,7 +22,12 @@ PubSubClient client(net);
 LogHandler logHandler;
 LogHandler _logger;
 AsyncWebServer server(80);
-WebServerControl webServerControl(sysStat, fileSystem, logHandler, server);
+DiagnosticsHandler diagnostics(logHandler);
+WebServerControl webServerControl(sysStat, 
+                                fileSystem, 
+                                logHandler, 
+                                server,
+                                diagnostics);
 MQTTHandler mqttHandler(net, client, sysStat, logHandler);
 
 // Inicialização rápida
@@ -46,6 +52,9 @@ void setup() {
     // Inicializa serviços
     webServerControl.begin();
     fileSystem.initializeAndLoadConfig(sysStat, WiFi.macAddress());
+    
+    // Inicializa diagnósticos
+    diagnostics.logMetrics(); // Log inicial
 }
 
 void loop() {
@@ -56,6 +65,15 @@ void loop() {
     updateNextionSetBBQVariables(sysStat);
     updateNextionSetChunkVariables(sysStat);
     updateNextionSetCaliVariables(sysStat);
+    
+    // Watchdog e monitoramento de tasks
+    diagnostics.watchdogFeed();
+    diagnostics.checkTasks();
+    diagnostics.logMetrics();
+    
+    if (!diagnostics.isHealthy()) {
+        _logger.logError("Sistema com recursos críticos!");
+    }
     
     vTaskDelay(1);
 }
