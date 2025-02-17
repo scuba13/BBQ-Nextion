@@ -14,6 +14,8 @@ extern LogHandler _logger;
 #define OTA_BUFFER_SIZE 4096
 #define MAX_FIRMWARE_SIZE (4 * 1024 * 1024)  // 4MB máximo
 #define UPDATE_TIMEOUT 300000  // 5 minutos timeout
+#define MIN_HEAP_FOR_UPDATE 40000 // 40KB mínimo de heap livre para update
+#define FIRMWARE_VERSION "1.0.0"  // Versão atual do firmware
 
 OTAHandler::OTAHandler(LogHandler& logger) : _logger(logger) {
     _status.inProgress = false;
@@ -28,6 +30,16 @@ OTAHandler::OTAHandler(LogHandler& logger) : _logger(logger) {
 }
 
 void OTAHandler::beginUpdate(size_t size, String version) {
+    if (!hasEnoughSpace()) {
+        _logger.logError("Espaço insuficiente para atualização");
+        return;
+    }
+    
+    if (!isVersionNewer(version)) {
+        _logger.logError("Versão igual ou anterior à atual");
+        return;
+    }
+    
     if (_status.inProgress) {
         _logger.logError("Atualização já em andamento");
         return;
@@ -60,21 +72,24 @@ void OTAHandler::beginUpdate(size_t size, String version) {
 }
 
 bool OTAHandler::writeUpdate(uint8_t* data, size_t len) {
-    if (!_status.inProgress) return false;
-    if (_checkTimeout()) {
-        abortUpdate();
-        return false;
+    const int MAX_RETRIES = 3;
+    int retries = 0;
+    
+    while (retries < MAX_RETRIES) {
+        if (Update.write(data, len) == len) {
+            _status.writtenBytes += len;
+            _updateProgress(_status.writtenBytes);
+            return true;
+        }
+        
+        _logger.logError("Tentativa " + String(retries + 1) + " falhou");
+        retries++;
+        delay(100);  // Pequeno delay entre tentativas
     }
-
-    if (Update.write(data, len) != len) {
-        _logger.logError("Erro ao escrever firmware");
-        abortUpdate();
-        return false;
-    }
-
-    _status.writtenBytes += len;
-    _updateProgress(_status.writtenBytes);
-    return true;
+    
+    _logger.logError("Falha após " + String(MAX_RETRIES) + " tentativas");
+    abortUpdate();
+    return false;
 }
 
 bool OTAHandler::endUpdate() {
@@ -128,6 +143,23 @@ bool OTAHandler::performRollback() {
 
 bool OTAHandler::verifyFirmware() {
     const esp_partition_t* running = esp_ota_get_running_partition();
+    if (!running) {
+        _logger.logError("Partição atual não encontrada");
+        return false;
+    }
+    
+    // Verifica assinatura do firmware
+    uint32_t magicNumber;
+    if (esp_partition_read(running, 0, &magicNumber, sizeof(magicNumber)) != ESP_OK) {
+        _logger.logError("Erro ao ler assinatura do firmware");
+        return false;
+    }
+    
+    if (magicNumber != ESP_IMAGE_HEADER_MAGIC) {
+        _logger.logError("Assinatura do firmware inválida");
+        return false;
+    }
+    
     return _verifyPartition(running);
 }
 
@@ -205,4 +237,36 @@ void OTAHandler::_updateProgress(size_t written) {
 
 bool OTAHandler::_checkTimeout() {
     return (millis() - _status.startTime) > UPDATE_TIMEOUT;
+}
+
+bool OTAHandler::hasEnoughSpace() {
+    size_t freeHeap = ESP.getFreeHeap();
+    if (freeHeap < MIN_HEAP_FOR_UPDATE) {
+        _logger.logError("Heap insuficiente para update: " + String(freeHeap) + " bytes");
+        return false;
+    }
+    return true;
+}
+
+bool OTAHandler::isVersionNewer(const String& newVersion) {
+    if (!_validateVersion(newVersion)) {
+        _logger.logError("Formato de versão inválido: " + newVersion);
+        return false;
+    }
+    
+    // Compara versões no formato x.y.z
+    int current[3], newer[3];
+    sscanf(FIRMWARE_VERSION, "%d.%d.%d", &current[0], &current[1], &current[2]);
+    sscanf(newVersion.c_str(), "%d.%d.%d", &newer[0], &newer[1], &newer[2]);
+    
+    for (int i = 0; i < 3; i++) {
+        if (newer[i] > current[i]) return true;
+        if (newer[i] < current[i]) return false;
+    }
+    return false;
+}
+
+bool OTAHandler::_validateVersion(const String& version) {
+    int major, minor, patch;
+    return sscanf(version.c_str(), "%d.%d.%d", &major, &minor, &patch) == 3;
 }

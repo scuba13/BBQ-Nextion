@@ -67,6 +67,10 @@ void LogHandler::logError(const String &message) {
     logMessage(errorMsg);
 }
 
+void LogHandler::logWarning(const String &message) {
+    writeLog("WARN", message);
+}
+
 String LogHandler::formatLogMessage(const String& level, const String& clientIP, 
                                   const String& method, const String& url, 
                                   const String& message) {
@@ -132,4 +136,28 @@ void LogHandler::clearLogs() {
     memset(logBuffer, 0, LOG_BUFFER_SIZE);
     bufferIndex = 0;
     lastFlush = millis();
+}
+
+void LogHandler::writeLog(const String &level, const String &message) {
+    // Formata a mensagem com timestamp e nível
+    unsigned long now = millis();
+    String timeStamp = String(now/1000) + "s: ";
+    String fullMessage = timeStamp + "[" + level + "] " + message + "\n";
+    
+    // Imprime no dbSerial
+    dbSerial.print(fullMessage);
+    
+    // Verifica se há espaço no buffer
+    if (bufferIndex + fullMessage.length() >= LOG_BUFFER_SIZE) {
+        flushBuffer();
+    }
+    
+    // Adiciona ao buffer
+    memcpy(logBuffer + bufferIndex, fullMessage.c_str(), fullMessage.length());
+    bufferIndex += fullMessage.length();
+    
+    // Verifica se é hora de fazer flush
+    if (now - lastFlush >= FLUSH_INTERVAL) {
+        flushBuffer();
+    }
 }

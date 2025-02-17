@@ -12,6 +12,8 @@
 #define OTA_BUFFER_SIZE 4096
 #define MAX_FIRMWARE_SIZE (4 * 1024 * 1024)  // 4MB máximo
 #define UPDATE_TIMEOUT 300000  // 5 minutos timeout
+#define FIRMWARE_VERSION "1.0.0"  // Versão atual do firmware
+#define MIN_HEAP_FOR_UPDATE 40000 // 40KB mínimo de heap livre para update
 
 class OTAHandler {
 public:
@@ -37,6 +39,9 @@ public:
     bool verifyFirmware();
     UpdateStatus getStatus();
     void checkRollbackNeeded();
+    bool hasEnoughSpace();
+    String getFirmwareVersion() { return FIRMWARE_VERSION; }
+    bool isVersionNewer(const String& newVersion);
     
 private:
     LogHandler& _logger;
@@ -46,6 +51,7 @@ private:
     void _backupCurrentFirmware();
     void _updateProgress(size_t written);
     bool _checkTimeout();
+    bool _validateVersion(const String& version);
 };
 
 #endif // OTA_HANDLER_H

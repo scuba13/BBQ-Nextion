@@ -28,11 +28,15 @@ public:
     LogHandler();
     void begin();
     void logMessage(const String& message);
+    void logWarning(const String &message);
+    void logError(const String &message);
     void clearLogs();
 
     // Métodos adicionados de volta
     void logRequest(AsyncWebServerRequest *request, const String &message);
-    void logError(const String &message);
+
+private:
+    void writeLog(const String &level, const String &message);
 };
 
 #endif

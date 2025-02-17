@@ -29,10 +29,32 @@ static TaskHandle_t controlTaskHandle = NULL;
 static SystemStatus* systemStatus;
 static MQTTHandler* mqttHandler;
 
+// Adicionar constantes para monitoramento
+#define TASK_STACK_WATERMARK_THRESHOLD 512  // Alerta quando stack livre < 512 bytes
+#define HEAP_WATERMARK_THRESHOLD 10000      // Alerta quando heap < 10KB
+
 // Task para leitura de temperatura (500ms)
 void temperatureTask(void *parameter) {
     const TickType_t xDelay = pdMS_TO_TICKS(500);
+    
+    // Monitor de stack
+    UBaseType_t minStackLeft = UINT32_MAX;
+    
     while (true) {
+        // Verifica stack disponível
+        UBaseType_t stackLeft = uxTaskGetStackHighWaterMark(NULL);
+        if (stackLeft < minStackLeft) {
+            minStackLeft = stackLeft;
+            if (stackLeft < TASK_STACK_WATERMARK_THRESHOLD) {
+                _logger.logWarning("Stack baixa na TempTask: " + String(stackLeft) + " bytes");
+            }
+        }
+        
+        // Verifica heap
+        if (ESP.getFreeHeap() < HEAP_WATERMARK_THRESHOLD) {
+            _logger.logWarning("Heap baixa: " + String(ESP.getFreeHeap()) + " bytes");
+        }
+        
         getCalibratedTemp(thermocouple, *systemStatus);
         getCalibratedTempP(thermocoupleP, *systemStatus);
         getCalibratedInternalTemp(*systemStatus);

@@ -16,6 +16,13 @@ static struct {
     const unsigned long CACHE_TIMEOUT = 60000; // 1 minuto
 } fsCache;
 
+FileSystem::FileSystem() {
+    // Inicializa a estrutura de cache
+    fsCache.mqttConfig = "";
+    fsCache.tempConfig = "";
+    fsCache.lastRead = 0;
+}
+
 void FileSystem::initializeAndLoadConfig(SystemStatus &status, String mac)
 {
     if (!LittleFS.begin(true))
@@ -211,11 +218,10 @@ void FileSystem::resetLogFile() {
 }
 
 bool FileSystem::begin() {
-    if (!LittleFS.begin(true)) { // Format on failure
+    if (!LittleFS.begin(true)) {
         logHandler.logMessage("Erro ao montar LittleFS");
         return false;
     }
-    
     return true;
 }
 

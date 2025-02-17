@@ -6,19 +6,26 @@
 
 class FileSystem {
 public:
+    FileSystem();
+    bool begin();
+    bool loadConfig(SystemStatus& sysStat, const String& macAddress);
+    bool saveConfig(SystemStatus& sysStat);
+    void resetToDefaults(SystemStatus& sysStat);
     static void initializeAndLoadConfig(SystemStatus &status, String mac);
     static void saveConfigToFile(const SystemStatus &status);
     static void verifyFileSystem();
     static void resetLogFile();  // Declaração do novo método
 
     // Novos métodos otimizados
-    bool begin();
     String readFile(const char* path);
     bool writeFile(const char* path, const char* message);
     bool deleteFile(const char* path);
     void listDir(const char* dirname);
 
 private:
+    bool loadConfigFile(const char* filename, SystemStatus& sysStat);
+    bool saveConfigFile(const char* filename, SystemStatus& sysStat);
+
     // Cache de arquivos frequentes
     struct {
         String mqttConfig;

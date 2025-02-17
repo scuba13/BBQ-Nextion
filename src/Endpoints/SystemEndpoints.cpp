@@ -87,4 +87,21 @@ void registerSystemEndpoints(AsyncWebServer &server, SystemStatus &systemStatus,
             ResponseHelper::sendErrorResponse(request, 500, "Falha ao iniciar rollback");
         }
     });
+
+    // Adicionar novo endpoint
+    server.on("/api/v1/system/update/check", HTTP_POST, [&](AsyncWebServerRequest *request) {
+        if (!request->hasParam("version", true)) {
+            ResponseHelper::sendErrorResponse(request, 400, "Versão não especificada");
+            return;
+        }
+        
+        String newVersion = request->getParam("version", true)->value();
+        
+        DynamicJsonDocument doc(1024);
+        doc["currentVersion"] = otaHandler.getFirmwareVersion();
+        doc["canUpdate"] = otaHandler.hasEnoughSpace() && otaHandler.isVersionNewer(newVersion);
+        doc["freeHeap"] = ESP.getFreeHeap();
+        
+        ResponseHelper::sendJsonResponse(request, 200, "Verificação concluída", doc.as<JsonObject>());
+    });
 }
