@@ -754,6 +754,114 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 
 ---
 
+---
+
+## Análise Kimi-K2.6 — Concorrência, Hardware e Runtime
+
+*Análise gerada em 2026-05-06 com base no estado pós-Sprint 1. K-10 já resolvido na Sprint 4 (C-35).*
+
+---
+
+### K-01 — `SystemStatus` sem mecanismo de sincronização
+- **Status:** `[ ]`
+- **Arquivos:** `include/SystemStatus.h`, todos os `.cpp` que acessam `sysStat`
+- **Problema:** `sysStat` é acessada por ~5 tasks + callbacks Nextion + handlers de endpoint sem nenhum mutex, `volatile` ou `std::atomic`. O compilador pode reordenar acessos e o cache de cada core pode ver valores desatualizados. Campos `float` e structs maiores podem sofrer *tearing*.
+- **Impacto:** Temperatura alvo, estado do relé e amostras lidas de forma inconsistente entre cores. Bugs intermitentes impossíveis de reproduzir em debug.
+- **Correção:** Criar `SemaphoreHandle_t sysStatMutex` global. Envolver toda leitura/escrita em `sysStat` com `xSemaphoreTake` / `xSemaphoreGive`. Para `isRelayOn`, considerar `std::atomic<bool>`.
+
+---
+
+### K-02 — Hardware WDT não monitora `TempTask` nem `ControlTask`
+- **Status:** `[ ]`
+- **Arquivos:** `src/Handlers/DiagnosticsHandler.cpp:10-13`, `src/Handlers/TaskHandler.cpp`
+- **Problema:** `esp_task_wdt_add(NULL)` no construtor de `DiagnosticsHandler` registra apenas a task corrente no momento (tipicamente `loop()`, core 1). `TempTask` e `ControlTask` (core 0) nunca são registradas no WDT.
+- **Impacto:** Se `temperatureTask` ou `controlTask` travarem (deadlock em SPI, sensor preso), o hardware watchdog não detecta. O relé pode ficar preso em ON indefinidamente.
+- **Correção:** Em `TaskHandler.cpp`, após `xTaskCreatePinnedToCore`, chamar `esp_task_wdt_add(tempTaskHandle)` e `esp_task_wdt_add(controlTaskHandle)`. Cada task deve chamar `esp_task_wdt_reset()` a cada iteração.
+
+---
+
+### K-03 — `LogHandler` buffer sem mutex
+- **Status:** `[ ]`
+- **Arquivo:** `src/Handlers/LogHandler.cpp`
+- **Problema:** `logHandler` é chamado concorrentemente por `TempTask`, `ControlTask`, `MQTTTask` e `loop()`. O buffer `logBuffer[1024]`, `bufferIndex`, `currentFileSize` são acessados sem mutex. Duas tasks podem executar `memcpy(logBuffer + bufferIndex, ...)` simultaneamente.
+- **Impacto:** Corrupção do buffer, índice inválido (`bufferIndex > LOG_BUFFER_SIZE`), crash ou log corrompido no LittleFS.
+- **Correção:** Adicionar `SemaphoreHandle_t _logMutex` em `LogHandler` e envolver `writeLog`, `flushBuffer` e `clearLogs` com `xSemaphoreTake` / `xSemaphoreGive`.
+
+---
+
+### K-04 — `Update.end(true)` aceita firmware incompleto
+- **Status:** `[ ]`
+- **Arquivo:** `src/Handlers/OTAHandler.cpp:95-114`
+- **Problema:** `Update.end(true)` — o parâmetro `true` (*evenIfRemaining*) faz o ESP32 aceitar o firmware mesmo que nem todos os bytes tenham sido escritos.
+- **Impacto:** Upload truncado gera boot com firmware corrompido. Possível brick ou loop de boot.
+- **Correção:** Trocar `Update.end(true)` por `Update.end(false)`. Uma linha.
+
+---
+
+### K-05 — DS18B20 sem validação de valores de erro
+- **Status:** `[ ]`
+- **Arquivo:** `src/Handlers/TemperatureControlHandler.cpp:36-43`
+- **Problema:** `sensors.getTempCByIndex(0)` retorna `-127.0` (sensor desconectado) ou `85.0` (power-on reset). O código converte diretamente para `int`, propagando o erro como temperatura real.
+- **Impacto:** Temperatura interna exibida como -127°C ou 85°C; se usada em lógica de corte, comportamento errático.
+- **Correção:**
+  ```cpp
+  float temp = sensors.getTempCByIndex(0);
+  if (temp == DEVICE_DISCONNECTED_C || temp == 85.0f) return sysStat.calibratedTempInternal;
+  sysStat.calibratedTempInternal = (int)round(temp);
+  ```
+
+---
+
+### K-06 — MAX6675 sem validação de leitura inválida
+- **Status:** `[ ]`
+- **Arquivo:** `src/Handlers/TemperatureControlHandler.cpp:46-74`
+- **Problema:** `MAX6675::readCelsius()` pode retornar `NaN` ou `0` em falha SPI ou termopar aberto. O código soma calibração e insere na média móvel sem validar.
+- **Impacto:** Média móvel corrompida com `NaN` ou zeros. Relé pode ligar/desligar incorretamente.
+- **Correção:**
+  ```cpp
+  float raw = thermocouple.readCelsius();
+  if (isnan(raw) || raw <= 0 || raw > 500) return sysStat.calibratedTemp;
+  float temp = raw + sysStat.tempCalibration;
+  ```
+
+---
+
+### K-07 — `neopixelWrite` chamado de múltiplas tasks sem sincronização
+- **Status:** `[ ]`
+- **Arquivos:** `src/Handlers/TemperatureControlHandler.cpp`, `src/main.cpp`, `src/Handlers/WiFiHandler.cpp`
+- **Problema:** `neopixelWrite()` usa o periférico RMT do ESP32-S3. Chamada concorrente de `loop()`, `TempTask`, `ControlTask` e callbacks WiFi pode causar glitch visual ou corrupção do driver RMT.
+- **Impacto:** LED RGB errático; em casos extremos, crash do driver RMT.
+- **Correção:** Centralizar o controle do LED em uma única função chamada apenas do `loop()` com base no estado atual de `sysStat.isRelayOn`, removendo as chamadas de dentro das tasks.
+
+---
+
+### K-08 — `String` em hot paths causando fragmentação de heap
+- **Status:** `[ ]`
+- **Arquivos:** `src/Handlers/LogHandler.cpp`, `src/Handlers/MQTTHandler.cpp`
+- **Problema:** Concatenações de `String` em `writeLog()` (`timeStamp + "[" + level + "]"...`) alocam no heap a cada ciclo. Em operação prolongada, o heap fragmenta e alocações passam a falhar.
+- **Impacto:** Falha silenciosa de alocação → log não grava ou crash por `panic`.
+- **Correção:** Substituir por `snprintf` em buffer `char[]` fixo no stack.
+
+---
+
+### K-09 — Divisão por zero no cálculo de fragmentação de heap
+- **Status:** `[ ]`
+- **Arquivo:** `src/Handlers/DiagnosticsHandler.cpp:122`
+- **Problema:** `heapFragmentation = 100 - (maxAllocHeap * 100) / freeHeap` — se `freeHeap == 0`, divisão por zero. Em float não crasha, mas gera `NaN`/`Inf`.
+- **Correção:** Uma linha:
+  ```cpp
+  metrics.heapFragmentation = (metrics.freeHeap == 0) ? 100.0f
+      : 100.0f - ((float)metrics.maxAllocHeap * 100.0f) / metrics.freeHeap;
+  ```
+
+---
+
+### K-10 — `LogHandler` dependia de macro `dbSerial` de lib externa
+- **Status:** `[x]`
+- **Resolvido em:** Sprint 4 (C-35) — `dbSerial` substituído por `Serial` diretamente.
+
+---
+
 ## Rastreabilidade
 
 | ID | Arquivo Principal | Prioridade | Status |
@@ -815,6 +923,16 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 | D-02 | `platformio.ini` | 🟢 Dep. Minor | `[x]` |
 | D-03 | `platformio.ini` | 🟢 Dep. Minor | `[x]` |
 | D-04 | `platformio.ini` | 🟡 Dep. Major | `[x]` |
+| K-01 | `include/SystemStatus.h`, todos os `.cpp` | 🔴 Concorrência | `[ ]` |
+| K-02 | `src/Handlers/DiagnosticsHandler.cpp`, `TaskHandler.cpp` | 🔴 Concorrência | `[ ]` |
+| K-03 | `src/Handlers/LogHandler.cpp` | 🔴 Concorrência | `[ ]` |
+| K-04 | `src/Handlers/OTAHandler.cpp` | 🔴 Crítico | `[ ]` |
+| K-05 | `src/Handlers/TemperatureControlHandler.cpp` | 🟠 Hardware | `[ ]` |
+| K-06 | `src/Handlers/TemperatureControlHandler.cpp` | 🟠 Hardware | `[ ]` |
+| K-07 | `src/Handlers/TemperatureControlHandler.cpp`, `main.cpp` | 🟠 Hardware | `[ ]` |
+| K-08 | `src/Handlers/LogHandler.cpp`, `MQTTHandler.cpp` | 🟡 Performance | `[ ]` |
+| K-09 | `src/Handlers/DiagnosticsHandler.cpp` | 🟡 Lógica | `[ ]` |
+| K-10 | `src/Handlers/LogHandler.cpp` | 🟡 Qualidade | `[x]` |
 
 ---
 
@@ -879,6 +997,17 @@ Sprint 7 — Atualização de dependências (fazer em branch separado, testar no
   D-02  ✅ ESPAsyncWebServer-esphome 3.3.0 → 3.4.1
   D-03  ✅ ArduinoJson 7.3.0 → 7.4.3
   D-04  ✅ DallasTemperature 3.11.0 → 4.0.6
+
+Sprint K — Concorrência, hardware e runtime (achados Kimi-K2.6)
+  K-04  Update.end(false) — evita aceitar firmware incompleto (1 linha, alta prioridade)
+  K-09  divisão por zero na fragmentação de heap (1 linha)
+  K-05  DS18B20 validar -127 e 85 antes de usar leitura
+  K-06  MAX6675 validar NaN e valores fora de range antes de inserir na média
+  K-02  hardware WDT registrar TempTask e ControlTask + reset periódico
+  K-07  centralizar neopixelWrite no loop() — remover chamadas das tasks
+  K-03  mutex no LogHandler — proteger buffer contra escrita concorrente
+  K-08  snprintf em buffers fixos nos hot paths de log e MQTT
+  K-01  mutex global para sysStat — proteger leitura/escrita entre cores
 
 Sprint 6 — Refatoração estrutural (fazer depois de tudo estabilizado)
   E-01  mover headers para subpastas include/Endpoints/ e include/Handlers/
