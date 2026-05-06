@@ -548,6 +548,165 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 
 ---
 
+---
+
+## Terceira Análise — Estrutura do Projeto
+
+### E-01 — `include/` flat vs `src/` com subpastas — assimetria estrutural
+- **Status:** `[ ]`
+- **Problema:** `src/` está bem dividido em `Endpoints/` e `Handlers/`, mas `include/` tem todos os 20 headers na raiz, sem subpastas. Paradoxalmente, `include/Endpoints/`, `include/Handlers/` e `include/Webhooks/` **existem mas estão completamente vazias** — foram criadas com intenção de espelhar `src/` mas nunca usadas.
+- **Impacto:** Para encontrar o header de `src/Endpoints/AIEndpoints.cpp` é preciso saber que ele está em `include/AIEndpoints.h` (raiz), não em `include/Endpoints/`. Isso quebra a descoberta por navegação.
+- **Correção:** Mover headers para as subpastas correspondentes e atualizar os includes:
+  ```
+  include/Endpoints/  ← AIEndpoints.h, MonitorEndpoints.h, etc.
+  include/Handlers/   ← MQTTHandler.h, LogHandler.h, etc.
+  include/            ← só PinDefinitions.h, SystemStatus.h (globais)
+  ```
+
+---
+
+### E-02 — `ResponseHelper.h` dentro de `src/Endpoints/`
+- **Status:** `[ ]`
+- **Arquivo:** `src/Endpoints/ResponseHelper.h`
+- **Problema:** Único header dentro de `src/` — vai contra a convenção do projeto de manter headers em `include/`. Funciona apenas porque os `.cpp` da mesma pasta o encontram pelo caminho relativo. Se um Handler precisar usar ResponseHelper no futuro, não o encontraria.
+- **Correção:** Mover para `include/Endpoints/ResponseHelper.h` (junto com E-01).
+
+---
+
+### E-03 — Nomes de arquivo desalinhados entre `.h` e `.cpp`
+- **Status:** `[ ]`
+- **Problema:** Três pares com nomes que não batem:
+
+  | Header | Implementação | Inconsistência |
+  |---|---|---|
+  | `TemperatureControl.h` | `TemperatureControlHandler.cpp` | sufixo `Handler` só no .cpp |
+  | `WebServerControl.h` | `WebServerHandler.cpp` | `Control` no .h, `Handler` no .cpp |
+  | `FileSystem.h` | `FileSystem.cpp` + `FileSystemHandler.cpp` | dois .cpp para um .h |
+
+- **Correção:** Padronizar para `NomeHandler.h` / `NomeHandler.cpp` em tudo:
+  - `TemperatureControl.h` → `TemperatureHandler.h` (e renomear .cpp)
+  - `WebServerControl.h` → `WebServerHandler.h`
+  - Consolidar `FileSystem.cpp` em `FileSystemHandler.cpp` (ver C-32)
+
+---
+
+### E-04 — Include guards inconsistentes
+- **Status:** `[ ]`
+- **Problema:** A maioria usa `SCREAMING_SNAKE_CASE`, mas dois headers usam `camelCase_h`:
+
+  | Header | Guard atual | Padrão esperado |
+  |---|---|---|
+  | `MonitorEndpoints.h` | `MonitorEndpoints_h` | `MONITOR_ENDPOINTS_H` |
+  | `WebServerControl.h` | `WebServerControl_h` | `WEB_SERVER_CONTROL_H` |
+
+- **Correção:** Atualizar os dois headers para o padrão `SCREAMING_SNAKE_CASE`.
+
+---
+
+### E-05 — Inclusão inconsistente de `AsyncTCP.h` nos headers
+- **Status:** `[ ]`
+- **Problema:** 7 headers incluem `AsyncTCP.h` antes de `ESPAsyncWebServer.h`, mas 4 usam `ESPAsyncWebServer.h` sem incluir `AsyncTCP.h` (`AIEndpoints.h`, `DiagnosticsEndpoints.h`, `SystemEndpoints.h`, `LogHandler.h`). `AsyncTCP.h` é uma dependência interna do `ESPAsyncWebServer-esphome` e não precisa ser incluída diretamente — os headers que a incluem são desnecessariamente verbosos.
+- **Correção:** Remover `#include <AsyncTCP.h>` de todos os headers do projeto. `ESPAsyncWebServer.h` já resolve essa dependência internamente.
+
+---
+
+### E-06 — `extern` espalhados — acoplamento oculto entre arquivos
+- **Status:** `[ ]`
+- **Problema:** 10 declarações `extern` espalhadas pelos `.cpp`, criando dependências implícitas que não aparecem nas assinaturas das funções. Agravado pelo uso de dois nomes diferentes para o mesmo objeto:
+
+  | Arquivo | Extern usado |
+  |---|---|
+  | `FileSystem.cpp`, `TemperatureControlHandler.cpp`, `FileSystemHandler.cpp` | `extern LogHandler logHandler` |
+  | `MQTTHandler.cpp`, `NextionHandler.cpp`, `OTAHandler.cpp`, `TaskHandler.cpp`, `WiFiHandler.cpp`, `FileSystem.cpp` | `extern LogHandler _logger` |
+
+  `TaskHandler.cpp` vai além: usa `extern SystemStatus sysStat` (global direto) E `static SystemStatus* systemStatus` (ponteiro recebido por parâmetro) — dois padrões para o mesmo objeto dentro do mesmo arquivo.
+
+- **Correção:** Eliminar todos os `extern` de objetos globais. Passar as dependências como parâmetros de função ou via construtor. O único `extern` legítimo neste projeto é para variáveis de hardware (como os objetos Nextion declarados no `.h` e definidos no `.cpp`).
+
+---
+
+### E-07 — `SystemStatus` é uma god struct com 40+ campos sem agrupamento
+- **Status:** `[ ]`
+- **Arquivo:** `include/SystemStatus.h`
+- **Problema:** Uma única struct flat mistura dados de domínios completamente diferentes sem nenhuma organização interna:
+  - Temperatura BBQ (leitura, setpoint, amostras, calibração, média)
+  - Temperatura proteína (idem)
+  - Temperatura interna do ESP
+  - Controle do relay
+  - Config MQTT (servidor, porta, usuário, senha, flag HA)
+  - Config AI (chave, tip)
+  - Config de limites (min/max BBQ, proteína, calibração — 8 campos)
+  - Energia (power, cost — a remover via C-43)
+  - Estado de processo (cureProcessMode, currentPos, lastPos — mortos)
+
+- **Correção sugerida:** Agrupar em sub-structs semânticas dentro de `SystemStatus` (sem quebrar a API existente):
+  ```cpp
+  struct SystemStatus {
+      struct { int calibrated; int setpoint; int calibration; ... } bbq;
+      struct { int calibrated; int setpoint; int calibration; ... } protein;
+      struct { char server[100]; int port; char user[30]; ... } mqtt;
+      struct { char key[128]; char tip[256]; } ai;
+      struct { int minBBQ; int maxBBQ; int minPrt; ... } limits;
+      bool isRelayOn;
+      // ...
+  };
+  ```
+
+---
+
+### E-08 — `NextionHandler.cpp` com 437 linhas acumula 4 responsabilidades
+- **Status:** `[ ]`
+- **Arquivo:** `src/Handlers/NextionHandler.cpp`
+- **Problema:** O maior arquivo do projeto mistura:
+  1. **Mapeamento de hardware** — definição de todos os objetos `NexPage`, `NexNumber`, `NexButton` (linhas 48–97)
+  2. **Callbacks de eventos** — `setBBQTempPushCallback`, `setChunkTempPushCallback`, `setStopPushCallback`, `setCaliPushCallback` (linhas 99–218)
+  3. **Lógica de update por página** — `updateNextionMonitorVariables`, `updateNextionSetBBQVariables`, etc. (linhas 292–437)
+  4. **Helpers de comunicação serial** — `getCurrentPageId`, `setPageBackground`, `updateNumberComponent` (linhas 238–290)
+
+  Além disso, 4 structs/variáveis de cache separadas no topo do arquivo (linhas 10–45) — uma por página — em vez de um cache unificado.
+
+- **Correção:** Dividir em pelo menos dois arquivos:
+  - `NextionComponents.cpp/.h` — declaração de todos os objetos Nextion (o mapeamento de hardware)
+  - `NextionHandler.cpp/.h` — lógica de init, callbacks, update e helpers
+
+---
+
+### E-09 — Sufixos `Handler` / `Control` / sem sufixo sem critério
+- **Status:** `[ ]`
+- **Problema:** A nomenclatura dos módulos não segue uma convenção clara:
+
+  | Classe/módulo | Sufixo | Tipo real |
+  |---|---|---|
+  | `LogHandler`, `MQTTHandler`, `OTAHandler`, `DiagnosticsHandler`, `NextionHandler`, `WiFiHandler`, `TaskHandler` | `Handler` | Varia: alguns são services, outros são drivers |
+  | `WebServerControl` | `Control` | É um registrador de endpoints |
+  | `TemperatureControl` (header) | `Control` | É um conjunto de funções puras |
+  | `FileSystem` | nenhum | É um service de persistência |
+
+- **Correção:** Adotar uma convenção e aplicar consistentemente. Sugestão para este projeto embarcado:
+  - `*Handler` — módulo que trata eventos/comunicação com periférico (`NextionHandler`, `MQTTHandler`, `WiFiHandler`)
+  - `*Controller` — módulo com lógica de negócio ativa (`TemperatureController`, `WebServerController`)
+  - `*Service` ou sem sufixo — módulo de utilidade (`FileSystem`, `LogHandler` → `Logger`)
+
+---
+
+### E-10 — Configurações de sistema espalhadas em múltiplos locais
+- **Status:** `[ ]`
+- **Problema:** Constantes de configuração estão definidas em 6 arquivos diferentes sem um lugar central:
+
+  | Constante | Onde está |
+  |---|---|
+  | `NUM_SAMPLES=20`, `MOVING_AVERAGE_SIZE=180` | `SystemStatus.h` |
+  | `TEMP_READ_INTERVAL=500`, `PID_UPDATE_INTERVAL=100` | `TemperatureControl.h` |
+  | `TEMP_TASK_STACK=3072`, `CONTROL_TASK_STACK=2048` | `TaskHandler.cpp` |
+  | `WDT_TIMEOUT_SECONDS=30`, `SOFT_WDT_INTERVAL=60000` | `DiagnosticsHandler.h` |
+  | `FIRMWARE_VERSION="1.0.0"`, `MAX_FIRMWARE_SIZE` | `OTAHandler.h` |
+  | `MQTT_BUFFER_SIZE=1024`, `MQTT_RETRY_INTERVAL=5000` | `MQTTHandler.cpp` |
+  | `LOG_BUFFER_SIZE=1024`, `MAX_LOG_SIZE=50000` | `LogHandler.h` |
+
+- **Correção:** Criar `include/Config.h` com todas as constantes tunáveis do sistema. Deixar em cada header apenas as constantes de implementação interna.
+
+---
+
 ## Rastreabilidade
 
 | ID | Arquivo Principal | Prioridade | Status |
@@ -595,6 +754,16 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 | C-41 | `src/Webhooks/`, `include/Webhooks/` | 🟡 Qualidade | `[ ]` |
 | C-42 | `README.md` | 🟡 Qualidade | `[ ]` |
 | C-43 | `src/Endpoints/EnergyEndpoints.cpp`, `include/SystemStatus.h`, `src/Handlers/NextionHandler.cpp` | 🗑️ Remoção | `[ ]` |
+| E-01 | `include/`, `src/Endpoints/`, `src/Handlers/` | 🏗️ Estrutura | `[ ]` |
+| E-02 | `src/Endpoints/ResponseHelper.h` | 🏗️ Estrutura | `[ ]` |
+| E-03 | `TemperatureControl.h`, `WebServerControl.h`, `FileSystem.h` | 🏗️ Estrutura | `[ ]` |
+| E-04 | `include/MonitorEndpoints.h`, `include/WebServerControl.h` | 🏗️ Estrutura | `[ ]` |
+| E-05 | `include/*.h` | 🏗️ Estrutura | `[ ]` |
+| E-06 | `src/Handlers/*.cpp` | 🏗️ Estrutura | `[ ]` |
+| E-07 | `include/SystemStatus.h` | 🏗️ Estrutura | `[ ]` |
+| E-08 | `src/Handlers/NextionHandler.cpp` | 🏗️ Estrutura | `[ ]` |
+| E-09 | todos os headers | 🏗️ Estrutura | `[ ]` |
+| E-10 | espalhado | 🏗️ Estrutura | `[ ]` |
 
 ---
 
@@ -653,4 +822,16 @@ Sprint 5 — Segurança e features pendentes
   C-07  cureProcessMode sem implementação
   C-27  API key hardcoded
   C-28  sem autenticação na API
+
+Sprint 6 — Refatoração estrutural (fazer depois de tudo estabilizado)
+  E-01  mover headers para subpastas include/Endpoints/ e include/Handlers/
+  E-02  mover ResponseHelper.h para include/Endpoints/
+  E-03  alinhar nomes .h / .cpp (TemperatureControl, WebServerControl, FileSystem)
+  E-04  corrigir include guards de MonitorEndpoints.h e WebServerControl.h
+  E-05  remover #include <AsyncTCP.h> desnecessários
+  E-06  eliminar extern espalhados — passar dependências por parâmetro
+  E-07  reorganizar SystemStatus em sub-structs semânticas
+  E-08  dividir NextionHandler.cpp em Components + Handler
+  E-09  padronizar sufixos Handler/Controller/Service
+  E-10  criar include/Config.h com todas as constantes do sistema
 ```
