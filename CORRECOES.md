@@ -811,10 +811,10 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 | E-08 | `src/Handlers/NextionHandler.cpp` | 🏗️ Estrutura | `[ ]` |
 | E-09 | todos os headers | 🏗️ Estrutura | `[ ]` |
 | E-10 | espalhado | 🏗️ Estrutura | `[ ]` |
-| D-01 | `platformio.ini` | 🔴 Dep. Major | `[ ]` |
-| D-02 | `platformio.ini` | 🟢 Dep. Minor | `[ ]` |
-| D-03 | `platformio.ini` | 🟢 Dep. Minor | `[ ]` |
-| D-04 | `platformio.ini` | 🟡 Dep. Major | `[ ]` |
+| D-01 | `platformio.ini` | 🔴 Dep. Major | `[x]` |
+| D-02 | `platformio.ini` | 🟢 Dep. Minor | `[x]` |
+| D-03 | `platformio.ini` | 🟢 Dep. Minor | `[x]` |
+| D-04 | `platformio.ini` | 🟡 Dep. Major | `[x]` |
 
 ---
 
@@ -875,10 +875,10 @@ Sprint 5 — Segurança e features pendentes
   C-28  sem autenticação na API
 
 Sprint 7 — Atualização de dependências (fazer em branch separado, testar no hardware)
-  D-01  espressif32 6.10.0 → 7.0.0 (platform — major, testar primeiro)
-  D-02  ESPAsyncWebServer-esphome 3.3.0 → 3.4.1 (minor — seguro)
-  D-03  ArduinoJson 7.3.0 → 7.4.3 (minor — seguro)
-  D-04  DallasTemperature 3.11.0 → 4.0.6 (major — verificar API)
+  D-01  ✅ espressif32 6.10.0 → 7.0.0
+  D-02  ✅ ESPAsyncWebServer-esphome 3.3.0 → 3.4.1
+  D-03  ✅ ArduinoJson 7.3.0 → 7.4.3
+  D-04  ✅ DallasTemperature 3.11.0 → 4.0.6
 
 Sprint 6 — Refatoração estrutural (fazer depois de tudo estabilizado)
   E-01  mover headers para subpastas include/Endpoints/ e include/Handlers/
