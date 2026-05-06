@@ -2,7 +2,6 @@
 #include <esp_ota_ops.h>
 #include <esp_system.h>
 #include <MD5Builder.h>
-#include <Nextion.h>
 #include "LogHandler.h"
 #include <algorithm>
 

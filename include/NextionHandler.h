@@ -15,10 +15,13 @@ extern NexTouch *nex_listen_list[];
 // Função de inicialização do Nextion
 void initNextion(SystemStatus &sysStat);
 
+// Lê o ID da página atual (envia "sendme" e aguarda resposta)
+uint8_t getCurrentPageId();
+
 // Função para atualizar os valores das variáveis do Nextion
-void updateNextionMonitorVariables(SystemStatus &sysStat);
-void updateNextionSetBBQVariables(SystemStatus &sysStat);
-void updateNextionSetChunkVariables(SystemStatus &sysStat);
-void updateNextionSetCaliVariables(SystemStatus &sysStat);
+void updateNextionMonitorVariables(SystemStatus &sysStat, uint8_t pageId);
+void updateNextionSetBBQVariables(SystemStatus &sysStat, uint8_t pageId);
+void updateNextionSetChunkVariables(SystemStatus &sysStat, uint8_t pageId);
+void updateNextionSetCaliVariables(SystemStatus &sysStat, uint8_t pageId);
 
 #endif // NEXTION_HANDLER_H

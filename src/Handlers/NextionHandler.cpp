@@ -51,7 +51,6 @@ NexPage menu = NexPage(2, 0, "menu");
 NexPage monitor = NexPage(3, 0, "monitor");
 NexPage BBQTemp = NexPage(4, 0, "BBQTemp");
 NexPage ChunkTemp = NexPage(5, 0, "ChunkTemp");
-NexPage energyPg = NexPage(6, 0, "energyPg");
 NexPage ap = NexPage(7, 0, "ap");
 NexPage initial = NexPage(8, 0, "init");
 
@@ -289,21 +288,18 @@ void updateNumberComponent(NexNumber &component, float &lastValue, float newValu
     }
 }
 
-void updateNextionMonitorVariables(SystemStatus &sysStat)
+void updateNextionMonitorVariables(SystemStatus &sysStat, uint8_t pageId)
 {
-    const unsigned long UPDATE_INTERVAL = 500; // Atualiza a cada 500ms
+    const unsigned long UPDATE_INTERVAL = 500;
     unsigned long currentTime = millis();
-    
-    // Verifica se está na hora de atualizar
+
     if (currentTime - nexCache.lastUpdate < UPDATE_INTERVAL) {
         return;
     }
     nexCache.lastUpdate = currentTime;
 
-    // Verifica se está na página correta
-    uint32_t currentPage = getCurrentPageId();
-    if (currentPage != 3) { // Página do monitor
-        nexCache.lastPageId = currentPage;
+    if (pageId != 3) {
+        nexCache.lastPageId = pageId;
         return;
     }
 
@@ -340,14 +336,13 @@ void updateNextionMonitorVariables(SystemStatus &sysStat)
     }
 }
 
-void updateNextionSetBBQVariables(SystemStatus &sysStat)
+void updateNextionSetBBQVariables(SystemStatus &sysStat, uint8_t pageId)
 {
-    uint32_t currentPageId = getCurrentPageId();
-    bool forceUpdate = (currentPageId != lastPageIdBBQ);
+    bool forceUpdate = (pageId != lastPageIdBBQ);
 
-    if (currentPageId != 4)
+    if (pageId != 4)
     {
-        lastPageIdBBQ = currentPageId;
+        lastPageIdBBQ = pageId;
         initialUpdateDoneBBQ = false;
         return;
     }
@@ -369,17 +364,16 @@ void updateNextionSetBBQVariables(SystemStatus &sysStat)
     updateNumberComponent(minBBQTemp, lastMinBBQTemp, sysStat.minBBQTemp, "minBBQTemp", forceUpdate);
     updateNumberComponent(maxBBQTemp, lastMaxBBQTemp, sysStat.maxBBQTemp, "maxBBQTemp", forceUpdate);
 
-    lastPageIdBBQ = currentPageId;
+    lastPageIdBBQ = pageId;
 }
 
-void updateNextionSetChunkVariables(SystemStatus &sysStat)
+void updateNextionSetChunkVariables(SystemStatus &sysStat, uint8_t pageId)
 {
-    uint32_t currentPageId = getCurrentPageId();
-    bool forceUpdate = (currentPageId != lastPageIdChunk);
+    bool forceUpdate = (pageId != lastPageIdChunk);
 
-    if (currentPageId != 5)
+    if (pageId != 5)
     {
-        lastPageIdChunk = currentPageId;
+        lastPageIdChunk = pageId;
         initialUpdateDoneChunk = false;
         return;
     }
@@ -401,17 +395,16 @@ void updateNextionSetChunkVariables(SystemStatus &sysStat)
     updateNumberComponent(minChunkTemp, lastMinChunkTemp, sysStat.minPrtTemp, "minChunkTemp", forceUpdate);
     updateNumberComponent(maxChunkTemp, lastMaxChunkTemp, sysStat.maxPrtTemp, "maxChunkTemp", forceUpdate);
 
-    lastPageIdChunk = currentPageId;
+    lastPageIdChunk = pageId;
 }
 
-void updateNextionSetCaliVariables(SystemStatus &sysStat)
+void updateNextionSetCaliVariables(SystemStatus &sysStat, uint8_t pageId)
 {
-    uint32_t currentPageId = getCurrentPageId();
-    bool forceUpdate = (currentPageId != lastPageIdCali);
+    bool forceUpdate = (pageId != lastPageIdCali);
 
-    if (currentPageId != 6)
+    if (pageId != 6)
     {
-        lastPageIdCali = currentPageId;
+        lastPageIdCali = pageId;
         initialUpdateDoneCali = false;
         return;
     }
@@ -433,5 +426,5 @@ void updateNextionSetCaliVariables(SystemStatus &sysStat)
     updateNumberComponent(minCaliChuTemp, lastMinCaliChunk, static_cast<int32_t>(sysStat.minCaliTempP), "minCaliChuTemp", forceUpdate);
     updateNumberComponent(maxCaliChuTemp, lastMaxCaliChunk, sysStat.maxCaliTempP, "maxCaliChuTemp", forceUpdate);
 
-    lastPageIdCali = currentPageId;
+    lastPageIdCali = pageId;
 }

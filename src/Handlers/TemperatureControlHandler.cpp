@@ -1,7 +1,6 @@
 #include "TemperatureControl.h"
 #include "PinDefinitions.h"
 #include <Arduino.h>
-#include <Nextion.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include "LogHandler.h"
@@ -182,10 +181,6 @@ void resetSystem(SystemStatus &sysStat)
 
   sysStat.calibratedTemp = 0;
   sysStat.calibratedTempP = 0;
-
-  sysStat.power = 0.0;
-  sysStat.energy = 0.0;
-  sysStat.cost = 0.0;
 
   digitalWrite(RGB_BUILTIN, LOW);
 

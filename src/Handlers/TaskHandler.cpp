@@ -15,6 +15,7 @@ extern DiagnosticsHandler diagnostics;  // Usar a instância global ao invés de
 static TaskHandle_t tempTaskHandle = NULL;
 static TaskHandle_t mqttTaskHandle = NULL;
 static TaskHandle_t controlTaskHandle = NULL;
+static TaskHandle_t diagnosticsTaskHandle = NULL;
 
 // Referências globais
 static SystemStatus* systemStatus;
@@ -156,5 +157,30 @@ void stopMQTTTask() {
         mqttTaskHandle = NULL;
         logHandler.logMessage("MQTT task parada");
     }
+}
+
+// Task de diagnóstico com intervalo de 60s
+static DiagnosticsHandler* diagHandler = NULL;
+
+void diagnosticsTaskFunc(void* parameter) {
+    while (true) {
+        diagHandler->checkTasks();
+        diagHandler->logMetrics();
+        vTaskDelay(pdMS_TO_TICKS(60000));
+    }
+}
+
+void startDiagnosticsTask(DiagnosticsHandler& diag) {
+    diagHandler = &diag;
+    xTaskCreatePinnedToCore(
+        diagnosticsTaskFunc,
+        "DiagTask",
+        2048,
+        NULL,
+        1,
+        &diagnosticsTaskHandle,
+        0
+    );
+    logHandler.logMessage("Diagnostics task iniciada");
 }
 

@@ -53,12 +53,6 @@ struct SystemStatus
     char aiKey[128];
     char tip[256];
 
-    // Energy Monitor
-    float power = 0.0;
-    float energy = 0.0;
-    float cost = 0.0;
-    float kWhCost = 1.0; // Valor do kWh em reais, padrão de 1 real por kWh
-
     //Internal Temp
     int calibratedTempInternal = 0;
 };

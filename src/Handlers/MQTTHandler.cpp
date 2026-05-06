@@ -1,6 +1,5 @@
 #include "MQTTHandler.h"
 #include "TemperatureControl.h"
-#include <Nextion.h>
 #include "LogHandler.h"
 
 extern LogHandler logHandler;

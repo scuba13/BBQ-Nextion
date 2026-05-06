@@ -1,9 +1,8 @@
 #include "SystemEndpoints.h"
-#include "LogHandler.h"     // Inclua o novo LogHandler aqui
-#include "ResponseHelper.h" // Inclua o ResponseHelper aqui
+#include "LogHandler.h"
+#include "ResponseHelper.h"
 #include <ArduinoJson.h>
-#include <Nextion.h>
-#include "OTAHandler.h" 
+#include "OTAHandler.h"
 #include "TemperatureControl.h"
 
 void registerSystemEndpoints(AsyncWebServer &server, SystemStatus &systemStatus, LogHandler &logger, OTAHandler &otaHandler)

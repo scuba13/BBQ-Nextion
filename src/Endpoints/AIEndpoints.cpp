@@ -1,8 +1,7 @@
 #include "AIEndpoints.h"
 #include <ArduinoJson.h>
-#include "LogHandler.h"       // Inclua o novo LogHandler aqui
-#include "ResponseHelper.h"   // Inclua o ResponseHelper aqui
-#include <Nextion.h>
+#include "LogHandler.h"
+#include "ResponseHelper.h"
 
 void registerAIEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, LogHandler& logger, FileSystem& fileSystem) {
     server.on("/api/v1/ai/config", HTTP_GET, [&systemStatus, &logger](AsyncWebServerRequest *request) {

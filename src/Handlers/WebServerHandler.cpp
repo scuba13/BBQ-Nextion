@@ -2,7 +2,6 @@
 #include "TemperatureEndpoints.h"
 #include "MQTTConfigEndpoints.h"
 #include "TempConfigEndpoints.h"
-#include "EnergyEndpoints.h"
 #include "GeneralEndpoints.h"
 #include "AIEndpoints.h"
 #include "SystemEndpoints.h"
@@ -35,7 +34,6 @@ void WebServerControl::begin() {
     registerMQTTConfigEndpoints(_server, _systemStatus, _fileSystem, _logger, _mqttHandler);
     registerTempConfigEndpoints(_server, _systemStatus, _fileSystem, _logger);
     registerGeneralEndpoints(_server, _systemStatus, _logger, _otaHandler);
-    registerEnergyEndpoints(_server, _systemStatus, _logger);
     registerDiagnosticsEndpoints(_server, _diagnostics, _logger);
 
     // Adicionar handler global para OPTIONS

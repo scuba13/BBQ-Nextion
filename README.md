@@ -14,14 +14,15 @@ BBQ-Nextion é uma aplicação desenvolvida para o controle preciso e eficiente 
 
 - **ESP32-S3 DevKitC-1 N16R8**: Placa de desenvolvimento ESP32-S3.
 - **Display Nextion**: Display touchscreen para interface com o usuário.
-- **Sensores de Temperatura ACS712**: Sensores para monitoramento da temperatura do pit smoker.
-- **Conversor TTL/RS232**: Para comunicação entre o display Nextion e o ESP32.
+- **MAX6675 (x2)**: Termopares para temperatura da câmara (BBQ) e da proteína.
+- **DS18B20**: Sensor de temperatura interna do ESP32.
 
 ## Configuração
 
 1. **Conexão de Hardware**:
-    - Conecte os sensores ACS712 ao ESP32-S3.
-    - Conecte o display Nextion ao ESP32-S3 usando o conversor TTL/RS232.
+    - Conecte os termopares MAX6675 ao ESP32-S3 (pinos SCK/CS/SO para BBQ e proteína).
+    - Conecte o sensor DS18B20 ao pino 4 do ESP32-S3.
+    - Conecte o display Nextion ao ESP32-S3 via Serial2 (RX=16, TX=17).
     - Garanta que todas as conexões estejam firmes e corretas.
 
 2. **Instalação do Software**:

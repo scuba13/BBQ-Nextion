@@ -781,9 +781,9 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 | C-21 | `src/Handlers/LogHandler.cpp` | 🟡 Logging | `[x]` |
 | C-22 | `src/Handlers/MQTTHandler.cpp` | 🟡 Logging | `[x]` |
 | C-23 | `src/Handlers/FileSystemHandler.cpp` | 🟡 Logging | `[x]` |
-| C-24 | `src/Handlers/NextionHandler.cpp`, `src/main.cpp` | 🟢 Performance | `[ ]` |
-| C-25 | `src/Endpoints/*.cpp` | 🟢 Performance | `[ ]` |
-| C-26 | `src/main.cpp` | 🟢 Performance | `[ ]` |
+| C-24 | `src/Handlers/NextionHandler.cpp`, `src/main.cpp` | 🟢 Performance | `[x]` |
+| C-25 | `src/Endpoints/*.cpp` | 🟢 Performance | `[x]` |
+| C-26 | `src/main.cpp` | 🟢 Performance | `[x]` |
 | C-27 | `src/Handlers/FileSystemHandler.cpp` | 🔐 Segurança | `[ ]` |
 | C-28 | `src/Endpoints/*.cpp` | 🔐 Segurança | `[ ]` |
 | C-29 | `src/Handlers/TaskHandler.cpp` | 🔴 Crítico | `[ ]` |
@@ -792,15 +792,15 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 | C-32 | `src/Handlers/FileSystem.cpp` | 🟠 Lógica | `[x]` |
 | C-33 | `src/Handlers/FileSystemHandler.cpp` | 🟡 Qualidade | `[x]` |
 | C-34 | `src/Handlers/MQTTHandler.cpp` | 🟡 Qualidade | `[x]` |
-| C-35 | `src/Endpoints/*.cpp`, `src/Handlers/LogHandler.cpp` | 🟡 Qualidade | `[ ]` |
-| C-36 | `src/main.cpp` | 🟡 Qualidade | `[ ]` |
+| C-35 | `src/Endpoints/*.cpp`, `src/Handlers/LogHandler.cpp` | 🟡 Qualidade | `[x]` |
+| C-36 | `src/main.cpp` | 🟡 Qualidade | `[x]` |
 | C-37 | `src/Handlers/OTAHandler.cpp` | 🟠 Lógica | `[x]` |
-| C-38 | `platformio.ini` | 🟢 Performance | `[ ]` |
+| C-38 | `platformio.ini` | 🟢 Performance | `[x]` |
 | C-39 | `platformio.ini` | 🟠 Lógica | `[x]` |
-| C-40 | `include/SystemStatus.h` | 🟡 Qualidade | `[ ]` |
-| C-41 | `src/Webhooks/`, `include/Webhooks/` | 🟡 Qualidade | `[ ]` |
-| C-42 | `README.md` | 🟡 Qualidade | `[ ]` |
-| C-43 | `src/Endpoints/EnergyEndpoints.cpp`, `include/SystemStatus.h`, `src/Handlers/NextionHandler.cpp` | 🗑️ Remoção | `[ ]` |
+| C-40 | `include/SystemStatus.h` | 🟡 Qualidade | `[x]` |
+| C-41 | `src/Webhooks/`, `include/Webhooks/` | 🟡 Qualidade | `[x]` |
+| C-42 | `README.md` | 🟡 Qualidade | `[x]` |
+| C-43 | `src/Endpoints/EnergyEndpoints.cpp`, `include/SystemStatus.h`, `src/Handlers/NextionHandler.cpp` | 🗑️ Remoção | `[x]` |
 | E-01 | `include/`, `src/Endpoints/`, `src/Handlers/` | 🏗️ Estrutura | `[ ]` |
 | E-02 | `src/Endpoints/ResponseHelper.h` | 🏗️ Estrutura | `[ ]` |
 | E-03 | `TemperatureControl.h`, `WebServerControl.h`, `FileSystem.h` | 🏗️ Estrutura | `[ ]` |
@@ -858,16 +858,16 @@ Sprint 3 — API, persistência e logging ✅
   C-33  ✅ kWhCost persistido e carregado do config.json
   C-34  ✅ clientId MQTT usa deviceId (MAC) em vez de random
 
-Sprint 4 — Qualidade e limpeza
-  C-24  getCurrentPageId() 4x por loop
-  C-25  DynamicJsonDocument em todos endpoints
-  C-26  diagnostics no loop Arduino
-  C-35  Nextion.h desnecessário em 10+ arquivos
-  C-38  libs não usadas (SoftwareSerial, SD)
-  C-40  deviceId salvo mas nunca usado
-  C-41  diretórios Webhooks vazios
-  C-42  README com hardware errado
-  C-43  remover feature de energia (power/energy/cost/kWhCost) — descontinuada
+Sprint 4 — Qualidade e limpeza ✅
+  C-24  ✅ getCurrentPageId() chamado 1x por loop, resultado passado às 4 funções
+  C-25  ✅ já resolvido: ArduinoJson 7.x usa JsonDocument (sem StaticJsonDocument)
+  C-26  ✅ checkTasks/logMetrics movidos para DiagTask FreeRTOS (60s)
+  C-35  ✅ Nextion.h removido de 7 arquivos; dbSerial→Serial no LogHandler
+  C-38  ✅ SD removida; EspSoftwareSerial mantida (dependência interna do Nextion)
+  C-40  ✅ deviceId agora usado como MQTT clientId (C-34)
+  C-41  ✅ diretórios src/Webhooks/ e include/Webhooks/ removidos
+  C-42  ✅ README: ACS712→MAX6675 (x2) + DS18B20
+  C-43  ✅ feature de energia removida completamente
 
 Sprint 5 — Segurança e features pendentes
   C-07  cureProcessMode sem implementação

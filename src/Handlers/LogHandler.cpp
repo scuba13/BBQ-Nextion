@@ -1,7 +1,6 @@
 #include "LogHandler.h"
 #include <FS.h>
 #include <LittleFS.h>
-#include <Nextion.h>
 
 LogHandler::LogHandler() {
     memset(logBuffer, 0, LOG_BUFFER_SIZE);
@@ -111,8 +110,8 @@ void LogHandler::writeLog(const String &level, const String &message) {
     String timeStamp = String(now/1000) + "s: ";
     String fullMessage = timeStamp + "[" + level + "] " + message + "\n";
     
-    // Imprime no dbSerial
-    dbSerial.print(fullMessage);
+    // Imprime no Serial
+    Serial.print(fullMessage);
     
     // Verifica se há espaço no buffer
     if (bufferIndex + fullMessage.length() >= LOG_BUFFER_SIZE) {

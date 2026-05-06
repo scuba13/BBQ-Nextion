@@ -61,6 +61,9 @@ void setup() {
     // Inicia tasks de temperatura, controle e MQTT
     initializeTasks(sysStat, mqttHandler);
 
+    // Inicia task de diagnóstico (60s)
+    startDiagnosticsTask(diagnostics);
+
     // Inicia servidor web
     webServerControl.begin();
 
@@ -69,21 +72,19 @@ void setup() {
 
 void loop() {
     nexLoop(nex_listen_list);
-    
-    // Atualiza todas as variáveis do Nextion
-    updateNextionMonitorVariables(sysStat);
-    updateNextionSetBBQVariables(sysStat);
-    updateNextionSetChunkVariables(sysStat);
-    updateNextionSetCaliVariables(sysStat);
-    
-    // Watchdog e monitoramento de tasks
+
+    // Lê o ID da página uma única vez por iteração do loop
+    uint8_t currentPage = getCurrentPageId();
+    updateNextionMonitorVariables(sysStat, currentPage);
+    updateNextionSetBBQVariables(sysStat, currentPage);
+    updateNextionSetChunkVariables(sysStat, currentPage);
+    updateNextionSetCaliVariables(sysStat, currentPage);
+
     diagnostics.watchdogFeed();
-    diagnostics.checkTasks();
-    diagnostics.logMetrics();
-    
+
     if (!diagnostics.isHealthy()) {
         logHandler.logError("Sistema com recursos críticos!");
     }
-    
+
     vTaskDelay(1);
 }

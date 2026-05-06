@@ -1,10 +1,9 @@
 #include "GeneralEndpoints.h"
 #include <LittleFS.h>
 #include <FS.h>
-#include "LogHandler.h"       // Inclua o novo LogHandler aqui
-#include "ResponseHelper.h"   // Inclua o ResponseHelper aqui
+#include "LogHandler.h"
+#include "ResponseHelper.h"
 #include "TemperatureControl.h"
-#include <Nextion.h>
 
 void registerGeneralEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, LogHandler& logger, OTAHandler& otaHandler) {
     server.on("/api/v1/log/content", HTTP_GET, [&logger](AsyncWebServerRequest *request) {
