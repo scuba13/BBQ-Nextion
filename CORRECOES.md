@@ -822,15 +822,15 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 
 ```
 Sprint 1 — Estabilidade crítica
-  C-01  tasks duplicadas (race condition)
-  C-02  MQTTHandler::begin() nunca chamado
-  C-03  processMessage() não implementado
-  C-04  initWiFi() nunca chamado
-  C-18  duas instâncias de LogHandler
-  C-29  client.loop() ausente no mqttTask
+  C-01  ✅ tasks duplicadas (race condition)
+  C-02  ✅ MQTTHandler::begin() nunca chamado
+  C-03  ✅ processMessage() não implementado
+  C-04  ✅ initWiFi() nunca chamado
+  C-18  ✅ duas instâncias de LogHandler
+  C-29  ✅ client.loop() ausente no mqttTask
   C-30  conflito de page ID no Nextion (energia vs calibração)
-  C-32  FileSystem.cpp duplicado — remover
-  C-36  Serial.begin() ausente
+  C-32  ✅ FileSystem.cpp duplicado — remover
+  C-36  ✅ Serial.begin() ausente
 
 Sprint 2 — Lógica e bugs
   C-05  handle de task deletada no vetor
