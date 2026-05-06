@@ -1,6 +1,7 @@
 #include "SystemEndpoints.h"
 #include "LogHandler.h"
 #include "ResponseHelper.h"
+#include "SysStatMutex.h"
 #include <ArduinoJson.h>
 #include "OTAHandler.h"
 #include "TemperatureControl.h"

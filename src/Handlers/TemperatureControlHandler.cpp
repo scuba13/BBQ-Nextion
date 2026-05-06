@@ -4,6 +4,7 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include "LogHandler.h"
+#include "SysStatMutex.h"
 
 extern LogHandler logHandler; // Certifique-se de que o logHandler esteja declarado externamente ou passado como argumento
 
@@ -168,6 +169,7 @@ void resetSystem(SystemStatus &sysStat)
 {
   logHandler.logMessage("System Reset Started...");
 
+  sysStatLock();
   digitalWrite(RELAY_PIN, LOW);
   sysStat.isRelayOn = false;
 
@@ -196,6 +198,7 @@ void resetSystem(SystemStatus &sysStat)
   sysStat.calibratedTempP = 0;
 
   digitalWrite(RGB_BUILTIN, LOW);
+  sysStatUnlock();
 
   logHandler.logMessage("System reset completed.");
 }

@@ -1,6 +1,7 @@
 #include "MQTTConfigEndpoints.h"
 #include "LogHandler.h"
 #include "ResponseHelper.h"
+#include "SysStatMutex.h"
 #include <ArduinoJson.h>
 
 void registerMQTTConfigEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, FileSystem& fileSystem, LogHandler& logger, MQTTHandler& mqttHandler) {
@@ -69,8 +70,8 @@ void registerMQTTConfigEndpoints(AsyncWebServer& server, SystemStatus& systemSta
             return;
         }
 
+        sysStatLock();
         bool wasAvailable = systemStatus.isHAAvailable;
-
         strncpy(systemStatus.mqttServer, mqttServer.c_str(), sizeof(systemStatus.mqttServer) - 1);
         systemStatus.mqttServer[sizeof(systemStatus.mqttServer) - 1] = '\0';
         systemStatus.mqttPort = mqttPort;
@@ -79,6 +80,7 @@ void registerMQTTConfigEndpoints(AsyncWebServer& server, SystemStatus& systemSta
         strncpy(systemStatus.mqttPassword, mqttPassword.c_str(), sizeof(systemStatus.mqttPassword) - 1);
         systemStatus.mqttPassword[sizeof(systemStatus.mqttPassword) - 1] = '\0';
         systemStatus.isHAAvailable = isHAAvailable;
+        sysStatUnlock();
 
         fileSystem.saveConfigToFile(systemStatus);
 

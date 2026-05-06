@@ -1,5 +1,6 @@
 #include "AuthEndpoints.h"
 #include "ResponseHelper.h"
+#include "SysStatMutex.h"
 #include <ArduinoJson.h>
 
 void registerAuthEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, FileSystem& fileSystem, LogHandler& logger) {
@@ -49,8 +50,10 @@ void registerAuthEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, F
             return;
         }
 
+        sysStatLock();
         strncpy(systemStatus.apiKey, newKey.c_str(), sizeof(systemStatus.apiKey) - 1);
         systemStatus.apiKey[sizeof(systemStatus.apiKey) - 1] = '\0';
+        sysStatUnlock();
 
         fileSystem.saveConfigToFile(systemStatus);
 

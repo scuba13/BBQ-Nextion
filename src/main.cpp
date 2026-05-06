@@ -1,5 +1,6 @@
 #include <WiFiManager.h>
 #include "SystemStatus.h"
+#include "SysStatMutex.h"
 #include "PinDefinitions.h"
 #include "WebServerControl.h"
 #include "TemperatureControl.h"
@@ -13,6 +14,8 @@
 #include "TaskHandler.h"
 #include "WiFiHandler.h"
 #include "DiagnosticsHandler.h"
+
+SemaphoreHandle_t sysStatMutex = nullptr;
 
 // Instanciação dos objetos globais
 SystemStatus sysStat;
@@ -58,6 +61,9 @@ void setup() {
                           sysStat.mqttUser, sysStat.mqttPassword);
     }
 
+    // Mutex recursivo para proteger sysStat entre tasks e cores
+    sysStatMutex = xSemaphoreCreateRecursiveMutex();
+
     // Inicia tasks de temperatura, controle e MQTT
     initializeTasks(sysStat, mqttHandler);
 
@@ -71,14 +77,19 @@ void setup() {
 }
 
 void loop() {
+    // nexLoop processa callbacks Nextion (que escrevem em sysStat sob seu próprio lock)
     nexLoop(nex_listen_list);
 
-    // Lê o ID da página uma única vez por iteração do loop
+    // getCurrentPageId usa Serial2 apenas — sem acesso a sysStat, fora do lock
     uint8_t currentPage = getCurrentPageId();
+
+    // Nextion update functions lêem sysStat — protegidas pelo mutex
+    sysStatLock();
     updateNextionMonitorVariables(sysStat, currentPage);
     updateNextionSetBBQVariables(sysStat, currentPage);
     updateNextionSetChunkVariables(sysStat, currentPage);
     updateNextionSetCaliVariables(sysStat, currentPage);
+    sysStatUnlock();
 
     diagnostics.watchdogFeed();
 
@@ -86,11 +97,15 @@ void loop() {
         logHandler.logError("Sistema com recursos críticos!");
     }
 
-    // Atualiza LED RGB pelo loop() — único ponto de chamada de neopixelWrite
+    // Lê isRelayOn sob lock para atualizar LED (único ponto de neopixelWrite)
+    sysStatLock();
+    bool relayOn = sysStat.isRelayOn;
+    sysStatUnlock();
+
     static bool lastRelayState = false;
-    if (sysStat.isRelayOn != lastRelayState) {
-        lastRelayState = sysStat.isRelayOn;
-        if (sysStat.isRelayOn) {
+    if (relayOn != lastRelayState) {
+        lastRelayState = relayOn;
+        if (relayOn) {
             neopixelWrite(RGB_BUILTIN, RGB_BRIGHTNESS, 0, 0); // Red = relay ON
         } else {
             neopixelWrite(RGB_BUILTIN, 0, 0, RGB_BRIGHTNESS); // Blue = relay OFF

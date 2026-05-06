@@ -2,6 +2,7 @@
 #include <ArduinoJson.h>
 #include "LogHandler.h"
 #include "ResponseHelper.h"
+#include "SysStatMutex.h"
 
 void registerAIEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, LogHandler& logger, FileSystem& fileSystem) {
     server.on("/api/v1/ai/config", HTTP_GET, [&systemStatus, &logger](AsyncWebServerRequest *request) {
@@ -38,11 +39,12 @@ void registerAIEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, Log
             return;
         }
 
+        sysStatLock();
         strncpy(systemStatus.aiKey, aiKey.c_str(), sizeof(systemStatus.aiKey) - 1);
         systemStatus.aiKey[sizeof(systemStatus.aiKey) - 1] = '\0';
-
         strncpy(systemStatus.tip, tip.c_str(), sizeof(systemStatus.tip) - 1);
         systemStatus.tip[sizeof(systemStatus.tip) - 1] = '\0';
+        sysStatUnlock();
 
         fileSystem.saveConfigToFile(systemStatus);
 

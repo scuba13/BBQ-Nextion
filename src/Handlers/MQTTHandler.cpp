@@ -1,6 +1,7 @@
 #include "MQTTHandler.h"
 #include "TemperatureControl.h"
 #include "LogHandler.h"
+#include "SysStatMutex.h"
 
 extern LogHandler logHandler;
 
@@ -167,29 +168,30 @@ void MQTTHandler::messageHandler(char* topic, byte* payload, unsigned int length
     String messageTemp = String((char*)payload, length);
     logHandler.logMessage("Received [" + receivedTopic + "]: " + messageTemp);
 
-    // Verifica se a mensagem é para setar a temperatura da BBQ
     if (receivedTopic == "sensor/bbq_set_temperature/set") {
         float bbqTempSet = messageTemp.toFloat();
         if (bbqTempSet >= 30 && bbqTempSet <= 250) {
+            sysStatLock();
             systemStatus.bbqTemperature = bbqTempSet;
-            logHandler.logMessage("Nova temperatura da BBQ setada: " + String(systemStatus.bbqTemperature));
+            sysStatUnlock();
+            logHandler.logMessage("Nova temperatura da BBQ setada: " + String(bbqTempSet));
         } else {
             logHandler.logMessage("Valor de BBQTempSet inválido!");
         }
     }
-    // Verifica se a mensagem é para setar a temperatura da proteína
     else if (receivedTopic == "sensor/protein_temperature/set") {
         float proteinTempSet = messageTemp.toFloat();
         if (proteinTempSet >= 25 && proteinTempSet <= 100) {
+            sysStatLock();
             systemStatus.proteinTemperature = proteinTempSet;
-            logHandler.logMessage("Nova temperatura da proteína setada: " + String(systemStatus.proteinTemperature));
+            sysStatUnlock();
+            logHandler.logMessage("Nova temperatura da proteína setada: " + String(proteinTempSet));
         } else {
             logHandler.logMessage("Valor de ProteinTempSet inválido!");
         }
     }
-    // Verifica se a mensagem é para resetar o sistema
     else if (receivedTopic == "func/reset_cmd") {
-        // Executa a lógica de reset apenas se o payload for "reset"
+        // resetSystem() toma o mutex internamente (recursivo — seguro se mqttTask já o tem)
         if (messageTemp == "RESET") {
             resetSystem(systemStatus);
             logHandler.logMessage("Sistema Resetado");

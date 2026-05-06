@@ -1,6 +1,7 @@
 #include "TemperatureEndpoints.h"
-#include "LogHandler.h"      // Inclua o novo LogHandler aqui
-#include "ResponseHelper.h"  // Inclua o ResponseHelper aqui
+#include "LogHandler.h"
+#include "ResponseHelper.h"
+#include "SysStatMutex.h"
 
 void registerTemperatureEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, LogHandler& logger) {
     server.on("/api/v1/temperature/config", HTTP_GET, [&](AsyncWebServerRequest *request) {
@@ -24,43 +25,39 @@ void registerTemperatureEndpoints(AsyncWebServer& server, SystemStatus& systemSt
 
         bool updated = false;
 
+        // Valida os valores antes de escrever (leitura de limites é segura fora do lock)
+        int newBBQTemp = -1, newPrtTemp = -1, newCali = -9999, newCaliP = -9999;
+
         if (request->hasParam("bbqTemperature", true)) {
-            int newBBQTemp = request->getParam("bbqTemperature", true)->value().toInt();
+            newBBQTemp = request->getParam("bbqTemperature", true)->value().toInt();
             if (newBBQTemp < systemStatus.minBBQTemp || newBBQTemp > systemStatus.maxBBQTemp) {
                 ResponseHelper::sendErrorResponse(request, 400, "Temperatura BBQ fora do intervalo permitido");
                 return;
             }
-            systemStatus.bbqTemperature = newBBQTemp;
             updated = true;
         }
-
         if (request->hasParam("proteinTemperature", true)) {
-            int newPrtTemp = request->getParam("proteinTemperature", true)->value().toInt();
+            newPrtTemp = request->getParam("proteinTemperature", true)->value().toInt();
             if (newPrtTemp < systemStatus.minPrtTemp || newPrtTemp > systemStatus.maxPrtTemp) {
                 ResponseHelper::sendErrorResponse(request, 400, "Temperatura da proteína fora do intervalo permitido");
                 return;
             }
-            systemStatus.proteinTemperature = newPrtTemp;
             updated = true;
         }
-
         if (request->hasParam("tempCalibration", true)) {
-            int newCali = request->getParam("tempCalibration", true)->value().toInt();
+            newCali = request->getParam("tempCalibration", true)->value().toInt();
             if (newCali < systemStatus.minCaliTemp || newCali > systemStatus.maxCaliTemp) {
                 ResponseHelper::sendErrorResponse(request, 400, "Calibração BBQ fora do intervalo permitido");
                 return;
             }
-            systemStatus.tempCalibration = newCali;
             updated = true;
         }
-
         if (request->hasParam("tempCalibrationP", true)) {
-            int newCaliP = request->getParam("tempCalibrationP", true)->value().toInt();
+            newCaliP = request->getParam("tempCalibrationP", true)->value().toInt();
             if (newCaliP < systemStatus.minCaliTempP || newCaliP > systemStatus.maxCaliTempP) {
                 ResponseHelper::sendErrorResponse(request, 400, "Calibração da proteína fora do intervalo permitido");
                 return;
             }
-            systemStatus.tempCalibrationP = newCaliP;
             updated = true;
         }
 
@@ -68,6 +65,14 @@ void registerTemperatureEndpoints(AsyncWebServer& server, SystemStatus& systemSt
             ResponseHelper::sendErrorResponse(request, 400, "Nenhum parâmetro válido fornecido para atualização");
             return;
         }
+
+        // Aplica as escritas sob mutex
+        sysStatLock();
+        if (newBBQTemp  != -1)    systemStatus.bbqTemperature   = newBBQTemp;
+        if (newPrtTemp  != -1)    systemStatus.proteinTemperature = newPrtTemp;
+        if (newCali     != -9999) systemStatus.tempCalibration   = newCali;
+        if (newCaliP    != -9999) systemStatus.tempCalibrationP  = newCaliP;
+        sysStatUnlock();
 
         ResponseHelper::sendJsonResponse(request, 200, "Configuração de temperatura atualizada com sucesso");
     });

@@ -1,5 +1,6 @@
 #include "NextionHandler.h"
 #include "LogHandler.h"
+#include "SysStatMutex.h"
 
 extern LogHandler logHandler; // Certifique-se de que o logHandler esteja declarado externamente ou passado como argumento
 
@@ -117,10 +118,11 @@ void setBBQTempPushCallback(void *ptr)
     }
 
     int bbqTempValue = static_cast<int>(value);
+    sysStatLock();
     systemStatus->bbqTemperature = bbqTempValue;
+    sysStatUnlock();
 
     logHandler.logMessage("BBQTempValue: " + String(bbqTempValue));
-    logHandler.logMessage("SystemStatus BBQ Temperature: " + String(systemStatus->bbqTemperature));
     logHandler.logMessage("Exiting setBBQTempPopCallback");
     monitor.show();
 }
@@ -147,10 +149,11 @@ void setChunkTempPushCallback(void *ptr)
     }
 
     int chunkTempValue = static_cast<int>(value);
+    sysStatLock();
     systemStatus->proteinTemperature = chunkTempValue;
+    sysStatUnlock();
 
     logHandler.logMessage("ChunkTempValue: " + String(chunkTempValue));
-    logHandler.logMessage("SystemStatus Chunk Temperature: " + String(systemStatus->proteinTemperature));
     logHandler.logMessage("Exiting setChunkTempPopCallback");
     monitor.show();
 }
@@ -203,15 +206,14 @@ void setCaliPushCallback(void *ptr)
     }
 
     int caliBBQValue = static_cast<int>(bbq);
-    systemStatus->tempCalibration = caliBBQValue;
-
     int caliChunkValue = static_cast<int>(chunk);
+    sysStatLock();
+    systemStatus->tempCalibration = caliBBQValue;
     systemStatus->tempCalibrationP = caliChunkValue;
+    sysStatUnlock();
 
     logHandler.logMessage("CaliBBQValue: " + String(caliBBQValue));
-    logHandler.logMessage("SystemStatus tempCalibration: " + String(systemStatus->tempCalibration));
     logHandler.logMessage("CaliChunkValue: " + String(caliChunkValue));
-    logHandler.logMessage("SystemStatus tempCalibrationP: " + String(systemStatus->tempCalibrationP));
     logHandler.logMessage("Exiting setCaliPushCallback");
     menu.show();
 }

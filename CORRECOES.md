@@ -923,7 +923,7 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 | D-02 | `platformio.ini` | 🟢 Dep. Minor | `[x]` |
 | D-03 | `platformio.ini` | 🟢 Dep. Minor | `[x]` |
 | D-04 | `platformio.ini` | 🟡 Dep. Major | `[x]` |
-| K-01 | `include/SystemStatus.h`, todos os `.cpp` | 🔴 Concorrência | `[ ]` |
+| K-01 | `include/SystemStatus.h`, todos os `.cpp` | 🔴 Concorrência | `[x]` |
 | K-02 | `src/Handlers/DiagnosticsHandler.cpp`, `TaskHandler.cpp` | 🔴 Concorrência | `[x]` |
 | K-03 | `src/Handlers/LogHandler.cpp` | 🔴 Concorrência | `[x]` |
 | K-04 | `src/Handlers/OTAHandler.cpp` | 🔴 Crítico | `[x]` |
@@ -1007,7 +1007,7 @@ Sprint K — Concorrência, hardware e runtime (achados Kimi-K2.6) ✅ (parcial)
   K-07  ✅ neopixelWrite centralizado no loop() com cache de estado
   K-03  ✅ mutex no LogHandler — buffer protegido contra escrita concorrente
   K-08  ✅ snprintf em buffer fixo char[256] no writeLog; char[40] no MQTT clientId
-  K-01  [ ] mutex global para sysStat — adiado (maior invasividade)
+  K-01  ✅ mutex recursivo global para sysStat — tasks, callbacks e endpoints protegidos
 
 Sprint 6 — Refatoração estrutural (fazer depois de tudo estabilizado)
   E-01  mover headers para subpastas include/Endpoints/ e include/Handlers/

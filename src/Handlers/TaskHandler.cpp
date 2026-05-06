@@ -6,6 +6,7 @@
 #include "NextionHandler.h"
 #include "TemperatureControl.h"
 #include "DiagnosticsHandler.h"
+#include "SysStatMutex.h"
 
 // Declarações externas
 extern SystemStatus sysStat;
@@ -34,7 +35,7 @@ void temperatureTask(void *parameter) {
     UBaseType_t minStackLeft = UINT32_MAX;
 
     while (true) {
-        esp_task_wdt_reset(); // Alimenta o WDT desta task
+        esp_task_wdt_reset();
 
         UBaseType_t stackLeft = uxTaskGetStackHighWaterMark(NULL);
         if (stackLeft < minStackLeft) {
@@ -48,20 +49,27 @@ void temperatureTask(void *parameter) {
             logHandler.logWarning("Heap baixa: " + String(ESP.getFreeHeap()) + " bytes");
         }
 
+        sysStatLock();
         getCalibratedTemp(thermocouple, *systemStatus);
         getCalibratedTempP(thermocoupleP, *systemStatus);
         getCalibratedInternalTemp(*systemStatus);
+        sysStatUnlock();
+
         vTaskDelay(xDelay);
     }
 }
 
 // Task para MQTT (3s)
+// client.loop() fora do mutex: callbacks (messageHandler) tomam o mutex por conta própria
+// managePublishing dentro do mutex: lê sysStat para publicar
 void mqttTask(void *parameter) {
     const TickType_t xDelay = pdMS_TO_TICKS(3000);
     while (true) {
         if (systemStatus->isHAAvailable) {
             mqttHandler->loop();
+            sysStatLock();
             mqttHandler->managePublishing(*systemStatus);
+            sysStatUnlock();
         }
         vTaskDelay(xDelay);
     }
@@ -70,11 +78,13 @@ void mqttTask(void *parameter) {
 // Task para controle de temperatura (1s)
 void controlTask(void *parameter) {
     const TickType_t xDelay = pdMS_TO_TICKS(1000);
-    esp_task_wdt_add(NULL); // Registra esta task no hardware WDT
+    esp_task_wdt_add(NULL);
 
     while (true) {
-        esp_task_wdt_reset(); // Alimenta o WDT desta task
+        esp_task_wdt_reset();
+        sysStatLock();
         controlTemperature(*systemStatus);
+        sysStatUnlock();
         vTaskDelay(xDelay);
     }
 }

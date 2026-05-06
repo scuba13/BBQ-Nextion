@@ -1,6 +1,7 @@
 #include "TempConfigEndpoints.h"
 #include "LogHandler.h"
 #include "ResponseHelper.h"
+#include "SysStatMutex.h"
 #include <ArduinoJson.h>
 
 void registerTempConfigEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, FileSystem& fileSystem, LogHandler& logger) {
@@ -58,14 +59,16 @@ void registerTempConfigEndpoints(AsyncWebServer& server, SystemStatus& systemSta
             return;
         }
 
-        systemStatus.minBBQTemp = newMinBBQTemp;
-        systemStatus.maxBBQTemp = newMaxBBQTemp;
-        systemStatus.minPrtTemp = newMinPrtTemp;
-        systemStatus.maxPrtTemp = newMaxPrtTemp;
-        systemStatus.minCaliTemp = newMinCaliTemp;
-        systemStatus.maxCaliTemp = newMaxCaliTemp;
+        sysStatLock();
+        systemStatus.minBBQTemp   = newMinBBQTemp;
+        systemStatus.maxBBQTemp   = newMaxBBQTemp;
+        systemStatus.minPrtTemp   = newMinPrtTemp;
+        systemStatus.maxPrtTemp   = newMaxPrtTemp;
+        systemStatus.minCaliTemp  = newMinCaliTemp;
+        systemStatus.maxCaliTemp  = newMaxCaliTemp;
         systemStatus.minCaliTempP = newMinCaliTempP;
         systemStatus.maxCaliTempP = newMaxCaliTempP;
+        sysStatUnlock();
 
         fileSystem.saveConfigToFile(systemStatus);
 
