@@ -513,6 +513,25 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 
 ---
 
+### C-43 — Remover toda a feature de monitoramento de energia
+- **Status:** `[ ]`
+- **Decisão:** Feature descontinuada — remover completamente.
+- **Tudo que precisa ser deletado:**
+
+  | Arquivo | O que remover |
+  |---|---|
+  | `src/Endpoints/EnergyEndpoints.cpp` | deletar arquivo inteiro |
+  | `include/EnergyEndpoints.h` | deletar arquivo inteiro |
+  | `src/Handlers/WebServerHandler.cpp` | remover `#include "EnergyEndpoints.h"` e `registerEnergyEndpoints(...)` |
+  | `include/SystemStatus.h:66–69` | remover campos `power`, `energy`, `cost`, `kWhCost` |
+  | `src/Handlers/TemperatureControlHandler.cpp:214–216` | remover zeragem de `power`, `energy`, `cost` em `resetSystem()` |
+  | `src/Handlers/NextionHandler.cpp:54` | remover `NexPage energyPg = NexPage(6, 0, "energyPg")` |
+  | `src/Handlers/MonitorEndpoints.cpp` | verificar se expõe campos de energia e remover |
+
+- **Obs:** A remoção de `energyPg` (page 6) resolve parcialmente o C-30 (conflito de page ID). Após remover, confirmar qual é a página real de calibração e corrigir o mapeamento.
+
+---
+
 ### C-41 — Diretórios `src/Webhooks/` e `include/Webhooks/` vazios
 - **Status:** `[ ]`
 - **Arquivos:** `src/Webhooks/`, `include/Webhooks/`
@@ -575,6 +594,7 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 | C-40 | `include/SystemStatus.h` | 🟡 Qualidade | `[ ]` |
 | C-41 | `src/Webhooks/`, `include/Webhooks/` | 🟡 Qualidade | `[ ]` |
 | C-42 | `README.md` | 🟡 Qualidade | `[ ]` |
+| C-43 | `src/Endpoints/EnergyEndpoints.cpp`, `include/SystemStatus.h`, `src/Handlers/NextionHandler.cpp` | 🗑️ Remoção | `[ ]` |
 
 ---
 
@@ -627,6 +647,7 @@ Sprint 4 — Qualidade e limpeza
   C-40  deviceId salvo mas nunca usado
   C-41  diretórios Webhooks vazios
   C-42  README com hardware errado
+  C-43  remover feature de energia (power/energy/cost/kWhCost) — descontinuada
 
 Sprint 5 — Segurança e features pendentes
   C-07  cureProcessMode sem implementação
