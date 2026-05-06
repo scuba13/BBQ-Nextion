@@ -10,7 +10,7 @@ void registerMonitorEndpoints(AsyncWebServer &server, SystemStatus &systemStatus
         // Log da requisição utilizando o novo LogHandler
         logger.logRequest(request, "Fetching monitoring data");
 
-        DynamicJsonDocument doc(1024); // Ajuste o tamanho conforme necessário
+        JsonDocument doc;
         doc["currentTemp"] = systemStatus.calibratedTemp;
         doc["setTemp"] = systemStatus.bbqTemperature;
         doc["proteinTemp"] = systemStatus.calibratedTempP;

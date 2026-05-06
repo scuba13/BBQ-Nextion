@@ -7,7 +7,7 @@
 class ResponseHelper {
 public:
     static void sendJsonResponse(AsyncWebServerRequest *request, int statusCode, const String &message, const JsonObject &data = JsonObject()) {
-        DynamicJsonDocument doc(1024);
+        JsonDocument doc;
         doc["status"] = statusCode;
         doc["message"] = message;
         if (!data.isNull()) {
@@ -27,7 +27,7 @@ public:
     }
 
     static void sendErrorResponse(AsyncWebServerRequest *request, int statusCode, const String &message) {
-        DynamicJsonDocument doc(512);
+        JsonDocument doc;
         doc["status"] = statusCode;
         doc["message"] = message;
         String response;

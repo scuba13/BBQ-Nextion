@@ -7,7 +7,7 @@ void registerDiagnosticsEndpoints(AsyncWebServer& server, DiagnosticsHandler& di
         
         auto metrics = diagnostics.getMetrics();
         
-        DynamicJsonDocument doc(1024);
+        JsonDocument doc;
         doc["heap"]["free"] = metrics.freeHeap;
         doc["heap"]["min"] = metrics.minFreeHeap;
         doc["heap"]["maxAlloc"] = metrics.maxAllocHeap;

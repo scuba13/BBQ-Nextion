@@ -9,7 +9,7 @@ void registerAIEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, Log
         // Log da requisição utilizando o novo LogHandler
         logger.logRequest(request, "Fetching AI configuration");
 
-        DynamicJsonDocument doc(1024);
+        JsonDocument doc;
         doc["aiKey"] = systemStatus.aiKey;
         doc["tip"] = systemStatus.tip;
 

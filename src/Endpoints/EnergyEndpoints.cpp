@@ -9,7 +9,7 @@ void registerEnergyEndpoints(AsyncWebServer& server, SystemStatus& systemStatus,
         // Log da requisição utilizando o novo LogHandler
         logger.logRequest(request, "Fetching energy data");
 
-        DynamicJsonDocument doc(1024);
+        JsonDocument doc;
         doc["power"] = systemStatus.power;
         doc["energy"] = systemStatus.energy;
         doc["cost"] = systemStatus.cost;
@@ -33,7 +33,7 @@ void registerEnergyEndpoints(AsyncWebServer& server, SystemStatus& systemStatus,
             logger.logMessage("Energy cost received: " + String(systemStatus.kWhCost));
 
             // Utilizando ResponseHelper para enviar a resposta
-            DynamicJsonDocument jsonDoc(1024);
+            JsonDocument jsonDoc;
             jsonDoc["status"] = "success";
             jsonDoc["kWhCost"] = systemStatus.kWhCost;
             ResponseHelper::sendJsonResponse(request, 200, "Energy cost updated successfully", jsonDoc.as<JsonObject>());

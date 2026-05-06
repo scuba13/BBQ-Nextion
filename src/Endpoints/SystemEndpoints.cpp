@@ -70,7 +70,7 @@ void registerSystemEndpoints(AsyncWebServer &server, SystemStatus &systemStatus,
     server.on("/api/v1/system/update/status", HTTP_GET, [&](AsyncWebServerRequest *request) {
         auto status = otaHandler.getStatus();
         
-        DynamicJsonDocument doc(1024);
+        JsonDocument doc;
         doc["inProgress"] = status.inProgress;
         doc["progress"] = status.progress;
         doc["currentVersion"] = status.currentVersion;
@@ -97,7 +97,7 @@ void registerSystemEndpoints(AsyncWebServer &server, SystemStatus &systemStatus,
         
         String newVersion = request->getParam("version", true)->value();
         
-        DynamicJsonDocument doc(1024);
+        JsonDocument doc;
         doc["currentVersion"] = otaHandler.getFirmwareVersion();
         doc["canUpdate"] = otaHandler.hasEnoughSpace() && otaHandler.isVersionNewer(newVersion);
         doc["freeHeap"] = ESP.getFreeHeap();

@@ -9,7 +9,7 @@ void registerMQTTConfigEndpoints(AsyncWebServer& server, SystemStatus& systemSta
         // Log da requisição utilizando o novo LogHandler
         logger.logRequest(request, "Fetching MQTT configuration");
 
-        DynamicJsonDocument doc(1024);
+        JsonDocument doc;
         doc["mqttServer"] = systemStatus.mqttServer;
         doc["mqttPort"] = systemStatus.mqttPort;
         doc["mqttUser"] = systemStatus.mqttUser;

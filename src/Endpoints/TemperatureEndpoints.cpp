@@ -7,7 +7,7 @@ void registerTemperatureEndpoints(AsyncWebServer& server, SystemStatus& systemSt
         // Log da requisição utilizando o novo LogHandler
         logger.logRequest(request, "Fetching temperature config");
 
-        DynamicJsonDocument data(1024);
+        JsonDocument data;
         data["bbqTemperature"] = systemStatus.bbqTemperature;
         data["proteinTemperature"] = systemStatus.proteinTemperature;
         data["tempCalibration"] = systemStatus.tempCalibration;

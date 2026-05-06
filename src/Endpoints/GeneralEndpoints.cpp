@@ -42,7 +42,7 @@ void registerGeneralEndpoints(AsyncWebServer& server, SystemStatus& systemStatus
         }
 
         // Criando um JsonObject para armazenar o logContent e passar para o ResponseHelper
-        DynamicJsonDocument doc(4096);
+        JsonDocument doc;
         doc["logContent"] = logContent;
 
         // Enviando o conteúdo do log usando o ResponseHelper

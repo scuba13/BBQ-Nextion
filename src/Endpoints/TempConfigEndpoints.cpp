@@ -9,7 +9,7 @@ void registerTempConfigEndpoints(AsyncWebServer& server, SystemStatus& systemSta
         // Log da requisição utilizando o novo LogHandler
         logger.logRequest(request, "Fetching TempConfig configuration");
 
-        DynamicJsonDocument doc(1024);
+        JsonDocument doc;
         doc["minBBQTemp"] = systemStatus.minBBQTemp;
         doc["maxBBQTemp"] = systemStatus.maxBBQTemp;
         doc["minPrtTemp"] = systemStatus.minPrtTemp;
