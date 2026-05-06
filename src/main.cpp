@@ -20,7 +20,6 @@ FileSystem fileSystem;
 WiFiClient net;
 PubSubClient client(net);
 LogHandler logHandler;
-LogHandler _logger;
 AsyncWebServer server(80);
 DiagnosticsHandler diagnostics(logHandler);
 WebServerControl webServerControl(sysStat, 
@@ -30,31 +29,40 @@ WebServerControl webServerControl(sysStat,
                                 diagnostics);
 MQTTHandler mqttHandler(net, client, sysStat, logHandler);
 
-// Inicialização rápida
+// Inicialização rápida de hardware (sem WiFi)
 void fastInit() {
+    Serial.begin(115200);
     neopixelWrite(RGB_BUILTIN, 0, 0, RGB_BRIGHTNESS);
     pinMode(RELAY_PIN, OUTPUT);
     digitalWrite(RELAY_PIN, LOW);
     initNextion(sysStat);
     initial.show();
-    WiFi.begin();
 }
 
 void setup() {
     fastInit();
-    
-    // Inicializa tasks de MQTT e controle
-    initializeTasks(sysStat, mqttHandler);
-    
-    // Inicializa tasks de temperatura
-    createTasks();
-    
-    // Inicializa serviços
-    webServerControl.begin();
+
+    // WiFi — tenta reconectar com credenciais salvas, abre portal AP se necessário
+    initWiFi(sysStat, logHandler);
+
+    // Carrega configurações persistidas
     fileSystem.initializeAndLoadConfig(sysStat, WiFi.macAddress());
-    
-    // Inicializa diagnósticos
-    diagnostics.logMetrics(); // Log inicial
+
+    // Configura MQTT se habilitado
+    if (sysStat.isHAAvailable) {
+        mqttHandler.begin(sysStat.mqttServer, sysStat.mqttPort,
+                          sysStat.mqttUser, sysStat.mqttPassword);
+    }
+
+    // Inicia tasks de temperatura, controle e MQTT
+    initializeTasks(sysStat, mqttHandler);
+
+    // Inicia servidor web
+    webServerControl.begin();
+
+    // Log inicial de diagnóstico
+    logHandler.begin();
+    diagnostics.logMetrics();
 }
 
 void loop() {
@@ -72,7 +80,7 @@ void loop() {
     diagnostics.logMetrics();
     
     if (!diagnostics.isHealthy()) {
-        _logger.logError("Sistema com recursos críticos!");
+        logHandler.logError("Sistema com recursos críticos!");
     }
     
     vTaskDelay(1);

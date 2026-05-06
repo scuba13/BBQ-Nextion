@@ -8,17 +8,8 @@
 
 // Declarações externas
 extern SystemStatus sysStat;
-extern LogHandler _logger;
+extern LogHandler logHandler;
 extern DiagnosticsHandler diagnostics;  // Usar a instância global ao invés de criar uma nova
-
-// Configurações otimizadas para as tasks
-#define TEMP_TASK_STACK    3072  // Reduzido de 4000
-#define TEMP_TASK_PRIORITY 2     // Aumentado para prioridade maior
-#define TEMP_TASK_CORE     1     // Core dedicado para temperatura
-
-#define CONTROL_TASK_STACK    2048  // Reduzido de 4000
-#define CONTROL_TASK_PRIORITY 1     // Prioridade menor
-#define CONTROL_TASK_CORE     0     // Core separado para controle
 
 // Handles apenas para tasks necessárias
 static TaskHandle_t tempTaskHandle = NULL;
@@ -46,13 +37,13 @@ void temperatureTask(void *parameter) {
         if (stackLeft < minStackLeft) {
             minStackLeft = stackLeft;
             if (stackLeft < TASK_STACK_WATERMARK_THRESHOLD) {
-                _logger.logWarning("Stack baixa na TempTask: " + String(stackLeft) + " bytes");
+                logHandler.logWarning("Stack baixa na TempTask: " + String(stackLeft) + " bytes");
             }
         }
         
         // Verifica heap
         if (ESP.getFreeHeap() < HEAP_WATERMARK_THRESHOLD) {
-            _logger.logWarning("Heap baixa: " + String(ESP.getFreeHeap()) + " bytes");
+            logHandler.logWarning("Heap baixa: " + String(ESP.getFreeHeap()) + " bytes");
         }
         
         getCalibratedTemp(thermocouple, *systemStatus);
@@ -62,11 +53,12 @@ void temperatureTask(void *parameter) {
     }
 }
 
-// Task para MQTT (3s) - Agora com verificação de disponibilidade
+// Task para MQTT (3s)
 void mqttTask(void *parameter) {
     const TickType_t xDelay = pdMS_TO_TICKS(3000);
     while (true) {
-        if (systemStatus->isHAAvailable) {  // Só executa se MQTT estiver disponível
+        if (systemStatus->isHAAvailable) {
+            mqttHandler->loop();
             mqttHandler->managePublishing(*systemStatus);
         }
         vTaskDelay(xDelay);
@@ -119,9 +111,9 @@ void initializeTasks(SystemStatus& sysStat, MQTTHandler& mqtt) {
             &mqttTaskHandle,
             1
         );
-        _logger.logMessage("MQTT task iniciada - HA disponível");
+        logHandler.logMessage("MQTT task iniciada - HA disponível");
     } else {
-        _logger.logMessage("MQTT task não iniciada - HA não disponível");
+        logHandler.logMessage("MQTT task não iniciada - HA não disponível");
     }
 
     // Registra tasks para monitoramento
@@ -153,7 +145,7 @@ void startMQTTTask() {
             &mqttTaskHandle,
             1
         );
-        _logger.logMessage("MQTT task iniciada posteriormente");
+        logHandler.logMessage("MQTT task iniciada posteriormente");
     }
 }
 
@@ -162,92 +154,7 @@ void stopMQTTTask() {
     if (mqttTaskHandle) {
         vTaskDelete(mqttTaskHandle);
         mqttTaskHandle = NULL;
-        _logger.logMessage("MQTT task parada");
+        logHandler.logMessage("MQTT task parada");
     }
 }
 
-// Task de temperatura do BBQ - otimizada
-void getCalibratedTempTask(void *parameter) {
-    const TickType_t xFrequency = pdMS_TO_TICKS(500); // 2Hz é suficiente
-    TickType_t xLastWakeTime = xTaskGetTickCount();
-
-    while (true) {
-        getCalibratedTemp(thermocouple, sysStat);
-        vTaskDelayUntil(&xLastWakeTime, xFrequency); // Timing mais preciso
-    }
-}
-
-// Task de temperatura da sonda - otimizada
-void getCalibratedTempPTask(void *parameter) {
-    const TickType_t xFrequency = pdMS_TO_TICKS(500);
-    TickType_t xLastWakeTime = xTaskGetTickCount();
-
-    while (true) {
-        getCalibratedTempP(thermocoupleP, sysStat);
-        vTaskDelayUntil(&xLastWakeTime, xFrequency);
-    }
-}
-
-// Task de controle - otimizada
-void controlTemperatureTask(void *parameter) {
-    const TickType_t xFrequency = pdMS_TO_TICKS(1000); // 1Hz para controle
-    TickType_t xLastWakeTime = xTaskGetTickCount();
-
-    while (true) {
-        if (sysStat.bbqTemperature > 0) {
-            controlTemperature(sysStat);
-        }
-        vTaskDelayUntil(&xLastWakeTime, xFrequency);
-    }
-}
-
-// Tarefa para obter a temperatura calibrada do ds18b20
-void getCalibratedInternalTempTask(void *parameter)
-{
-    _logger.logMessage("Task getCalibratedInternalTempTask started.");
-    while (true)
-    {
-        //getCalibratedInternalTemp(sysStat);
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    }
-}
-
-// Função de criação das tasks otimizada
-void createTasks() {
-    _logger.logMessage("Iniciando criação das tasks...");
-
-    // Task de temperatura BBQ
-    xTaskCreatePinnedToCore(
-        getCalibratedTempTask,
-        "TempTask",
-        TEMP_TASK_STACK,
-        NULL,
-        TEMP_TASK_PRIORITY,
-        NULL,
-        TEMP_TASK_CORE
-    );
-
-    // Task de temperatura Sonda
-    xTaskCreatePinnedToCore(
-        getCalibratedTempPTask,
-        "TempPTask",
-        TEMP_TASK_STACK,
-        NULL,
-        TEMP_TASK_PRIORITY,
-        NULL,
-        TEMP_TASK_CORE
-    );
-
-    // Task de controle
-    xTaskCreatePinnedToCore(
-        controlTemperatureTask,
-        "ControlTask",
-        CONTROL_TASK_STACK,
-        NULL,
-        CONTROL_TASK_PRIORITY,
-        NULL,
-        CONTROL_TASK_CORE
-    );
-
-    _logger.logMessage("Tasks criadas com sucesso");
-}

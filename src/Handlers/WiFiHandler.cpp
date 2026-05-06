@@ -3,7 +3,7 @@
 #include "NextionHandler.h"
 #include "LogHandler.h"
 
-extern LogHandler _logger;
+extern LogHandler logHandler;
 
 // Configurações otimizadas de WiFi
 #define WIFI_CONNECT_TIMEOUT 10000  // 10 segundos timeout
@@ -11,7 +11,7 @@ extern LogHandler _logger;
 #define MAX_CONNECTION_RETRIES 3    // Máximo de tentativas
 
 void configModeCallback(WiFiManager *myWiFiManager) {
-    _logger.logMessage("Modo AP iniciado: " + myWiFiManager->getConfigPortalSSID());
+    logHandler.logMessage("Modo AP iniciado: " + myWiFiManager->getConfigPortalSSID());
     digitalWrite(RGB_BUILTIN, HIGH);
     ap.show();
 }

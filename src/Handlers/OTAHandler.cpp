@@ -6,7 +6,7 @@
 #include "LogHandler.h"
 #include <algorithm>
 
-extern LogHandler _logger;
+extern LogHandler logHandler;
 
 // Configurações otimizadas
 #define MIN_FREE_SPACE 65536  // 64KB mínimo livre
@@ -31,22 +31,22 @@ OTAHandler::OTAHandler(LogHandler& logger) : _logger(logger) {
 
 void OTAHandler::beginUpdate(size_t size, String version) {
     if (!hasEnoughSpace()) {
-        _logger.logError("Espaço insuficiente para atualização");
+        logHandler.logError("Espaço insuficiente para atualização");
         return;
     }
     
     if (!isVersionNewer(version)) {
-        _logger.logError("Versão igual ou anterior à atual");
+        logHandler.logError("Versão igual ou anterior à atual");
         return;
     }
     
     if (_status.inProgress) {
-        _logger.logError("Atualização já em andamento");
+        logHandler.logError("Atualização já em andamento");
         return;
     }
 
     if (size > MAX_FIRMWARE_SIZE) {
-        _logger.logError("Firmware muito grande");
+        logHandler.logError("Firmware muito grande");
         return;
     }
 
@@ -63,12 +63,12 @@ void OTAHandler::beginUpdate(size_t size, String version) {
 
     // Inicia atualização
     if (!Update.begin(size)) {
-        _logger.logError("Não foi possível iniciar atualização");
+        logHandler.logError("Não foi possível iniciar atualização");
         _status.inProgress = false;
         return;
     }
 
-    _logger.logMessage("Iniciando atualização OTA: " + version);
+    logHandler.logMessage("Iniciando atualização OTA: " + version);
 }
 
 bool OTAHandler::writeUpdate(uint8_t* data, size_t len) {
@@ -82,12 +82,12 @@ bool OTAHandler::writeUpdate(uint8_t* data, size_t len) {
             return true;
         }
         
-        _logger.logError("Tentativa " + String(retries + 1) + " falhou");
+        logHandler.logError("Tentativa " + String(retries + 1) + " falhou");
         retries++;
         delay(100);  // Pequeno delay entre tentativas
     }
     
-    _logger.logError("Falha após " + String(MAX_RETRIES) + " tentativas");
+    logHandler.logError("Falha após " + String(MAX_RETRIES) + " tentativas");
     abortUpdate();
     return false;
 }
@@ -96,18 +96,18 @@ bool OTAHandler::endUpdate() {
     if (!_status.inProgress) return false;
 
     if (!Update.end(true)) {
-        _logger.logError("Erro ao finalizar atualização: " + String(Update.errorString()));
+        logHandler.logError("Erro ao finalizar atualização: " + String(Update.errorString()));
         _status.needsRollback = true;
         return false;
     }
 
     if (!verifyFirmware()) {
-        _logger.logError("Verificação do firmware falhou");
+        logHandler.logError("Verificação do firmware falhou");
         _status.needsRollback = true;
         return false;
     }
 
-    _logger.logMessage("Atualização concluída com sucesso");
+    logHandler.logMessage("Atualização concluída com sucesso");
     _status.inProgress = false;
     _status.needsRollback = false;
     return true;
@@ -117,7 +117,7 @@ void OTAHandler::abortUpdate() {
     Update.abort();
     _status.inProgress = false;
     _status.needsRollback = true;
-    _logger.logError("Atualização abortada");
+    logHandler.logError("Atualização abortada");
 }
 
 bool OTAHandler::performRollback() {
@@ -125,17 +125,17 @@ bool OTAHandler::performRollback() {
     const esp_partition_t* previous = esp_ota_get_next_update_partition(NULL);
 
     if (!previous) {
-        _logger.logError("Partição anterior não encontrada");
+        logHandler.logError("Partição anterior não encontrada");
         return false;
     }
 
-    _logger.logMessage("Iniciando rollback para partição anterior");
+    logHandler.logMessage("Iniciando rollback para partição anterior");
     if (esp_ota_set_boot_partition(previous) != ESP_OK) {
-        _logger.logError("Falha ao configurar partição de boot");
+        logHandler.logError("Falha ao configurar partição de boot");
         return false;
     }
 
-    _logger.logMessage("Rollback concluído, reiniciando...");
+    logHandler.logMessage("Rollback concluído, reiniciando...");
     delay(1000);
     ESP.restart();
     return true;
@@ -144,19 +144,19 @@ bool OTAHandler::performRollback() {
 bool OTAHandler::verifyFirmware() {
     const esp_partition_t* running = esp_ota_get_running_partition();
     if (!running) {
-        _logger.logError("Partição atual não encontrada");
+        logHandler.logError("Partição atual não encontrada");
         return false;
     }
     
     // Verifica assinatura do firmware
     uint32_t magicNumber;
     if (esp_partition_read(running, 0, &magicNumber, sizeof(magicNumber)) != ESP_OK) {
-        _logger.logError("Erro ao ler assinatura do firmware");
+        logHandler.logError("Erro ao ler assinatura do firmware");
         return false;
     }
     
     if (magicNumber != ESP_IMAGE_HEADER_MAGIC) {
-        _logger.logError("Assinatura do firmware inválida");
+        logHandler.logError("Assinatura do firmware inválida");
         return false;
     }
     
@@ -165,7 +165,7 @@ bool OTAHandler::verifyFirmware() {
 
 void OTAHandler::checkRollbackNeeded() {
     if (_status.needsRollback) {
-        _logger.logMessage("Rollback necessário detectado");
+        logHandler.logMessage("Rollback necessário detectado");
         performRollback();
     }
 }
@@ -190,7 +190,7 @@ bool OTAHandler::_verifyPartition(const esp_partition_t* partition) {
     }
 
     md5.calculate();
-    _logger.logMessage("MD5 do firmware: " + md5.toString());
+    logHandler.logMessage("MD5 do firmware: " + md5.toString());
     return true;
 }
 
@@ -200,13 +200,13 @@ void OTAHandler::_backupCurrentFirmware() {
         ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_APP_OTA_1, NULL);
 
     if (!backup) {
-        _logger.logError("Partição de backup não encontrada");
+        logHandler.logError("Partição de backup não encontrada");
         return;
     }
 
-    _logger.logMessage("Fazendo backup do firmware atual");
+    logHandler.logMessage("Fazendo backup do firmware atual");
     if (esp_partition_erase_range(backup, 0, backup->size) != ESP_OK) {
-        _logger.logError("Erro ao apagar partição de backup");
+        logHandler.logError("Erro ao apagar partição de backup");
         return;
     }
 
@@ -215,12 +215,12 @@ void OTAHandler::_backupCurrentFirmware() {
         size_t read_size = std::min(size_t(OTA_BUFFER_SIZE), size_t(running->size - i));
         if (esp_partition_read(running, i, buffer, read_size) != ESP_OK ||
             esp_partition_write(backup, i, buffer, read_size) != ESP_OK) {
-            _logger.logError("Erro ao copiar firmware para backup");
+            logHandler.logError("Erro ao copiar firmware para backup");
             return;
         }
     }
 
-    _logger.logMessage("Backup concluído com sucesso");
+    logHandler.logMessage("Backup concluído com sucesso");
 }
 
 void OTAHandler::_updateProgress(size_t written) {
@@ -229,7 +229,7 @@ void OTAHandler::_updateProgress(size_t written) {
         int newProgress = (written * 100) / _status.totalBytes;
         if (newProgress != _status.progress) {
             _status.progress = newProgress;
-            _logger.logMessage("Progresso: " + String(newProgress) + "%");
+            logHandler.logMessage("Progresso: " + String(newProgress) + "%");
             _lastProgressUpdate = now;
         }
     }
@@ -242,7 +242,7 @@ bool OTAHandler::_checkTimeout() {
 bool OTAHandler::hasEnoughSpace() {
     size_t freeHeap = ESP.getFreeHeap();
     if (freeHeap < MIN_HEAP_FOR_UPDATE) {
-        _logger.logError("Heap insuficiente para update: " + String(freeHeap) + " bytes");
+        logHandler.logError("Heap insuficiente para update: " + String(freeHeap) + " bytes");
         return false;
     }
     return true;
@@ -250,7 +250,7 @@ bool OTAHandler::hasEnoughSpace() {
 
 bool OTAHandler::isVersionNewer(const String& newVersion) {
     if (!_validateVersion(newVersion)) {
-        _logger.logError("Formato de versão inválido: " + newVersion);
+        logHandler.logError("Formato de versão inválido: " + newVersion);
         return false;
     }
     

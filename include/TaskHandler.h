@@ -10,9 +10,6 @@ void initializeTasks(SystemStatus& sysStat, MQTTHandler& mqtt);
 // Para as tasks em execução
 void stopTasks();
 
-// Cria tasks específicas de temperatura
-void createTasks();
-
 // Controle específico do MQTT
 void startMQTTTask();
 void stopMQTTTask();

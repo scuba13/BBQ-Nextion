@@ -1,7 +1,7 @@
 #include "NextionHandler.h"
 #include "LogHandler.h"
 
-extern LogHandler _logger; // Certifique-se de que o logHandler esteja declarado externamente ou passado como argumento
+extern LogHandler logHandler; // Certifique-se de que o logHandler esteja declarado externamente ou passado como argumento
 
 // Define nexSerial
 #define nexSerial Serial2
@@ -98,11 +98,11 @@ char buffer[100] = {0};
 
 void setBBQTempPushCallback(void *ptr)
 {
-    _logger.logMessage("Entering setBBQTempPopCallback");
+    logHandler.logMessage("Entering setBBQTempPopCallback");
 
     if (ptr == nullptr)
     {
-        _logger.logMessage("Error: ptr is null");
+        logHandler.logMessage("Error: ptr is null");
         return;
     }
 
@@ -113,26 +113,26 @@ void setBBQTempPushCallback(void *ptr)
 
     if (!success)
     {
-        _logger.logMessage("Error: Failed to get value from setBBQTemp");
+        logHandler.logMessage("Error: Failed to get value from setBBQTemp");
         return;
     }
 
     int bbqTempValue = static_cast<int>(value);
     systemStatus->bbqTemperature = bbqTempValue;
 
-    _logger.logMessage("BBQTempValue: " + String(bbqTempValue));
-    _logger.logMessage("SystemStatus BBQ Temperature: " + String(systemStatus->bbqTemperature));
-    _logger.logMessage("Exiting setBBQTempPopCallback");
+    logHandler.logMessage("BBQTempValue: " + String(bbqTempValue));
+    logHandler.logMessage("SystemStatus BBQ Temperature: " + String(systemStatus->bbqTemperature));
+    logHandler.logMessage("Exiting setBBQTempPopCallback");
     monitor.show();
 }
 
 void setChunkTempPushCallback(void *ptr)
 {
-    _logger.logMessage("Entering setChunkTempPopCallback");
+    logHandler.logMessage("Entering setChunkTempPopCallback");
 
     if (ptr == nullptr)
     {
-        _logger.logMessage("Error: ptr is null");
+        logHandler.logMessage("Error: ptr is null");
         return;
     }
 
@@ -143,26 +143,26 @@ void setChunkTempPushCallback(void *ptr)
 
     if (!success)
     {
-        _logger.logMessage("Error: Failed to get value from setChunkTemp");
+        logHandler.logMessage("Error: Failed to get value from setChunkTemp");
         return;
     }
 
     int chunkTempValue = static_cast<int>(value);
     systemStatus->proteinTemperature = chunkTempValue;
 
-    _logger.logMessage("ChunkTempValue: " + String(chunkTempValue));
-    _logger.logMessage("SystemStatus Chunk Temperature: " + String(systemStatus->proteinTemperature));
-    _logger.logMessage("Exiting setChunkTempPopCallback");
+    logHandler.logMessage("ChunkTempValue: " + String(chunkTempValue));
+    logHandler.logMessage("SystemStatus Chunk Temperature: " + String(systemStatus->proteinTemperature));
+    logHandler.logMessage("Exiting setChunkTempPopCallback");
     monitor.show();
 }
 
 void setStopPushCallback(void *ptr)
 {
-    _logger.logMessage("Entering setStopPushCallback");
+    logHandler.logMessage("Entering setStopPushCallback");
 
     if (ptr == nullptr)
     {
-        _logger.logMessage("Error: ptr is null");
+        logHandler.logMessage("Error: ptr is null");
         return;
     }
 
@@ -170,16 +170,16 @@ void setStopPushCallback(void *ptr)
 
     resetSystem(*systemStatus);
 
-    _logger.logMessage("Exiting setStopPushCallback");
+    logHandler.logMessage("Exiting setStopPushCallback");
 }
 
 void setCaliPushCallback(void *ptr)
 {
-    _logger.logMessage("Entering setCaliPushCallback");
+    logHandler.logMessage("Entering setCaliPushCallback");
 
     if (ptr == nullptr)
     {
-        _logger.logMessage("Error: ptr is null");
+        logHandler.logMessage("Error: ptr is null");
         return;
     }
 
@@ -190,7 +190,7 @@ void setCaliPushCallback(void *ptr)
 
     if (!successBBQ)
     {
-        _logger.logMessage("Error: Failed to get value from Cali BBQ");
+        logHandler.logMessage("Error: Failed to get value from Cali BBQ");
         return;
     }
 
@@ -199,7 +199,7 @@ void setCaliPushCallback(void *ptr)
 
     if (!successChunk)
     {
-        _logger.logMessage("Error: Failed to get value from Cali Chunk");
+        logHandler.logMessage("Error: Failed to get value from Cali Chunk");
         return;
     }
 
@@ -209,11 +209,11 @@ void setCaliPushCallback(void *ptr)
     int caliChunkValue = static_cast<int>(chunk);
     systemStatus->tempCalibrationP = caliChunkValue;
 
-    _logger.logMessage("CaliBBQValue: " + String(caliBBQValue));
-    _logger.logMessage("SystemStatus tempCalibration: " + String(systemStatus->tempCalibration));
-    _logger.logMessage("CaliChunkValue: " + String(caliChunkValue));
-    _logger.logMessage("SystemStatus tempCalibrationP: " + String(systemStatus->tempCalibrationP));
-    _logger.logMessage("Exiting setCaliPushCallback");
+    logHandler.logMessage("CaliBBQValue: " + String(caliBBQValue));
+    logHandler.logMessage("SystemStatus tempCalibration: " + String(systemStatus->tempCalibration));
+    logHandler.logMessage("CaliChunkValue: " + String(caliChunkValue));
+    logHandler.logMessage("SystemStatus tempCalibrationP: " + String(systemStatus->tempCalibrationP));
+    logHandler.logMessage("Exiting setCaliPushCallback");
     menu.show();
 }
 
@@ -257,7 +257,7 @@ uint8_t getCurrentPageId()
         }
     }
 
-    //_logger.logMessage("Current Page ID: " + String(pageId));
+    //logHandler.logMessage("Current Page ID: " + String(pageId));
 
     return pageId;
 }
@@ -285,7 +285,7 @@ void updateNumberComponent(NexNumber &component, float &lastValue, float newValu
     {
         component.setValue(static_cast<int32_t>(newValue)); // Use int32_t to support negative values
         lastValue = newValue;
-       // _logger.logMessage(String(componentName) + " updated to: " + String(newValue));
+       // logHandler.logMessage(String(componentName) + " updated to: " + String(newValue));
     }
 }
 
@@ -363,7 +363,7 @@ void updateNextionSetBBQVariables(SystemStatus &sysStat)
 
         setBBQTemp.setValue(value);
         initialUpdateDoneBBQ = true;
-       // _logger.logMessage("BBQTemp page initialized with value: " + String(value));
+       // logHandler.logMessage("BBQTemp page initialized with value: " + String(value));
     }
 
     updateNumberComponent(minBBQTemp, lastMinBBQTemp, sysStat.minBBQTemp, "minBBQTemp", forceUpdate);
@@ -395,7 +395,7 @@ void updateNextionSetChunkVariables(SystemStatus &sysStat)
 
         setChunkTemp.setValue(value);
         initialUpdateDoneChunk = true;
-       // _logger.logMessage("ChunkTemp page initialized with value: " + String(value));
+       // logHandler.logMessage("ChunkTemp page initialized with value: " + String(value));
     }
 
     updateNumberComponent(minChunkTemp, lastMinChunkTemp, sysStat.minPrtTemp, "minChunkTemp", forceUpdate);
@@ -425,7 +425,7 @@ void updateNextionSetCaliVariables(SystemStatus &sysStat)
         caliChunkTemp.setValue(chunk);
 
         initialUpdateDoneCali = true;
-       // _logger.logMessage("Calibration page initialized with BBQ: " + String(bbq) + " Chunk: " + String(chunk));
+       // logHandler.logMessage("Calibration page initialized with BBQ: " + String(bbq) + " Chunk: " + String(chunk));
     }
 
     updateNumberComponent(minCaliBBQTemp, lastMinCaliBBQ, static_cast<int32_t>(sysStat.minCaliTemp), "minCaliBBQTemp", forceUpdate);
