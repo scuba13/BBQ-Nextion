@@ -15,6 +15,10 @@ void registerAIEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, Log
     });
 
     server.on("/api/v1/ai/config", HTTP_PATCH, [&systemStatus, &logger, &fileSystem](AsyncWebServerRequest *request) {
+        if (!ResponseHelper::isAuthenticated(request, systemStatus)) {
+            ResponseHelper::sendUnauthorized(request);
+            return;
+        }
         logger.logRequest(request, "Atualizando configuração de IA");
 
         String aiKey;

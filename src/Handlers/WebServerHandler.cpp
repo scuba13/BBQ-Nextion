@@ -7,6 +7,7 @@
 #include "SystemEndpoints.h"
 #include "MonitorEndpoints.h"
 #include "DiagnosticsEndpoints.h"
+#include "AuthEndpoints.h"
 #include <LittleFS.h>
 #include <FS.h>
 
@@ -35,6 +36,7 @@ void WebServerControl::begin() {
     registerTempConfigEndpoints(_server, _systemStatus, _fileSystem, _logger);
     registerGeneralEndpoints(_server, _systemStatus, _logger, _otaHandler);
     registerDiagnosticsEndpoints(_server, _diagnostics, _logger);
+    registerAuthEndpoints(_server, _systemStatus, _fileSystem, _logger);
 
     // Adicionar handler global para OPTIONS
     _server.onNotFound([](AsyncWebServerRequest *request){
@@ -42,7 +44,7 @@ void WebServerControl::begin() {
             AsyncWebServerResponse *response = request->beginResponse(204); // No Content
             response->addHeader("Access-Control-Allow-Origin", "*");
             response->addHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
-            response->addHeader("Access-Control-Allow-Headers", "Content-Type");
+            response->addHeader("Access-Control-Allow-Headers", "Content-Type, X-API-Key");
             request->send(response);
         } else {
             request->send(404, "text/plain", "Not Found");

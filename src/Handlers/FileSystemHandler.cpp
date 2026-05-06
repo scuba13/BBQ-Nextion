@@ -51,11 +51,12 @@ void FileSystem::initializeAndLoadConfig(SystemStatus &status, String mac)
         doc["maxCaliTemp"] = 20;
         doc["minCaliTempP"] = -20;
         doc["maxCaliTempP"] = 20;
-        doc["aiKey"] = "AIzaSyDf9K8Ya3djc2PO0YMmJmADRhuYFHMrgbc";
-        doc["tip"] = "Me de 1 dica e 1 receita de Churrasco americano no total de 200 palavras. Estruture o texto com Cabecalho, Dica, Cabecalho com o nome da receita, Receita."; 
-        
-        mac.replace(":", "");  // Remove os dois pontos do endereço MAC
-        doc["deviceId"] = mac; // Adiciona o deviceId ao documento JSON
+        doc["aiKey"] = "";
+        doc["tip"] = "Me de 1 dica e 1 receita de Churrasco americano no total de 200 palavras. Estruture o texto com Cabecalho, Dica, Cabecalho com o nome da receita, Receita.";
+        doc["apiKey"] = "";
+
+        mac.replace(":", "");
+        doc["deviceId"] = mac;
 
         if (serializeJson(doc, configFile) == 0)
         {
@@ -101,6 +102,7 @@ void FileSystem::initializeAndLoadConfig(SystemStatus &status, String mac)
     status.maxCaliTempP = doc["maxCaliTempP"].as<int>();
     strlcpy(status.aiKey, doc["aiKey"].as<const char *>(), sizeof(status.aiKey));
     strlcpy(status.tip, doc["tip"].as<const char *>(), sizeof(status.tip));
+    strlcpy(status.apiKey, doc["apiKey"] | "", sizeof(status.apiKey));
 
     logHandler.logMessage("isHAAvailable: " + String(status.isHAAvailable ? "true" : "false"));
     logHandler.logMessage("mqttServer: " + String(status.mqttServer));
@@ -148,6 +150,7 @@ void FileSystem::saveConfigToFile(const SystemStatus &status)
     
     doc["aiKey"] = status.aiKey;
     doc["tip"] = status.tip;
+    doc["apiKey"] = status.apiKey;
 
     if (serializeJson(doc, configFile) == 0)
     {

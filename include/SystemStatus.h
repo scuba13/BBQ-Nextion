@@ -11,7 +11,6 @@ struct SystemStatus
     int bbqTemperature = 0;
     int proteinTemperature = 0;
     bool isRelayOn = false;
-    bool cureProcessMode = false;
     float samples[MOVING_AVERAGE_SIZE];
     int sampleIndex;
     int avgNumSamples;
@@ -52,6 +51,9 @@ struct SystemStatus
     // AI
     char aiKey[128];
     char tip[256];
+
+    // Autenticação
+    char apiKey[33]; // API key para endpoints de escrita (vazio = desabilitado)
 
     //Internal Temp
     int calibratedTempInternal = 0;

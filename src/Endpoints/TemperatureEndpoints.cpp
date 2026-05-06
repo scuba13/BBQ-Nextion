@@ -16,6 +16,10 @@ void registerTemperatureEndpoints(AsyncWebServer& server, SystemStatus& systemSt
     });
 
     server.on("/api/v1/temperature/config", HTTP_PATCH, [&](AsyncWebServerRequest *request) {
+        if (!ResponseHelper::isAuthenticated(request, systemStatus)) {
+            ResponseHelper::sendUnauthorized(request);
+            return;
+        }
         logger.logRequest(request, "Atualizando configuração de temperatura");
 
         bool updated = false;

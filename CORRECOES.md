@@ -99,7 +99,7 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 ---
 
 ### C-07 — `cureProcessMode` ativado mas nunca verificado
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Arquivos:** `src/Endpoints/SystemEndpoints.cpp:13`, `src/Handlers/TemperatureControlHandler.cpp`
 - **Problema:** `POST /api/v1/system/activateCure` seta `cureProcessMode = true`, mas nenhuma parte do `controlTemperature()` ou de qualquer task verifica esse flag. A feature é um stub sem efeito.
 - **Correção (opção A):** Implementar a lógica de cura (ex: perfil de temperatura por estágios usando `CureState`).
@@ -361,7 +361,7 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 ## Segurança
 
 ### C-27 — API Key do Google hardcoded no config padrão
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Arquivos:** `src/Handlers/FileSystemHandler.cpp:68`
 - **Problema:** `doc["aiKey"] = "AIzaSyDf9K8Ya3djc2PO0YMmJmADRhuYFHMrgbc"` — chave real exposta no código.
 - **Correção:** Substituir pelo valor vazio `""` como padrão. O usuário configura via endpoint `/api/v1/ai/config`.
@@ -369,7 +369,7 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 ---
 
 ### C-28 — Sem autenticação nos endpoints da API
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Arquivos:** todos em `src/Endpoints/`
 - **Problema:** Qualquer dispositivo na mesma rede pode: resetar o sistema, iniciar OTA, alterar config de temperatura, alterar config MQTT. Não existe nenhum token, basic auth ou verificação de IP.
 - **Correção sugerida:** Implementar API key simples via header `X-API-Key`, configurável e persistida. Opcional: restringir endpoints destrutivos (reset, OTA, config) a requisições com a chave correta.
@@ -764,7 +764,7 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 | C-04 | `src/main.cpp`, `src/Handlers/WiFiHandler.cpp` | 🔴 Crítico | `[ ]` |
 | C-05 | `src/Handlers/DiagnosticsHandler.cpp` | 🟠 Lógica | `[x]` |
 | C-06 | `src/Handlers/DiagnosticsHandler.cpp` | 🟠 Lógica | `[x]` |
-| C-07 | `src/Endpoints/SystemEndpoints.cpp` | 🟠 Lógica | `[ ]` |
+| C-07 | `src/Endpoints/SystemEndpoints.cpp` | 🟠 Lógica | `[x]` |
 | C-08 | `src/Handlers/OTAHandler.cpp` | 🟠 Lógica | `[x]` |
 | C-09 | `src/Handlers/TemperatureControlHandler.cpp` | 🟠 Lógica | `[x]` |
 | C-10 | `src/Endpoints/MQTTConfigEndpoints.cpp` | 🟠 Lógica | `[x]` |
@@ -784,8 +784,8 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 | C-24 | `src/Handlers/NextionHandler.cpp`, `src/main.cpp` | 🟢 Performance | `[x]` |
 | C-25 | `src/Endpoints/*.cpp` | 🟢 Performance | `[x]` |
 | C-26 | `src/main.cpp` | 🟢 Performance | `[x]` |
-| C-27 | `src/Handlers/FileSystemHandler.cpp` | 🔐 Segurança | `[ ]` |
-| C-28 | `src/Endpoints/*.cpp` | 🔐 Segurança | `[ ]` |
+| C-27 | `src/Handlers/FileSystemHandler.cpp` | 🔐 Segurança | `[x]` |
+| C-28 | `src/Endpoints/*.cpp` | 🔐 Segurança | `[x]` |
 | C-29 | `src/Handlers/TaskHandler.cpp` | 🔴 Crítico | `[ ]` |
 | C-30 | `src/Handlers/NextionHandler.cpp` | 🔴 Crítico | `[ ]` |
 | C-31 | `include/FileSystem.h`, `src/Handlers/FileSystem.cpp` | 🟠 Lógica | `[x]` |
@@ -869,10 +869,10 @@ Sprint 4 — Qualidade e limpeza ✅
   C-42  ✅ README: ACS712→MAX6675 (x2) + DS18B20
   C-43  ✅ feature de energia removida completamente
 
-Sprint 5 — Segurança e features pendentes
-  C-07  cureProcessMode sem implementação
-  C-27  API key hardcoded
-  C-28  sem autenticação na API
+Sprint 5 — Segurança e features pendentes ✅
+  C-07  ✅ cureProcessMode removido (opção B: endpoint e flag removidos)
+  C-27  ✅ aiKey default alterado de chave real para "" vazio
+  C-28  ✅ API key via X-API-Key header; PATCH/POST protegidos; AuthEndpoints criado
 
 Sprint 7 — Atualização de dependências (fazer em branch separado, testar no hardware)
   D-01  ✅ espressif32 6.10.0 → 7.0.0

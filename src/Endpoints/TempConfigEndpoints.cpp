@@ -21,6 +21,10 @@ void registerTempConfigEndpoints(AsyncWebServer& server, SystemStatus& systemSta
     });
 
     server.on("/api/v1/temp/config", HTTP_PATCH, [&systemStatus, &fileSystem, &logger](AsyncWebServerRequest *request) {
+        if (!ResponseHelper::isAuthenticated(request, systemStatus)) {
+            ResponseHelper::sendUnauthorized(request);
+            return;
+        }
         logger.logRequest(request, "Atualizando configuração de limites de temperatura");
 
         int newMinBBQTemp = systemStatus.minBBQTemp;

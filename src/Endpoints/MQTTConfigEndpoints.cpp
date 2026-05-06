@@ -18,6 +18,10 @@ void registerMQTTConfigEndpoints(AsyncWebServer& server, SystemStatus& systemSta
     });
 
     server.on("/api/v1/mqtt/config", HTTP_PATCH, [&systemStatus, &fileSystem, &logger, &mqttHandler](AsyncWebServerRequest *request) {
+        if (!ResponseHelper::isAuthenticated(request, systemStatus)) {
+            ResponseHelper::sendUnauthorized(request);
+            return;
+        }
         logger.logRequest(request, "Atualizando configuração MQTT");
 
         String mqttServer;

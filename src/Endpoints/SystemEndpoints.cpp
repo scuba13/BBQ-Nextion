@@ -7,27 +7,23 @@
 
 void registerSystemEndpoints(AsyncWebServer &server, SystemStatus &systemStatus, LogHandler &logger, OTAHandler &otaHandler)
 {
-    server.on("/api/v1/system/activateCure", HTTP_POST, [&systemStatus, &logger](AsyncWebServerRequest *request)
-              {
-        systemStatus.cureProcessMode = true;
-
-        logger.logRequest(request, "Ativando modo de cura");
-
-        ResponseHelper::sendJsonResponse(request, 200, "Modo de cura ativado com sucesso"); });
-
-    // Novo endpoint para resetar o sistema
     server.on("/api/v1/system/reset", HTTP_POST, [&systemStatus, &logger](AsyncWebServerRequest *request)
               {
+        if (!ResponseHelper::isAuthenticated(request, systemStatus)) {
+            ResponseHelper::sendUnauthorized(request);
+            return;
+        }
         resetSystem(systemStatus);
-
         logger.logRequest(request, "Reset do sistema iniciado");
-
         ResponseHelper::sendJsonResponse(request, 200, "Sistema resetado com sucesso"); });
 
     // Endpoint para atualização OTA
     server.on("/api/v1/system/update", HTTP_POST,
         [&](AsyncWebServerRequest *request) {
-            // Primeiro callback - chamado após upload completo
+            if (!ResponseHelper::isAuthenticated(request, systemStatus)) {
+                ResponseHelper::sendUnauthorized(request);
+                return;
+            }
             if (otaHandler.getStatus().inProgress) {
                 if (otaHandler.endUpdate()) {
                     ResponseHelper::sendJsonResponse(request, 200, "Atualização concluída com sucesso");
@@ -39,14 +35,12 @@ void registerSystemEndpoints(AsyncWebServer &server, SystemStatus &systemStatus,
             }
         },
         [&](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
-            // Segundo callback - chamado durante o upload
+            if (!ResponseHelper::isAuthenticated(request, systemStatus)) return;
             if (!index) {
-                // Início do upload
-                String version = request->hasHeader("X-Firmware-Version") ? 
+                String version = request->hasHeader("X-Firmware-Version") ?
                                request->header("X-Firmware-Version") : "unknown";
                 otaHandler.beginUpdate(request->contentLength(), version);
             }
-
             if (otaHandler.getStatus().inProgress) {
                 if (!otaHandler.writeUpdate(data, len)) {
                     ResponseHelper::sendErrorResponse(request, 500, "Erro ao escrever firmware");
@@ -71,6 +65,10 @@ void registerSystemEndpoints(AsyncWebServer &server, SystemStatus &systemStatus,
 
     // Endpoint para forçar rollback
     server.on("/api/v1/system/rollback", HTTP_POST, [&](AsyncWebServerRequest *request) {
+        if (!ResponseHelper::isAuthenticated(request, systemStatus)) {
+            ResponseHelper::sendUnauthorized(request);
+            return;
+        }
         if (otaHandler.performRollback()) {
             ResponseHelper::sendJsonResponse(request, 200, "Rollback iniciado");
         } else {
@@ -78,8 +76,11 @@ void registerSystemEndpoints(AsyncWebServer &server, SystemStatus &systemStatus,
         }
     });
 
-    // Adicionar novo endpoint
     server.on("/api/v1/system/update/check", HTTP_POST, [&](AsyncWebServerRequest *request) {
+        if (!ResponseHelper::isAuthenticated(request, systemStatus)) {
+            ResponseHelper::sendUnauthorized(request);
+            return;
+        }
         if (!request->hasParam("version", true)) {
             ResponseHelper::sendErrorResponse(request, 400, "Versão não especificada");
             return;
