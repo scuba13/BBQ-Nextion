@@ -707,6 +707,53 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 
 ---
 
+---
+
+## Dependências — Atualizações Disponíveis
+
+### D-01 — espressif32 platform 6.10.0 → 7.0.0 (Major)
+- **Status:** `[ ]`
+- **Risco:** 🔴 Alto — major update do Arduino core ESP32. Pode mudar APIs internas, comportamento de periféricos, pinout de funções, partição padrão.
+- **Oportunidade:** Com 7.0.0, testar se `esp32-s3-devkitc-1-n16r8` passa a ser incluída nativamente (eliminando a necessidade de `boards/`). O `pio boards` já listou o board nessa versão.
+- **Como atualizar:** Em `platformio.ini`, trocar `platform = espressif32` por `platform = espressif32@7.0.0`.
+- **Procedimento:** Atualizar em branch isolado → compilar → gravar no hardware → validar: WiFi conecta, Nextion responde, temperaturas lidas, relay funciona, OTA ativo.
+
+---
+
+### D-02 — ESPAsyncWebServer-esphome 3.3.0 → 3.4.1 (Minor)
+- **Status:** `[ ]`
+- **Risco:** 🟢 Baixo — minor update, backward-compatible.
+- **Como atualizar:** Em `platformio.ini`, trocar `^3.2.2` por `^3.4.1`.
+
+---
+
+### D-03 — ArduinoJson 7.3.0 → 7.4.3 (Minor/Patch)
+- **Status:** `[ ]`
+- **Risco:** 🟢 Baixo — mesmo major version (7.x), backward-compatible. Possíveis melhorias de performance e correções.
+- **Como atualizar:** Em `platformio.ini`, `^7.2.0` → `^7.4.3`.
+
+---
+
+### D-04 — DallasTemperature 3.11.0 → 4.0.6 (Major)
+- **Status:** `[ ]`
+- **Risco:** 🟡 Médio — major update. A API pública pode ter mudado. Verificar se `sensors.getTempCByIndex(0)` e `sensors.requestTemperatures()` continuam iguais.
+- **Uso no projeto:** `src/Handlers/TemperatureControlHandler.cpp` → `getCalibratedInternalTemp()` (DS18B20 interno).
+- **Como atualizar:** Em `platformio.ini`, trocar `^3.11.0` por `^4.0.6`. Compilar e verificar warnings/errors.
+
+---
+
+### Dependências em dia (nenhuma ação necessária)
+| Biblioteca | Versão atual | Status |
+|---|---|---|
+| Nextion (itead) | 0.9.0 | ✅ última versão |
+| PubSubClient | 2.8.0 | ✅ última versão |
+| WiFiManager | 2.0.17 | ✅ última versão |
+| MAX6675 library | 1.1.2 | ✅ última versão |
+| OneWire | 2.3.8 | ✅ última versão |
+| EspSoftwareSerial | 8.2.0 | ✅ (a remover — C-38) |
+
+---
+
 ## Rastreabilidade
 
 | ID | Arquivo Principal | Prioridade | Status |
@@ -764,6 +811,10 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 | E-08 | `src/Handlers/NextionHandler.cpp` | 🏗️ Estrutura | `[ ]` |
 | E-09 | todos os headers | 🏗️ Estrutura | `[ ]` |
 | E-10 | espalhado | 🏗️ Estrutura | `[ ]` |
+| D-01 | `platformio.ini` | 🔴 Dep. Major | `[ ]` |
+| D-02 | `platformio.ini` | 🟢 Dep. Minor | `[ ]` |
+| D-03 | `platformio.ini` | 🟢 Dep. Minor | `[ ]` |
+| D-04 | `platformio.ini` | 🟡 Dep. Major | `[ ]` |
 
 ---
 
@@ -822,6 +873,12 @@ Sprint 5 — Segurança e features pendentes
   C-07  cureProcessMode sem implementação
   C-27  API key hardcoded
   C-28  sem autenticação na API
+
+Sprint 7 — Atualização de dependências (fazer em branch separado, testar no hardware)
+  D-01  espressif32 6.10.0 → 7.0.0 (platform — major, testar primeiro)
+  D-02  ESPAsyncWebServer-esphome 3.3.0 → 3.4.1 (minor — seguro)
+  D-03  ArduinoJson 7.3.0 → 7.4.3 (minor — seguro)
+  D-04  DallasTemperature 3.11.0 → 4.0.6 (major — verificar API)
 
 Sprint 6 — Refatoração estrutural (fazer depois de tudo estabilizado)
   E-01  mover headers para subpastas include/Endpoints/ e include/Handlers/
