@@ -4,6 +4,7 @@
 
 LogHandler::LogHandler() {
     memset(logBuffer, 0, LOG_BUFFER_SIZE);
+    _logMutex = xSemaphoreCreateMutex();
 }
 
 void LogHandler::begin() {
@@ -86,44 +87,50 @@ void LogHandler::rotateLogFile() {
 }
 
 void LogHandler::clearLogs() {
-    if (LittleFS.exists("/log.txt")) {
-        LittleFS.remove("/log.txt");
-    }
-    if (LittleFS.exists("/log.old")) {
-        LittleFS.remove("/log.old");
-    }
-    
+    if (_logMutex != nullptr) xSemaphoreTake(_logMutex, pdMS_TO_TICKS(200));
+
+    if (LittleFS.exists("/log.txt")) LittleFS.remove("/log.txt");
+    if (LittleFS.exists("/log.old")) LittleFS.remove("/log.old");
+
     File file = LittleFS.open("/log.txt", "w");
     if (file) {
         file.close();
         currentFileSize = 0;
     }
-    
+
     memset(logBuffer, 0, LOG_BUFFER_SIZE);
     bufferIndex = 0;
     lastFlush = millis();
+
+    if (_logMutex != nullptr) xSemaphoreGive(_logMutex);
 }
 
 void LogHandler::writeLog(const String &level, const String &message) {
-    // Formata a mensagem com timestamp e nível
+    if (_logMutex == nullptr || xSemaphoreTake(_logMutex, pdMS_TO_TICKS(100)) != pdTRUE) {
+        // Fallback sem mutex: imprime só no serial para não perder a mensagem
+        Serial.printf("[NO-MUTEX][%s] %s\n", level.c_str(), message.c_str());
+        return;
+    }
+
     unsigned long now = millis();
-    String timeStamp = String(now/1000) + "s: ";
-    String fullMessage = timeStamp + "[" + level + "] " + message + "\n";
-    
-    // Imprime no Serial
-    Serial.print(fullMessage);
-    
-    // Verifica se há espaço no buffer
-    if (bufferIndex + fullMessage.length() >= LOG_BUFFER_SIZE) {
+    char msgBuf[256];
+    int len = snprintf(msgBuf, sizeof(msgBuf), "%lus: [%s] %s\n",
+                       now / 1000UL, level.c_str(), message.c_str());
+    if (len < 0) len = 0;
+    if (len >= (int)sizeof(msgBuf)) len = (int)sizeof(msgBuf) - 1;
+
+    Serial.print(msgBuf);
+
+    if (bufferIndex + (size_t)len >= LOG_BUFFER_SIZE) {
         flushBuffer();
     }
-    
-    // Adiciona ao buffer
-    memcpy(logBuffer + bufferIndex, fullMessage.c_str(), fullMessage.length());
-    bufferIndex += fullMessage.length();
-    
-    // Verifica se é hora de fazer flush
+
+    memcpy(logBuffer + bufferIndex, msgBuf, len);
+    bufferIndex += len;
+
     if (now - lastFlush >= FLUSH_INTERVAL) {
         flushBuffer();
     }
+
+    xSemaphoreGive(_logMutex);
 }

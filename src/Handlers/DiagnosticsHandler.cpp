@@ -119,8 +119,9 @@ DiagnosticsHandler::Metrics DiagnosticsHandler::getMetrics() {
     // Stack
     metrics.freeStack = uxTaskGetStackHighWaterMark(NULL);
     
-    // Fragmentação
-    metrics.heapFragmentation = 100 - ((float)metrics.maxAllocHeap * 100) / metrics.freeHeap;
+    // Fragmentação (guarda contra divisão por zero quando heap = 0)
+    metrics.heapFragmentation = (metrics.freeHeap == 0) ? 100.0f
+        : 100.0f - ((float)metrics.maxAllocHeap * 100.0f) / (float)metrics.freeHeap;
     
     // Uptime
     metrics.uptime = millis() / 1000;

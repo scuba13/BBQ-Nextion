@@ -74,13 +74,16 @@ bool MQTTHandler::connect() {
     
     logHandler.logMessage("Conectando ao MQTT Broker...");
     
-    String clientId = String(systemStatus.deviceId).length() > 0
-        ? "BBQ-" + String(systemStatus.deviceId)
-        : "BBQ-" + String(random(0xffff), HEX);
-    
+    char clientId[40];
+    if (strlen(systemStatus.deviceId) > 0) {
+        snprintf(clientId, sizeof(clientId), "BBQ-%s", systemStatus.deviceId);
+    } else {
+        snprintf(clientId, sizeof(clientId), "BBQ-%04x", (unsigned)random(0xffff));
+    }
+
     bool connected = credentials.user.length() > 0 ?
-        client.connect(clientId.c_str(), credentials.user.c_str(), credentials.password.c_str()) :
-        client.connect(clientId.c_str());
+        client.connect(clientId, credentials.user.c_str(), credentials.password.c_str()) :
+        client.connect(clientId);
     
     if (connected) {
         logHandler.logMessage("Conectado ao MQTT Broker");

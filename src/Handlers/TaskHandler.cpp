@@ -1,6 +1,7 @@
 #include "TaskHandler.h"
 #include <Arduino.h>
 #include <Nextion.h>
+#include <esp_task_wdt.h>
 #include "LogHandler.h"
 #include "NextionHandler.h"
 #include "TemperatureControl.h"
@@ -28,12 +29,13 @@ static MQTTHandler* mqttHandler;
 // Task para leitura de temperatura (500ms)
 void temperatureTask(void *parameter) {
     const TickType_t xDelay = pdMS_TO_TICKS(500);
-    
-    // Monitor de stack
+    esp_task_wdt_add(NULL); // Registra esta task no hardware WDT
+
     UBaseType_t minStackLeft = UINT32_MAX;
-    
+
     while (true) {
-        // Verifica stack disponível
+        esp_task_wdt_reset(); // Alimenta o WDT desta task
+
         UBaseType_t stackLeft = uxTaskGetStackHighWaterMark(NULL);
         if (stackLeft < minStackLeft) {
             minStackLeft = stackLeft;
@@ -41,12 +43,11 @@ void temperatureTask(void *parameter) {
                 logHandler.logWarning("Stack baixa na TempTask: " + String(stackLeft) + " bytes");
             }
         }
-        
-        // Verifica heap
+
         if (ESP.getFreeHeap() < HEAP_WATERMARK_THRESHOLD) {
             logHandler.logWarning("Heap baixa: " + String(ESP.getFreeHeap()) + " bytes");
         }
-        
+
         getCalibratedTemp(thermocouple, *systemStatus);
         getCalibratedTempP(thermocoupleP, *systemStatus);
         getCalibratedInternalTemp(*systemStatus);
@@ -69,7 +70,10 @@ void mqttTask(void *parameter) {
 // Task para controle de temperatura (1s)
 void controlTask(void *parameter) {
     const TickType_t xDelay = pdMS_TO_TICKS(1000);
+    esp_task_wdt_add(NULL); // Registra esta task no hardware WDT
+
     while (true) {
+        esp_task_wdt_reset(); // Alimenta o WDT desta task
         controlTemperature(*systemStatus);
         vTaskDelay(xDelay);
     }

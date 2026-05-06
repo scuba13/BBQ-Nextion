@@ -100,7 +100,7 @@ bool OTAHandler::writeUpdate(uint8_t* data, size_t len) {
 bool OTAHandler::endUpdate() {
     if (!_status.inProgress) return false;
 
-    if (!Update.end(true)) {
+    if (!Update.end(false)) {
         logHandler.logError("Erro ao finalizar atualização: " + String(Update.errorString()));
         _status.needsRollback = true;
         return false;

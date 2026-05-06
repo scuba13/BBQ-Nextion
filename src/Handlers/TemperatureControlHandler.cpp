@@ -27,8 +27,13 @@ int getCalibratedInternalTemp(SystemStatus &sysStat)
 {
   sensors.requestTemperatures();
   float temp = sensors.getTempCByIndex(0);
-  sysStat.calibratedTempInternal = (int)round(temp);
 
+  // -127 = sensor desconectado; 85 = power-on reset do DS18B20
+  if (temp == DEVICE_DISCONNECTED_C || temp == 85.0f) {
+      return sysStat.calibratedTempInternal; // mantém última leitura válida
+  }
+
+  sysStat.calibratedTempInternal = (int)round(temp);
   return sysStat.calibratedTempInternal;
 }
 
@@ -41,8 +46,13 @@ int getCalibratedTemp(MAX6675& thermocouple, SystemStatus& sysStat) {
         return tempCache.lastBBQTemp;
     }
 
-    // Leitura do sensor com média móvel
-    float temp = thermocouple.readCelsius() + sysStat.tempCalibration;
+    // Valida leitura antes de usar (NaN ou fora de range = falha SPI / termopar aberto)
+    float raw = thermocouple.readCelsius();
+    if (isnan(raw) || raw <= 0.0f || raw > 500.0f) {
+        return sysStat.calibratedTemp; // mantém última leitura válida
+    }
+
+    float temp = raw + sysStat.tempCalibration;
     sysStat.tempSamples[sysStat.nextSampleIndex] = temp;
     sysStat.nextSampleIndex = (sysStat.nextSampleIndex + 1) % NUM_SAMPLES;
     
@@ -66,7 +76,12 @@ int getCalibratedTemp(MAX6675& thermocouple, SystemStatus& sysStat) {
 // Protein Collection Functions
 int getCalibratedTempP(MAX6675 &thermocoupleP, SystemStatus &sysStat)
 {
-  float temp = thermocoupleP.readCelsius() + sysStat.tempCalibrationP;
+  float raw = thermocoupleP.readCelsius();
+  if (isnan(raw) || raw <= 0.0f || raw > 500.0f) {
+      return sysStat.calibratedTempP; // mantém última leitura válida
+  }
+
+  float temp = raw + sysStat.tempCalibrationP;
   sysStat.tempSamplesP[sysStat.nextSampleIndexP] = temp;
   sysStat.nextSampleIndexP = (sysStat.nextSampleIndexP + 1) % NUM_SAMPLES;
   if (sysStat.numSamplesP < NUM_SAMPLES)
@@ -100,12 +115,10 @@ void controlTemperature(SystemStatus& sysStat) {
 
     if (temp <= sysStat.bbqTemperature - HYSTERESIS) {
         digitalWrite(RELAY_PIN, HIGH);
-        neopixelWrite(RGB_BUILTIN, RGB_BRIGHTNESS, 0, 0);  // Red
         sysStat.isRelayOn = true;
     }
     else if (temp >= sysStat.bbqTemperature + HYSTERESIS) {
         digitalWrite(RELAY_PIN, LOW);
-        neopixelWrite(RGB_BUILTIN, 0, 0, RGB_BRIGHTNESS);  // Blue
         sysStat.isRelayOn = false;
     }
 

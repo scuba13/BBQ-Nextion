@@ -86,5 +86,16 @@ void loop() {
         logHandler.logError("Sistema com recursos críticos!");
     }
 
+    // Atualiza LED RGB pelo loop() — único ponto de chamada de neopixelWrite
+    static bool lastRelayState = false;
+    if (sysStat.isRelayOn != lastRelayState) {
+        lastRelayState = sysStat.isRelayOn;
+        if (sysStat.isRelayOn) {
+            neopixelWrite(RGB_BUILTIN, RGB_BRIGHTNESS, 0, 0); // Red = relay ON
+        } else {
+            neopixelWrite(RGB_BUILTIN, 0, 0, RGB_BRIGHTNESS); // Blue = relay OFF
+        }
+    }
+
     vTaskDelay(1);
 }

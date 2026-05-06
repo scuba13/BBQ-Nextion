@@ -3,21 +3,23 @@
 
 #include <Arduino.h>
 #include <LittleFS.h>
-#include <ESPAsyncWebServer.h> // Necessário para AsyncWebServerRequest
+#include <ESPAsyncWebServer.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
 
 class LogHandler {
 private:
-    // Buffer circular para logs
     static const size_t LOG_BUFFER_SIZE = 1024;
-    static const size_t MAX_LOG_SIZE = 50000; // 50KB máximo
+    static const size_t MAX_LOG_SIZE = 50000;
     char logBuffer[LOG_BUFFER_SIZE];
     size_t bufferIndex = 0;
     unsigned long lastFlush = 0;
-    const unsigned long FLUSH_INTERVAL = 5000; // 5 segundos
+    const unsigned long FLUSH_INTERVAL = 5000;
 
-    // Cache de status do arquivo
     bool fileExists = false;
     size_t currentFileSize = 0;
+
+    SemaphoreHandle_t _logMutex = nullptr;
 
     void flushBuffer();
     void checkFileSize();
