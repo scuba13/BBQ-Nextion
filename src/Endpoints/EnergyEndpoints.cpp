@@ -6,8 +6,7 @@
 
 void registerEnergyEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, LogHandler& logger) {
     server.on("/api/v1/energy", HTTP_GET, [&systemStatus, &logger](AsyncWebServerRequest *request) {
-        // Log da requisição utilizando o novo LogHandler
-        logger.logRequest(request, "Fetching energy data");
+        logger.logRequest(request, "Buscando dados de energia");
 
         JsonDocument doc;
         doc["power"] = systemStatus.power;
@@ -15,33 +14,20 @@ void registerEnergyEndpoints(AsyncWebServer& server, SystemStatus& systemStatus,
         doc["cost"] = systemStatus.cost;
         doc["kWhCost"] = systemStatus.kWhCost;
 
-        // Utilizando ResponseHelper para enviar a resposta
-        ResponseHelper::sendJsonResponse(request, 200, "Energy data fetched successfully", doc.as<JsonObject>());
-        
-        // Log da mensagem de sucesso utilizando o novo LogHandler
-        logger.logMessage("Energy data fetched successfully");
+        ResponseHelper::sendJsonResponse(request, 200, "Dados de energia obtidos com sucesso", doc.as<JsonObject>());
     });
 
     server.on("/api/v1/energy/cost", HTTP_PATCH, [&systemStatus, &logger](AsyncWebServerRequest *request) {
-        // Log da requisição utilizando o novo LogHandler
-        logger.logRequest(request, "Updating energy cost");
+        logger.logRequest(request, "Atualizando custo de energia");
 
         if (request->hasParam("kWhCost", true)) {
-            float receivedNumber = request->getParam("kWhCost", true)->value().toFloat();
-            systemStatus.kWhCost = receivedNumber;
+            systemStatus.kWhCost = request->getParam("kWhCost", true)->value().toFloat();
 
-            logger.logMessage("Energy cost received: " + String(systemStatus.kWhCost));
-
-            // Utilizando ResponseHelper para enviar a resposta
             JsonDocument jsonDoc;
-            jsonDoc["status"] = "success";
             jsonDoc["kWhCost"] = systemStatus.kWhCost;
-            ResponseHelper::sendJsonResponse(request, 200, "Energy cost updated successfully", jsonDoc.as<JsonObject>());
-
-            logger.logMessage("Energy cost updated successfully: " + String(systemStatus.kWhCost));
+            ResponseHelper::sendJsonResponse(request, 200, "Custo de energia atualizado com sucesso", jsonDoc.as<JsonObject>());
         } else {
-            logger.logError("Parameter 'kWhCost' not found in the request");
-            ResponseHelper::sendErrorResponse(request, 400, "Parameter 'kWhCost' not found in the request");
+            ResponseHelper::sendErrorResponse(request, 400, "Parâmetro 'kWhCost' não encontrado");
         }
     });
 }

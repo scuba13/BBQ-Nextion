@@ -176,7 +176,7 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 ## Prioridade 🟡 — Consistência e Qualidade
 
 ### C-12 — Idioma misto nas respostas da API
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Arquivos:** todos em `src/Endpoints/`
 - **Problema:** Mensagens de resposta misturando português e inglês sem critério.
 - **Correção:** Padronizar todas as mensagens em pt-BR (idioma do projeto). Fazer busca/substituição em todos os `sendJsonResponse` e `sendErrorResponse`.
@@ -189,7 +189,7 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 ---
 
 ### C-13 — Senha MQTT exposta no GET `/api/v1/mqtt/config`
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Arquivos:** `src/Endpoints/MQTTConfigEndpoints.cpp:14`
 - **Problema:** `doc["mqttPassword"] = systemStatus.mqttPassword` envia a senha em plaintext na resposta HTTP para qualquer cliente na rede.
 - **Correção:** Omitir o campo na resposta GET, ou mascarar: `doc["mqttPassword"] = "***"`.
@@ -197,7 +197,7 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 ---
 
 ### C-14 — Sem validação de range no endpoint de temperatura
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Arquivos:** `src/Endpoints/TemperatureEndpoints.cpp:23`
 - **Problema:** PATCH `/api/v1/temperature/config` aceita qualquer valor de `bbqTemperature` sem verificar `minBBQTemp`/`maxBBQTemp` configurados.
 - **Correção:**
@@ -214,7 +214,7 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 ---
 
 ### C-15 — `TempConfigEndpoints` não valida min < max
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Arquivos:** `src/Endpoints/TempConfigEndpoints.cpp:84`
 - **Correção:** Antes de aplicar os novos valores, verificar:
   ```cpp
@@ -228,7 +228,7 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 ---
 
 ### C-16 — Campo `"status"` duplicado na resposta `energy/cost` PATCH
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Arquivos:** `src/Endpoints/EnergyEndpoints.cpp:36`
 - **Problema:** `jsonDoc["status"] = "success"` dentro do objeto `data` duplica o campo `"status"` que `ResponseHelper` já coloca no nível raiz.
 - **Correção:** Remover `jsonDoc["status"] = "success"`. Manter apenas `jsonDoc["kWhCost"] = systemStatus.kWhCost`.
@@ -236,7 +236,7 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 ---
 
 ### C-17 — Nomes de campos inconsistentes entre endpoints para os mesmos dados
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Arquivos:** `src/Endpoints/MonitorEndpoints.cpp`, `src/Endpoints/TemperatureEndpoints.cpp`
 - **Mapeamento atual (inconsistente):**
 
@@ -268,7 +268,7 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 ## Prioridade 🟡 — Logging
 
 ### C-19 — Log apagado em todo boot
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Arquivos:** `src/Handlers/FileSystemHandler.cpp:204`, chamado de `initializeAndLoadConfig()`
 - **Problema:** `resetLogFile()` apaga `/log.txt` em cada inicialização. Logs de crashes, OTA failures e resets são perdidos permanentemente.
 - **Correção:** Remover a chamada a `resetLogFile()` de `initializeAndLoadConfig()`. Deixar a rotação acontecer apenas quando o arquivo atingir `MAX_LOG_SIZE` (lógica já implementada em `LogHandler::rotateLogFile()`). Opcionalmente, adicionar um marcador de boot no log (`"=== BOOT ==="`).
@@ -276,7 +276,7 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 ---
 
 ### C-20 — `LogHandler::begin()` nunca chamado
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Arquivos:** `src/main.cpp`, `src/Handlers/LogHandler.cpp`
 - **Problema:** `begin()` inicializa `fileExists` e `currentFileSize` a partir do estado real do arquivo. Sem essa chamada, `currentFileSize = 0` e a rotação por tamanho não funciona corretamente.
 - **Correção:** Chamar `logHandler.begin()` no início de `setup()`, após a inicialização do LittleFS.
@@ -284,7 +284,7 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 ---
 
 ### C-21 — Formatação inconsistente entre `logMessage()` e `writeLog()`
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Arquivos:** `src/Handlers/LogHandler.cpp`
 - **Problema:**
   - `logError("foo")` → chama `logMessage("[ERROR] foo")` → output: `"42s: [ERROR] foo\n"`
@@ -297,7 +297,7 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 ---
 
 ### C-22 — MQTT `publishAllMessages()` polui o log
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Arquivos:** `src/Handlers/MQTTHandler.cpp:188–228`
 - **Problema:** A cada 3s (intervalo do `mqttTask`), são logadas ~10 linhas incluindo linhas separadoras `"======="`. Com log máximo de 50KB, isso é preenchido em poucas horas de uso.
 - **Correção:** Remover os logs individuais de cada publicação e as linhas separadoras de `publishAllMessages()`. Manter apenas um log de erro em caso de falha de publicação. Logs de diagnóstico MQTT já existem em `DiagnosticsHandler`.
@@ -305,7 +305,7 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 ---
 
 ### C-23 — Senha MQTT logada em plaintext
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Arquivos:** `src/Handlers/FileSystemHandler.cpp:124`
 - **Correção:** Remover a linha `logHandler.logMessage("mqttPassword: " + String(status.mqttPassword))`.
 
@@ -426,7 +426,7 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 ---
 
 ### C-33 — `kWhCost` não é persistido no config
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Arquivos:** `src/Handlers/FileSystemHandler.cpp:139`
 - **Problema:** O endpoint PATCH `/api/v1/energy/cost` atualiza `sysStat.kWhCost`, mas `saveConfigToFile()` não inclui esse campo. Toda alteração do custo do kWh é perdida no reboot.
 - **Correção:** Adicionar em `saveConfigToFile()`:
@@ -441,7 +441,7 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 ---
 
 ### C-34 — `client.loop()` não chamado = MQTT clientId aleatório quebra Home Assistant
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Arquivos:** `src/Handlers/MQTTHandler.cpp:78`
 - **Problema:** `String clientId = "BBQ-" + String(random(0xffff), HEX)` gera um ID diferente a cada reconexão. O Home Assistant usa o `clientId` para identificar devices — cada reconexão cria um novo device no HA, acumula entidades duplicadas e quebra automações.
 - **Correção:** Usar o `deviceId` (MAC address) já disponível em `sysStat`:
@@ -769,18 +769,18 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 | C-09 | `src/Handlers/TemperatureControlHandler.cpp` | 🟠 Lógica | `[x]` |
 | C-10 | `src/Endpoints/MQTTConfigEndpoints.cpp` | 🟠 Lógica | `[x]` |
 | C-11 | `include/TemperatureControl.h`, `include/SystemStatus.h` | 🟠 Lógica | `[x]` |
-| C-12 | `src/Endpoints/*.cpp` | 🟡 Qualidade | `[ ]` |
-| C-13 | `src/Endpoints/MQTTConfigEndpoints.cpp` | 🟡 Qualidade | `[ ]` |
-| C-14 | `src/Endpoints/TemperatureEndpoints.cpp` | 🟡 Qualidade | `[ ]` |
-| C-15 | `src/Endpoints/TempConfigEndpoints.cpp` | 🟡 Qualidade | `[ ]` |
-| C-16 | `src/Endpoints/EnergyEndpoints.cpp` | 🟡 Qualidade | `[ ]` |
-| C-17 | `src/Endpoints/MonitorEndpoints.cpp` | 🟡 Qualidade | `[ ]` |
-| C-18 | `src/main.cpp` | 🟡 Qualidade | `[ ]` |
-| C-19 | `src/Handlers/FileSystemHandler.cpp` | 🟡 Logging | `[ ]` |
-| C-20 | `src/main.cpp` | 🟡 Logging | `[ ]` |
-| C-21 | `src/Handlers/LogHandler.cpp` | 🟡 Logging | `[ ]` |
-| C-22 | `src/Handlers/MQTTHandler.cpp` | 🟡 Logging | `[ ]` |
-| C-23 | `src/Handlers/FileSystemHandler.cpp` | 🟡 Logging | `[ ]` |
+| C-12 | `src/Endpoints/*.cpp` | 🟡 Qualidade | `[x]` |
+| C-13 | `src/Endpoints/MQTTConfigEndpoints.cpp` | 🟡 Qualidade | `[x]` |
+| C-14 | `src/Endpoints/TemperatureEndpoints.cpp` | 🟡 Qualidade | `[x]` |
+| C-15 | `src/Endpoints/TempConfigEndpoints.cpp` | 🟡 Qualidade | `[x]` |
+| C-16 | `src/Endpoints/EnergyEndpoints.cpp` | 🟡 Qualidade | `[x]` |
+| C-17 | `src/Endpoints/MonitorEndpoints.cpp` | 🟡 Qualidade | `[x]` |
+| C-18 | `src/main.cpp` | 🟡 Qualidade | `[x]` |
+| C-19 | `src/Handlers/FileSystemHandler.cpp` | 🟡 Logging | `[x]` |
+| C-20 | `src/main.cpp` | 🟡 Logging | `[x]` |
+| C-21 | `src/Handlers/LogHandler.cpp` | 🟡 Logging | `[x]` |
+| C-22 | `src/Handlers/MQTTHandler.cpp` | 🟡 Logging | `[x]` |
+| C-23 | `src/Handlers/FileSystemHandler.cpp` | 🟡 Logging | `[x]` |
 | C-24 | `src/Handlers/NextionHandler.cpp`, `src/main.cpp` | 🟢 Performance | `[ ]` |
 | C-25 | `src/Endpoints/*.cpp` | 🟢 Performance | `[ ]` |
 | C-26 | `src/main.cpp` | 🟢 Performance | `[ ]` |
@@ -790,8 +790,8 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 | C-30 | `src/Handlers/NextionHandler.cpp` | 🔴 Crítico | `[ ]` |
 | C-31 | `include/FileSystem.h`, `src/Handlers/FileSystem.cpp` | 🟠 Lógica | `[x]` |
 | C-32 | `src/Handlers/FileSystem.cpp` | 🟠 Lógica | `[x]` |
-| C-33 | `src/Handlers/FileSystemHandler.cpp` | 🟡 Qualidade | `[ ]` |
-| C-34 | `src/Handlers/MQTTHandler.cpp` | 🟡 Qualidade | `[ ]` |
+| C-33 | `src/Handlers/FileSystemHandler.cpp` | 🟡 Qualidade | `[x]` |
+| C-34 | `src/Handlers/MQTTHandler.cpp` | 🟡 Qualidade | `[x]` |
 | C-35 | `src/Endpoints/*.cpp`, `src/Handlers/LogHandler.cpp` | 🟡 Qualidade | `[ ]` |
 | C-36 | `src/main.cpp` | 🟡 Qualidade | `[ ]` |
 | C-37 | `src/Handlers/OTAHandler.cpp` | 🟠 Lógica | `[x]` |
@@ -843,20 +843,20 @@ Sprint 2 — Lógica e bugs ✅
   C-37  ✅ timeout OTA nunca verificado
   C-39  ✅ -Wno-return-type mascara bugs (já estava comentado)
 
-Sprint 3 — API, persistência e logging
-  C-12  idioma misto nas respostas
-  C-13  senha MQTT exposta no GET
-  C-14  sem validação de range na temperatura
-  C-15  TempConfig não valida min < max
-  C-16  campo status duplicado no energy
-  C-17  nomes inconsistentes entre endpoints
-  C-19  log apagado em todo boot
-  C-20  LogHandler::begin() nunca chamado
-  C-21  logMessage vs writeLog formatação
-  C-22  MQTT polui log
-  C-23  senha MQTT no log
-  C-33  kWhCost não persistido
-  C-34  clientId MQTT aleatório quebra HA
+Sprint 3 — API, persistência e logging ✅
+  C-12  ✅ idioma misto nas respostas — tudo em pt-BR
+  C-13  ✅ senha MQTT mascarada ("***") no GET
+  C-14  ✅ validação de range em bbqTemperature e proteinTemperature
+  C-15  ✅ TempConfig valida min < max antes de salvar
+  C-16  ✅ campo "status" duplicado removido do energy/cost
+  C-17  ✅ MonitorEndpoints: bbqCurrentTemp/bbqSetpoint/proteinCurrentTemp/proteinSetpoint
+  C-19  ✅ log não é mais apagado no boot; marcador "=== BOOT ===" adicionado
+  C-20  ✅ logHandler.begin() chamado logo após LittleFS montar
+  C-21  ✅ logMessage/logError/logRequest unificados via writeLog
+  C-22  ✅ publishAllMessages() só loga erros de publicação
+  C-23  ✅ senha MQTT removida do log de boot
+  C-33  ✅ kWhCost persistido e carregado do config.json
+  C-34  ✅ clientId MQTT usa deviceId (MAC) em vez de random
 
 Sprint 4 — Qualidade e limpeza
   C-24  getCurrentPageId() 4x por loop

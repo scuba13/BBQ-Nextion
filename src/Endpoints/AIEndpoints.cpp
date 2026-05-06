@@ -6,23 +6,17 @@
 
 void registerAIEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, LogHandler& logger, FileSystem& fileSystem) {
     server.on("/api/v1/ai/config", HTTP_GET, [&systemStatus, &logger](AsyncWebServerRequest *request) {
-        // Log da requisição utilizando o novo LogHandler
-        logger.logRequest(request, "Fetching AI configuration");
+        logger.logRequest(request, "Buscando configuração de IA");
 
         JsonDocument doc;
         doc["aiKey"] = systemStatus.aiKey;
         doc["tip"] = systemStatus.tip;
 
-        // Utilizando ResponseHelper para enviar a resposta
-        ResponseHelper::sendJsonResponse(request, 200, "AI configuration fetched successfully", doc.as<JsonObject>());
-        
-        // Log da mensagem de sucesso utilizando o novo LogHandler
-        logger.logMessage("AI configuration fetched successfully");
+        ResponseHelper::sendJsonResponse(request, 200, "Configuração de IA obtida com sucesso", doc.as<JsonObject>());
     });
 
     server.on("/api/v1/ai/config", HTTP_PATCH, [&systemStatus, &logger, &fileSystem](AsyncWebServerRequest *request) {
-        // Log da requisição utilizando o novo LogHandler
-        logger.logRequest(request, "Updating AI configuration");
+        logger.logRequest(request, "Atualizando configuração de IA");
 
         String aiKey;
         String tip;
@@ -30,22 +24,17 @@ void registerAIEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, Log
         if (request->hasParam("aiKey", true)) {
             aiKey = request->getParam("aiKey", true)->value();
         } else {
-            ResponseHelper::sendErrorResponse(request, 400, "aiKey parameter is missing");
-            // Log de erro utilizando o novo LogHandler
-            logger.logError("Missing 'aiKey' parameter");
+            ResponseHelper::sendErrorResponse(request, 400, "Parâmetro 'aiKey' ausente");
             return;
         }
 
         if (request->hasParam("tip", true)) {
             tip = request->getParam("tip", true)->value();
         } else {
-            ResponseHelper::sendErrorResponse(request, 400, "tip parameter is missing");
-            // Log de erro utilizando o novo LogHandler
-            logger.logError("Missing 'tip' parameter");
+            ResponseHelper::sendErrorResponse(request, 400, "Parâmetro 'tip' ausente");
             return;
         }
 
-        // Atualiza os valores em systemStatus
         strncpy(systemStatus.aiKey, aiKey.c_str(), sizeof(systemStatus.aiKey) - 1);
         systemStatus.aiKey[sizeof(systemStatus.aiKey) - 1] = '\0';
 
@@ -54,10 +43,6 @@ void registerAIEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, Log
 
         fileSystem.saveConfigToFile(systemStatus);
 
-        // Utilizando ResponseHelper para enviar a resposta
-        ResponseHelper::sendJsonResponse(request, 200, "AI configuration updated successfully");
-        
-        // Log da mensagem de sucesso utilizando o novo LogHandler
-        logger.logMessage("AI configuration updated successfully");
+        ResponseHelper::sendJsonResponse(request, 200, "Configuração de IA atualizada com sucesso");
     });
 }

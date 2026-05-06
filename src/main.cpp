@@ -49,6 +49,9 @@ void setup() {
     // Carrega configurações persistidas
     fileSystem.initializeAndLoadConfig(sysStat, WiFi.macAddress());
 
+    // Inicializa log após LittleFS estar disponível
+    logHandler.begin();
+
     // Configura MQTT se habilitado
     if (sysStat.isHAAvailable) {
         mqttHandler.begin(sysStat.mqttServer, sysStat.mqttPort,
@@ -61,8 +64,6 @@ void setup() {
     // Inicia servidor web
     webServerControl.begin();
 
-    // Log inicial de diagnóstico
-    logHandler.begin();
     diagnostics.logMetrics();
 }
 

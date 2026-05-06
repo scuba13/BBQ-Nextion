@@ -75,7 +75,9 @@ bool MQTTHandler::connect() {
     
     logHandler.logMessage("Conectando ao MQTT Broker...");
     
-    String clientId = "BBQ-" + String(random(0xffff), HEX);
+    String clientId = String(systemStatus.deviceId).length() > 0
+        ? "BBQ-" + String(systemStatus.deviceId)
+        : "BBQ-" + String(random(0xffff), HEX);
     
     bool connected = credentials.user.length() > 0 ?
         client.connect(clientId.c_str(), credentials.user.c_str(), credentials.password.c_str()) :
@@ -194,45 +196,19 @@ void MQTTHandler::messageHandler(char* topic, byte* payload, unsigned int length
 }
 
 void MQTTHandler::publishAllMessages(SystemStatus& systemStatus) {
-    logHandler.logMessage("=======================================");
+    auto pub = [this](const char* topic, const String& val) {
+        if (!client.publish(topic, val.c_str())) {
+            logHandler.logError("Falha ao publicar MQTT: " + String(topic));
+        }
+    };
 
-    // Publica a temperatura da BBQ
-    String bbqTemp = String(systemStatus.calibratedTemp);
-    client.publish("sensor/bbq_temperature", bbqTemp.c_str());
-    logHandler.logMessage("BBQ temperature: " + bbqTemp);
-
-    // Publica a temperatura setada para a BBQ
-    String bbqTempSet = String(systemStatus.bbqTemperature);
-    client.publish("sensor/bbq_set_temperature", bbqTempSet.c_str());
-    logHandler.logMessage("BBQ set temperature: " + bbqTempSet);
-
-    // Publica o estado do relé
-    String relayState = systemStatus.isRelayOn ? "electric" : "off";
-    client.publish("relay/state", relayState.c_str());
-    logHandler.logMessage("Relay state: " + relayState);
-
-    // Publica a temperatura da proteína
-    String proteinTemp = String(systemStatus.calibratedTempP);
-    client.publish("sensor/protein_temperature", proteinTemp.c_str());
-    logHandler.logMessage("Protein temperature: " + proteinTemp);
-
-    // Publica a temperatura setada para a proteína
-    String proteinTempSet = String(systemStatus.proteinTemperature);
-    client.publish("sensor/protein_set_temperature", proteinTempSet.c_str());
-    logHandler.logMessage("Protein set temperature: " + proteinTempSet);
-
-    // Publica o estado do relé para proteína
-    String relayStateProtein = systemStatus.proteinTemperature > 0 ? "electric" : "off";
-    client.publish("relay_protein/state", relayStateProtein.c_str());
-    logHandler.logMessage("Relay Protein state: " + relayStateProtein);
-
-    // Publica a média da temperatura da BBQ
-    String bbqTempAvg = String(systemStatus.averageTemp);
-    client.publish("sensor/bbq_average_temperature", bbqTempAvg.c_str());
-    logHandler.logMessage("BBQ average temperature: " + bbqTempAvg);
-
-    logHandler.logMessage("Published all messages to MQTT topics");
-    logHandler.logMessage("=======================================");
+    pub("sensor/bbq_temperature",         String(systemStatus.calibratedTemp));
+    pub("sensor/bbq_set_temperature",     String(systemStatus.bbqTemperature));
+    pub("relay/state",                    systemStatus.isRelayOn ? "electric" : "off");
+    pub("sensor/protein_temperature",     String(systemStatus.calibratedTempP));
+    pub("sensor/protein_set_temperature", String(systemStatus.proteinTemperature));
+    pub("relay_protein/state",            systemStatus.proteinTemperature > 0 ? "electric" : "off");
+    pub("sensor/bbq_average_temperature", String(systemStatus.averageTemp));
 }
 
 void MQTTHandler::checkAndReconnectAwsIoT() {

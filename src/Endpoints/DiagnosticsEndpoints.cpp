@@ -3,7 +3,7 @@
 
 void registerDiagnosticsEndpoints(AsyncWebServer& server, DiagnosticsHandler& diagnostics, LogHandler& logger) {
     server.on("/api/v1/diagnostics", HTTP_GET, [&](AsyncWebServerRequest *request) {
-        logger.logRequest(request, "Fetching diagnostics");
+        logger.logRequest(request, "Buscando diagnósticos");
         
         auto metrics = diagnostics.getMetrics();
         
@@ -17,6 +17,6 @@ void registerDiagnosticsEndpoints(AsyncWebServer& server, DiagnosticsHandler& di
         doc["system"]["uptime"] = metrics.uptime;
         doc["system"]["healthy"] = diagnostics.isHealthy();
         
-        ResponseHelper::sendJsonResponse(request, 200, "Diagnostics fetched successfully", doc.as<JsonObject>());
+        ResponseHelper::sendJsonResponse(request, 200, "Diagnósticos obtidos com sucesso", doc.as<JsonObject>());
     });
 } 

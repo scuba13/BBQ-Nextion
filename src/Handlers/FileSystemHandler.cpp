@@ -26,8 +26,7 @@ void FileSystem::initializeAndLoadConfig(SystemStatus &status, String mac)
         }
     }
 
-    // Reseta o arquivo de log se ele existir
-    resetLogFile();
+    logHandler.logMessage("=== BOOT ===");
 
     if (!LittleFS.exists("/config.json"))
     {
@@ -103,12 +102,12 @@ void FileSystem::initializeAndLoadConfig(SystemStatus &status, String mac)
     status.maxCaliTempP = doc["maxCaliTempP"].as<int>();
     strlcpy(status.aiKey, doc["aiKey"].as<const char *>(), sizeof(status.aiKey));
     strlcpy(status.tip, doc["tip"].as<const char *>(), sizeof(status.tip));
+    status.kWhCost = doc["kWhCost"] | 1.0f;
 
     logHandler.logMessage("isHAAvailable: " + String(status.isHAAvailable ? "true" : "false"));
     logHandler.logMessage("mqttServer: " + String(status.mqttServer));
     logHandler.logMessage("mqttPort: " + String(status.mqttPort));
     logHandler.logMessage("mqttUser: " + String(status.mqttUser));
-    logHandler.logMessage("mqttPassword: " + String(status.mqttPassword));
     logHandler.logMessage("deviceId: " + String(status.deviceId));
     logHandler.logMessage("minBBQTemp: " + String(status.minBBQTemp));
     logHandler.logMessage("maxBBQTemp: " + String(status.maxBBQTemp));
@@ -151,6 +150,7 @@ void FileSystem::saveConfigToFile(const SystemStatus &status)
     
     doc["aiKey"] = status.aiKey;
     doc["tip"] = status.tip;
+    doc["kWhCost"] = status.kWhCost;
 
     if (serializeJson(doc, configFile) == 0)
     {

@@ -12,27 +12,18 @@ void registerSystemEndpoints(AsyncWebServer &server, SystemStatus &systemStatus,
               {
         systemStatus.cureProcessMode = true;
 
-        logger.logRequest(request, "Cure process activated");
+        logger.logRequest(request, "Ativando modo de cura");
 
-        // Utilizando ResponseHelper para enviar a resposta
-        ResponseHelper::sendJsonResponse(request, 200, "Cure process activated successfully");
-
-        // Log da mensagem de sucesso utilizando o novo LogHandler
-        logger.logMessage("Cure process activated successfully"); });
+        ResponseHelper::sendJsonResponse(request, 200, "Modo de cura ativado com sucesso"); });
 
     // Novo endpoint para resetar o sistema
     server.on("/api/v1/system/reset", HTTP_POST, [&systemStatus, &logger](AsyncWebServerRequest *request)
               {
-        // Chama o método resetSystem passando o systemStatus como parâmetro
         resetSystem(systemStatus);
 
-        logger.logRequest(request, "System reset initiated");
+        logger.logRequest(request, "Reset do sistema iniciado");
 
-        // Utilizando ResponseHelper para enviar a resposta
-        ResponseHelper::sendJsonResponse(request, 200, "System reset successfully");
-
-        // Log da mensagem de sucesso utilizando o novo LogHandler
-        logger.logMessage("System reset successfully"); });
+        ResponseHelper::sendJsonResponse(request, 200, "Sistema resetado com sucesso"); });
 
     // Endpoint para atualização OTA
     server.on("/api/v1/system/update", HTTP_POST,

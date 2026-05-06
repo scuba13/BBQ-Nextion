@@ -22,7 +22,6 @@ private:
     void flushBuffer();
     void checkFileSize();
     void rotateLogFile();
-    String formatLogMessage(const String& level, const String& clientIP, const String& method, const String& url, const String& message);
 
 public:
     LogHandler();

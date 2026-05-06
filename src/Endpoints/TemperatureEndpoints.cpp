@@ -4,8 +4,7 @@
 
 void registerTemperatureEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, LogHandler& logger) {
     server.on("/api/v1/temperature/config", HTTP_GET, [&](AsyncWebServerRequest *request) {
-        // Log da requisição utilizando o novo LogHandler
-        logger.logRequest(request, "Fetching temperature config");
+        logger.logRequest(request, "Buscando configuração de temperatura");
 
         JsonDocument data;
         data["bbqTemperature"] = systemStatus.bbqTemperature;
@@ -13,47 +12,59 @@ void registerTemperatureEndpoints(AsyncWebServer& server, SystemStatus& systemSt
         data["tempCalibration"] = systemStatus.tempCalibration;
         data["tempCalibrationP"] = systemStatus.tempCalibrationP;
 
-        // Utilizando ResponseHelper para enviar a resposta
-        ResponseHelper::sendJsonResponse(request, 200, "Temperature config fetched successfully", data.as<JsonObject>());
-        
-        // Log da mensagem de sucesso utilizando o novo LogHandler
-        logger.logMessage("Temperature config fetched successfully");
+        ResponseHelper::sendJsonResponse(request, 200, "Configuração de temperatura obtida com sucesso", data.as<JsonObject>());
     });
 
     server.on("/api/v1/temperature/config", HTTP_PATCH, [&](AsyncWebServerRequest *request) {
-        // Log da requisição utilizando o novo LogHandler
-        logger.logRequest(request, "Updating temperature config");
+        logger.logRequest(request, "Atualizando configuração de temperatura");
 
         bool updated = false;
 
         if (request->hasParam("bbqTemperature", true)) {
-            systemStatus.bbqTemperature = request->getParam("bbqTemperature", true)->value().toFloat();
+            int newBBQTemp = request->getParam("bbqTemperature", true)->value().toInt();
+            if (newBBQTemp < systemStatus.minBBQTemp || newBBQTemp > systemStatus.maxBBQTemp) {
+                ResponseHelper::sendErrorResponse(request, 400, "Temperatura BBQ fora do intervalo permitido");
+                return;
+            }
+            systemStatus.bbqTemperature = newBBQTemp;
             updated = true;
         }
 
         if (request->hasParam("proteinTemperature", true)) {
-            systemStatus.proteinTemperature = request->getParam("proteinTemperature", true)->value().toFloat();
+            int newPrtTemp = request->getParam("proteinTemperature", true)->value().toInt();
+            if (newPrtTemp < systemStatus.minPrtTemp || newPrtTemp > systemStatus.maxPrtTemp) {
+                ResponseHelper::sendErrorResponse(request, 400, "Temperatura da proteína fora do intervalo permitido");
+                return;
+            }
+            systemStatus.proteinTemperature = newPrtTemp;
             updated = true;
         }
 
         if (request->hasParam("tempCalibration", true)) {
-            systemStatus.tempCalibration = request->getParam("tempCalibration", true)->value().toFloat();
+            int newCali = request->getParam("tempCalibration", true)->value().toInt();
+            if (newCali < systemStatus.minCaliTemp || newCali > systemStatus.maxCaliTemp) {
+                ResponseHelper::sendErrorResponse(request, 400, "Calibração BBQ fora do intervalo permitido");
+                return;
+            }
+            systemStatus.tempCalibration = newCali;
             updated = true;
         }
 
         if (request->hasParam("tempCalibrationP", true)) {
-            systemStatus.tempCalibrationP = request->getParam("tempCalibrationP", true)->value().toFloat();
+            int newCaliP = request->getParam("tempCalibrationP", true)->value().toInt();
+            if (newCaliP < systemStatus.minCaliTempP || newCaliP > systemStatus.maxCaliTempP) {
+                ResponseHelper::sendErrorResponse(request, 400, "Calibração da proteína fora do intervalo permitido");
+                return;
+            }
+            systemStatus.tempCalibrationP = newCaliP;
             updated = true;
         }
 
         if (!updated) {
-            ResponseHelper::sendErrorResponse(request, 400, "No valid parameters provided for update");
-            logger.logError("No valid parameters provided for update");
+            ResponseHelper::sendErrorResponse(request, 400, "Nenhum parâmetro válido fornecido para atualização");
             return;
         }
 
-        // Utilizando ResponseHelper para enviar a resposta
-        ResponseHelper::sendJsonResponse(request, 200, "Temperature config updated successfully");
-        logger.logMessage("Temperature config updated successfully");
+        ResponseHelper::sendJsonResponse(request, 200, "Configuração de temperatura atualizada com sucesso");
     });
 }

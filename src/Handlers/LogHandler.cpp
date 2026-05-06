@@ -26,55 +26,22 @@ void LogHandler::begin() {
 }
 
 void LogHandler::logRequest(AsyncWebServerRequest *request, const String &message) {
-    String formattedMsg = formatLogMessage(
-        "[REQUEST]",
-        request->client()->remoteIP().toString(),
-        request->methodToString(),
-        request->url(),
-        message
-    );
-    dbSerial.println(formattedMsg);
-    logMessage(formattedMsg);
+    String info = request->client()->remoteIP().toString() + " " +
+                  request->methodToString() + " " +
+                  request->url() + " - " + message;
+    writeLog("REQUEST", info);
 }
 
 void LogHandler::logMessage(const String& message) {
-    // Formata a mensagem com timestamp
-    unsigned long now = millis();
-    String timeStamp = String(now/1000) + "s: ";
-    String fullMessage = timeStamp + message + "\n";
-    
-    // Imprime no dbSerial
-    dbSerial.print(fullMessage);
-    
-    // Verifica se há espaço no buffer
-    if (bufferIndex + fullMessage.length() >= LOG_BUFFER_SIZE) {
-        flushBuffer();
-    }
-    
-    // Adiciona ao buffer
-    memcpy(logBuffer + bufferIndex, fullMessage.c_str(), fullMessage.length());
-    bufferIndex += fullMessage.length();
-    
-    // Verifica se é hora de fazer flush
-    if (now - lastFlush >= FLUSH_INTERVAL) {
-        flushBuffer();
-    }
+    writeLog("INFO", message);
 }
 
 void LogHandler::logError(const String &message) {
-    String errorMsg = "[ERROR] " + message;
-    dbSerial.println(errorMsg);
-    logMessage(errorMsg);
+    writeLog("ERROR", message);
 }
 
 void LogHandler::logWarning(const String &message) {
     writeLog("WARN", message);
-}
-
-String LogHandler::formatLogMessage(const String& level, const String& clientIP, 
-                                  const String& method, const String& url, 
-                                  const String& message) {
-    return level + " " + clientIP + " " + method + " " + url + " - " + message;
 }
 
 void LogHandler::flushBuffer() {

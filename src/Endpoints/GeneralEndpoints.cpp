@@ -8,45 +8,34 @@
 
 void registerGeneralEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, LogHandler& logger, OTAHandler& otaHandler) {
     server.on("/api/v1/log/content", HTTP_GET, [&logger](AsyncWebServerRequest *request) {
-        // Log da requisição utilizando o novo LogHandler
-        logger.logRequest(request, "Fetching log content");
+        logger.logRequest(request, "Buscando conteúdo do log");
 
-        // Abrindo o arquivo de log
         File logFile = LittleFS.open("/log.txt", "r");
         if (!logFile) {
-            logger.logError("Log file not found");
-            ResponseHelper::sendErrorResponse(request, 404, "Log file not found");
+            ResponseHelper::sendErrorResponse(request, 404, "Arquivo de log não encontrado");
             return;
         }
 
-        // Lendo todas as linhas do arquivo
         std::vector<String> lines;
         while (logFile.available()) {
-            String line = logFile.readStringUntil('\n');
-            lines.push_back(line);
+            lines.push_back(logFile.readStringUntil('\n'));
         }
         logFile.close();
 
-        // Selecionando as últimas 100 linhas
         String logContent = "";
         int startLine = lines.size() > 100 ? lines.size() - 100 : 0;
-        for (int i = startLine; i < lines.size(); i++) {
+        for (int i = startLine; i < (int)lines.size(); i++) {
             logContent += lines[i] + '\n';
         }
 
-        // Verificação se o conteúdo foi lido corretamente
         if (logContent.length() == 0) {
-            logger.logError("Log content is empty after reading the file.");
-            ResponseHelper::sendErrorResponse(request, 500, "Log content is empty after reading the file.");
+            ResponseHelper::sendErrorResponse(request, 500, "Conteúdo do log está vazio");
             return;
         }
 
-        // Criando um JsonObject para armazenar o logContent e passar para o ResponseHelper
         JsonDocument doc;
         doc["logContent"] = logContent;
 
-        // Enviando o conteúdo do log usando o ResponseHelper
-        ResponseHelper::sendJsonResponse(request, 200, "Log content fetched successfully", doc.as<JsonObject>());
-        logger.logMessage("Log content fetched successfully");
+        ResponseHelper::sendJsonResponse(request, 200, "Conteúdo do log obtido com sucesso", doc.as<JsonObject>());
     });
 }
