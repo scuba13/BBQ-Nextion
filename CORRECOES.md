@@ -376,6 +376,159 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 
 ---
 
+---
+
+## Segunda Análise — Novos Achados
+
+### C-29 — `client.loop()` nunca chamado no mqttTask — MQTT não recebe mensagens
+- **Status:** `[ ]`
+- **Arquivos:** `src/Handlers/TaskHandler.cpp:66`, `src/Handlers/MQTTHandler.cpp:141`
+- **Problema:** `mqttTask` só chama `managePublishing()` → `publishAllMessages()`. O `client.loop()` do PubSubClient é chamado em `MQTTHandler::loop()` e `checkAndReconnectAwsIoT()`, mas nenhum dos dois é invocado da task. Sem `client.loop()`: (a) nenhuma mensagem recebida é processada (subscriptions são inúteis), (b) o keep-alive de 30s nunca é enviado → broker derruba a conexão, (c) a task fica num loop de reconectar/publicar/cair.
+- **Correção:** Adicionar `mqttHandler->loop()` (ou `client.loop()` direto) dentro do `mqttTask`, **antes** de `managePublishing()`:
+  ```cpp
+  void mqttTask(void *parameter) {
+      const TickType_t xDelay = pdMS_TO_TICKS(3000);
+      while (true) {
+          if (systemStatus->isHAAvailable) {
+              mqttHandler->loop();          // ← processa keep-alive e mensagens recebidas
+              mqttHandler->managePublishing(*systemStatus);
+          }
+          vTaskDelay(xDelay);
+      }
+  }
+  ```
+
+---
+
+### C-30 — Conflito de page ID 6: `energyPg` vs componentes de calibração
+- **Status:** `[ ]`
+- **Arquivos:** `src/Handlers/NextionHandler.cpp:54`, `src/Handlers/NextionHandler.cpp:80–88`
+- **Problema:** A página 6 do Nextion é declarada como `energyPg`, mas os componentes de calibração (`caliBBQTemp`, `caliChunkTemp`, `minCaliBBQTemp`, etc.) também estão mapeados para a página 6. `updateNextionSetCaliVariables()` dispara quando `currentPageId == 6`. Na prática, quando o usuário abre a tela de energia, o firmware tenta atualizar componentes de calibração nela — que não existem nessa página — gerando comandos inválidos enviados ao Nextion.
+- **Correção:** Verificar no arquivo `.HMI` do Nextion qual é a página real de calibração e corrigir os IDs no código. Se calibração for página 9 (por exemplo), atualizar a `NexPage` e o check em `updateNextionSetCaliVariables()`.
+
+---
+
+### C-31 — `FileSystem::saveConfig()`, `resetToDefaults()`, `loadConfigFile()`, `saveConfigFile()` declarados mas não implementados
+- **Status:** `[ ]`
+- **Arquivos:** `include/FileSystem.h`, `src/Handlers/FileSystem.cpp`
+- **Problema:** O header declara `saveConfig()`, `resetToDefaults()`, `loadConfigFile()`, `saveConfigFile()`. Apenas `loadConfig()` está em `FileSystem.cpp`, que internamente chama `loadConfigFile()` e `resetToDefaults()` — sem implementação. Se `loadConfig()` for chamada (não é atualmente), o linker falha. É um contrato de interface quebrado.
+- **Correção (opção A):** Implementar os métodos faltantes em `FileSystem.cpp` usando o mesmo padrão de `FileSystemHandler.cpp`.
+- **Correção (opção B):** Remover `FileSystem.cpp` e os métodos não usados do header, consolidando tudo em `FileSystemHandler.cpp`. Ver também C-32.
+
+---
+
+### C-32 — Dois arquivos `.cpp` implementando a mesma classe `FileSystem`
+- **Status:** `[ ]`
+- **Arquivos:** `src/Handlers/FileSystem.cpp`, `src/Handlers/FileSystemHandler.cpp`
+- **Problema:** `FileSystem.cpp` e `FileSystemHandler.cpp` são dois arquivos compilados juntos que implementam métodos da mesma classe `FileSystem`. Além da confusão, os dois usam instâncias diferentes do logger: `FileSystem.cpp` usa `extern LogHandler _logger`, `FileSystemHandler.cpp` usa `extern LogHandler logHandler` — reforçando o bug C-18. `FileSystem.cpp` só contém `loadConfig()`, que não é chamado em lugar nenhum no código atual.
+- **Correção:** Remover `FileSystem.cpp`. Todo código útil já está em `FileSystemHandler.cpp`.
+
+---
+
+### C-33 — `kWhCost` não é persistido no config
+- **Status:** `[ ]`
+- **Arquivos:** `src/Handlers/FileSystemHandler.cpp:139`
+- **Problema:** O endpoint PATCH `/api/v1/energy/cost` atualiza `sysStat.kWhCost`, mas `saveConfigToFile()` não inclui esse campo. Toda alteração do custo do kWh é perdida no reboot.
+- **Correção:** Adicionar em `saveConfigToFile()`:
+  ```cpp
+  doc["kWhCost"] = status.kWhCost;
+  ```
+  E em `initializeAndLoadConfig()` ao carregar:
+  ```cpp
+  status.kWhCost = doc["kWhCost"] | 1.0f;  // default 1.0
+  ```
+
+---
+
+### C-34 — `client.loop()` não chamado = MQTT clientId aleatório quebra Home Assistant
+- **Status:** `[ ]`
+- **Arquivos:** `src/Handlers/MQTTHandler.cpp:78`
+- **Problema:** `String clientId = "BBQ-" + String(random(0xffff), HEX)` gera um ID diferente a cada reconexão. O Home Assistant usa o `clientId` para identificar devices — cada reconexão cria um novo device no HA, acumula entidades duplicadas e quebra automações.
+- **Correção:** Usar o `deviceId` (MAC address) já disponível em `sysStat`:
+  ```cpp
+  String clientId = "BBQ-" + String(systemStatus.deviceId);
+  ```
+
+---
+
+### C-35 — `#include <Nextion.h>` desnecessário em 10+ arquivos — acopla logs ao Serial da lib
+- **Status:** `[ ]`
+- **Arquivos:** `src/Endpoints/AIEndpoints.cpp`, `EnergyEndpoints.cpp`, `MQTTConfigEndpoints.cpp`, `TempConfigEndpoints.cpp`, `src/Handlers/MQTTHandler.cpp`, `OTAHandler.cpp`, `FileSystemHandler.cpp`, `LogHandler.cpp`
+- **Problema:** `Nextion.h` → `NexConfig.h` define `#define DEBUG_SERIAL_ENABLE` e `#define dbSerial Serial`. Arquivos que incluem Nextion.h sem usar nada do display herdam essa definição. Pior: `LogHandler.cpp` usa `dbSerial` diretamente — significa que se `DEBUG_SERIAL_ENABLE` for comentada no `NexConfig.h` (algo natural para produção), todos os logs do sistema param silenciosamente sem nenhum erro de compilação.
+- **Correção em dois passos:**
+  1. Remover `#include <Nextion.h>` de todos os arquivos que não usam componentes Nextion (endpoints, MQTT, OTA, FileSystem).
+  2. Em `LogHandler.cpp`, substituir `dbSerial` por `Serial` diretamente — não depender de macro de lib de terceiro.
+
+---
+
+### C-36 — `Serial` (USB CDC) nunca inicializado explicitamente
+- **Status:** `[ ]`
+- **Arquivos:** `src/main.cpp`
+- **Problema:** Nenhum lugar chama `Serial.begin()`. Com `ARDUINO_USB_CDC_ON_BOOT=1` o CDC inicializa automaticamente, mas o `LogHandler` começa a escrever via `dbSerial` dentro de `fastInit()` — antes da inicialização estar garantida. Em alguns contextos de boot rápido, as primeiras mensagens de log podem ser perdidas ou corromper a saída serial.
+- **Correção:** Adicionar `Serial.begin(115200)` no início de `fastInit()`, antes de qualquer log.
+
+---
+
+### C-37 — `_checkTimeout()` implementado mas nunca chamado no OTA
+- **Status:** `[ ]`
+- **Arquivos:** `src/Handlers/OTAHandler.cpp:238`, `src/Handlers/OTAHandler.cpp:74`
+- **Problema:** `OTAHandler` define `UPDATE_TIMEOUT = 300000` (5 minutos) e implementa `_checkTimeout()`, mas nunca o chama em `writeUpdate()`. Um upload travado pode ficar pendurado indefinidamente, bloqueando o firmware update e deixando o dispositivo num estado intermediário.
+- **Correção:** Verificar timeout no início de `writeUpdate()`:
+  ```cpp
+  bool OTAHandler::writeUpdate(uint8_t* data, size_t len) {
+      if (_checkTimeout()) {
+          _logger.logError("Timeout do OTA excedido");
+          abortUpdate();
+          return false;
+      }
+      // ... resto da lógica
+  }
+  ```
+
+---
+
+### C-38 — Dependências não usadas em `platformio.ini`
+- **Status:** `[ ]`
+- **Arquivos:** `platformio.ini`
+- **Problema:** Duas bibliotecas estão declaradas em `lib_deps` mas não há nenhum `#include` correspondente no código:
+  - `plerup/EspSoftwareSerial` — nenhum `#include <SoftwareSerial.h>` em lugar algum
+  - `SD` — nenhum `SD.begin()` ou uso da lib SD
+- **Correção:** Remover as duas entradas de `lib_deps`. Reduz tempo de compilação e tamanho do firmware.
+
+---
+
+### C-39 — `-Wno-return-type` suprime bugs reais
+- **Status:** `[ ]`
+- **Arquivos:** `platformio.ini`
+- **Problema:** `build_flags` inclui `-Wno-return-type`, que silencia warnings de funções com tipo de retorno declarado mas sem `return`. Isso pode mascarar funções que retornam lixo de stack. Os outros `-Wno-*` têm justificativa (libs de terceiro), mas `-Wno-return-type` é arriscado para código próprio.
+- **Correção:** Remover `-Wno-return-type`. Corrigir os erros que aparecerem (provavelmente poucos). Se necessário para libs externas, usar `-Wno-return-type` apenas para a lib específica via `lib_build_flags`.
+
+---
+
+### C-40 — `deviceId` salvo mas nunca usado no sistema
+- **Status:** `[ ]`
+- **Arquivos:** `include/SystemStatus.h:49`, `src/Handlers/FileSystemHandler.cpp:72,107`
+- **Problema:** O `deviceId` (MAC sem `:`) é gerado uma vez na criação do config, lido de volta e logado — mas nunca é usado em nenhuma lógica do sistema (MQTT, API, OTA). Ocupa espaço na struct e no config sem propósito atual.
+- **Correção:** Usar onde faz sentido (ver C-34 para MQTT clientId), ou remover se não houver plano.
+
+---
+
+### C-41 — Diretórios `src/Webhooks/` e `include/Webhooks/` vazios
+- **Status:** `[ ]`
+- **Arquivos:** `src/Webhooks/`, `include/Webhooks/`
+- **Problema:** Diretórios criados para uma feature que nunca foi implementada. Poluem a estrutura do projeto.
+- **Correção:** Remover ambos os diretórios.
+
+---
+
+### C-42 — README descreve hardware errado (ACS712 vs MAX6675)
+- **Status:** `[ ]`
+- **Arquivos:** `README.md`
+- **Problema:** O README menciona `"Sensores de Temperatura ACS712"`, mas ACS712 é um **sensor de corrente**, não de temperatura. O código usa `MAX6675` (termopar) para temperatura de câmara e proteína, e `DS18B20` para temperatura interna.
+- **Correção:** Atualizar o README com o hardware real: MAX6675 (x2) para termopares + DS18B20 para temperatura interna do ESP.
+
+---
+
 ## Rastreabilidade
 
 | ID | Arquivo Principal | Prioridade | Status |
@@ -408,15 +561,75 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 | C-26 | `src/main.cpp` | 🟢 Performance | `[ ]` |
 | C-27 | `src/Handlers/FileSystemHandler.cpp` | 🔐 Segurança | `[ ]` |
 | C-28 | `src/Endpoints/*.cpp` | 🔐 Segurança | `[ ]` |
+| C-29 | `src/Handlers/TaskHandler.cpp` | 🔴 Crítico | `[ ]` |
+| C-30 | `src/Handlers/NextionHandler.cpp` | 🔴 Crítico | `[ ]` |
+| C-31 | `include/FileSystem.h`, `src/Handlers/FileSystem.cpp` | 🟠 Lógica | `[ ]` |
+| C-32 | `src/Handlers/FileSystem.cpp` | 🟠 Lógica | `[ ]` |
+| C-33 | `src/Handlers/FileSystemHandler.cpp` | 🟡 Qualidade | `[ ]` |
+| C-34 | `src/Handlers/MQTTHandler.cpp` | 🟡 Qualidade | `[ ]` |
+| C-35 | `src/Endpoints/*.cpp`, `src/Handlers/LogHandler.cpp` | 🟡 Qualidade | `[ ]` |
+| C-36 | `src/main.cpp` | 🟡 Qualidade | `[ ]` |
+| C-37 | `src/Handlers/OTAHandler.cpp` | 🟠 Lógica | `[ ]` |
+| C-38 | `platformio.ini` | 🟢 Performance | `[ ]` |
+| C-39 | `platformio.ini` | 🟠 Lógica | `[ ]` |
+| C-40 | `include/SystemStatus.h` | 🟡 Qualidade | `[ ]` |
+| C-41 | `src/Webhooks/`, `include/Webhooks/` | 🟡 Qualidade | `[ ]` |
+| C-42 | `README.md` | 🟡 Qualidade | `[ ]` |
 
 ---
 
 ## Ordem de execução sugerida
 
 ```
-Sprint 1 — Estabilidade (C-01, C-02, C-03, C-04, C-18, C-19, C-20)
-Sprint 2 — Lógica e Correção de Bugs (C-05, C-06, C-08, C-09, C-10, C-11)
-Sprint 3 — API e Logging (C-12, C-13, C-14, C-15, C-16, C-17, C-21, C-22, C-23)
-Sprint 4 — Performance (C-24, C-25, C-26)
-Sprint 5 — Segurança e Features pendentes (C-07, C-27, C-28)
+Sprint 1 — Estabilidade crítica
+  C-01  tasks duplicadas (race condition)
+  C-02  MQTTHandler::begin() nunca chamado
+  C-03  processMessage() não implementado
+  C-04  initWiFi() nunca chamado
+  C-18  duas instâncias de LogHandler
+  C-29  client.loop() ausente no mqttTask
+  C-30  conflito de page ID no Nextion (energia vs calibração)
+  C-32  FileSystem.cpp duplicado — remover
+  C-36  Serial.begin() ausente
+
+Sprint 2 — Lógica e bugs
+  C-05  handle de task deletada no vetor
+  C-06  isHealthy() bytes vs %
+  C-08  OTA verifica partição errada
+  C-09  histerese assimétrica
+  C-10  MQTT task não inicia/para
+  C-11  código morto (updateRelayState, pidControl, etc.)
+  C-31  métodos não implementados em FileSystem
+  C-37  timeout OTA nunca verificado
+  C-39  -Wno-return-type mascara bugs
+
+Sprint 3 — API, persistência e logging
+  C-12  idioma misto nas respostas
+  C-13  senha MQTT exposta no GET
+  C-14  sem validação de range na temperatura
+  C-15  TempConfig não valida min < max
+  C-16  campo status duplicado no energy
+  C-17  nomes inconsistentes entre endpoints
+  C-19  log apagado em todo boot
+  C-20  LogHandler::begin() nunca chamado
+  C-21  logMessage vs writeLog formatação
+  C-22  MQTT polui log
+  C-23  senha MQTT no log
+  C-33  kWhCost não persistido
+  C-34  clientId MQTT aleatório quebra HA
+
+Sprint 4 — Qualidade e limpeza
+  C-24  getCurrentPageId() 4x por loop
+  C-25  DynamicJsonDocument em todos endpoints
+  C-26  diagnostics no loop Arduino
+  C-35  Nextion.h desnecessário em 10+ arquivos
+  C-38  libs não usadas (SoftwareSerial, SD)
+  C-40  deviceId salvo mas nunca usado
+  C-41  diretórios Webhooks vazios
+  C-42  README com hardware errado
+
+Sprint 5 — Segurança e features pendentes
+  C-07  cureProcessMode sem implementação
+  C-27  API key hardcoded
+  C-28  sem autenticação na API
 ```
