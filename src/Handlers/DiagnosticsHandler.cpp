@@ -48,14 +48,15 @@ void DiagnosticsHandler::registerTaskCheck(TaskHandle_t task, const char* taskNa
 
 void DiagnosticsHandler::checkTasks() {
     unsigned long now = millis();
-    
-    for (auto& task : monitoredTasks) {
-        if (eTaskGetState(task.handle) == eBlocked) {
-            if (now - task.lastActiveTime > MAX_TASK_BLOCKED_TIME) {
-                handleTaskTimeout(task);
-            }
+
+    for (auto it = monitoredTasks.begin(); it != monitoredTasks.end(); ) {
+        eTaskState state = eTaskGetState(it->handle);
+        if (state == eBlocked && now - it->lastActiveTime > MAX_TASK_BLOCKED_TIME) {
+            handleTaskTimeout(*it);
+            it = monitoredTasks.erase(it);
         } else {
-            task.lastActiveTime = now;
+            if (state != eBlocked) it->lastActiveTime = now;
+            ++it;
         }
     }
 }
@@ -95,7 +96,7 @@ void DiagnosticsHandler::logMetrics() {
         report += "Heap Mínimo: " + String(metrics.minFreeHeap) + " bytes\n";
         report += "Maior Alocação: " + String(metrics.maxAllocHeap) + " bytes\n";
         report += "CPU Freq: " + String(metrics.cpuFreqMHz) + " MHz\n";
-        report += "Stack Livre: " + String(metrics.freeStack) + "%\n";
+        report += "Stack Livre: " + String(metrics.freeStack) + " bytes\n";
         report += "Fragmentação: " + String(metrics.heapFragmentation) + "%\n";
         report += "Uptime: " + String(metrics.uptime) + " segundos\n";
         
@@ -133,7 +134,7 @@ bool DiagnosticsHandler::isHealthy() {
     // Critérios de saúde do sistema
     bool heapOk = metrics.freeHeap > 10000; // Mínimo 10KB livre
     bool fragOk = metrics.heapFragmentation < 70; // Máximo 70% fragmentação
-    bool stackOk = metrics.freeStack > 20; // Mínimo 20% stack livre
+    bool stackOk = metrics.freeStack > 256; // mínimo 256 bytes livres no stack
     
     return heapOk && fragOk && stackOk;
 } 

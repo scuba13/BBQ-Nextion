@@ -1,10 +1,9 @@
 #include "MQTTConfigEndpoints.h"
-#include "LogHandler.h"       // Inclua o novo LogHandler aqui
-#include "ResponseHelper.h"   // Inclua o ResponseHelper aqui
+#include "LogHandler.h"
+#include "ResponseHelper.h"
 #include <ArduinoJson.h>
-#include <Nextion.h>
 
-void registerMQTTConfigEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, FileSystem& fileSystem, LogHandler& logger) {
+void registerMQTTConfigEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, FileSystem& fileSystem, LogHandler& logger, MQTTHandler& mqttHandler) {
     server.on("/api/v1/mqtt/config", HTTP_GET, [&systemStatus, &logger](AsyncWebServerRequest *request) {
         // Log da requisição utilizando o novo LogHandler
         logger.logRequest(request, "Fetching MQTT configuration");
@@ -23,12 +22,11 @@ void registerMQTTConfigEndpoints(AsyncWebServer& server, SystemStatus& systemSta
         logger.logMessage("MQTT configuration fetched successfully");
     });
 
-    server.on("/api/v1/mqtt/config", HTTP_PATCH, [&systemStatus, &fileSystem, &logger](AsyncWebServerRequest *request) {
-        // Log da requisição utilizando o novo LogHandler
+    server.on("/api/v1/mqtt/config", HTTP_PATCH, [&systemStatus, &fileSystem, &logger, &mqttHandler](AsyncWebServerRequest *request) {
         logger.logRequest(request, "Updating MQTT configuration");
 
         String mqttServer;
-        int mqttPort = 0; // Inicializado com um valor padrão
+        int mqttPort = 0;
         String mqttUser;
         String mqttPassword;
         bool isHAAvailable = false;
@@ -78,7 +76,8 @@ void registerMQTTConfigEndpoints(AsyncWebServer& server, SystemStatus& systemSta
             return;
         }
 
-        // Atualiza os valores em systemStatus
+        bool wasAvailable = systemStatus.isHAAvailable;
+
         strncpy(systemStatus.mqttServer, mqttServer.c_str(), sizeof(systemStatus.mqttServer) - 1);
         systemStatus.mqttServer[sizeof(systemStatus.mqttServer) - 1] = '\0';
         systemStatus.mqttPort = mqttPort;
@@ -88,13 +87,20 @@ void registerMQTTConfigEndpoints(AsyncWebServer& server, SystemStatus& systemSta
         systemStatus.mqttPassword[sizeof(systemStatus.mqttPassword) - 1] = '\0';
         systemStatus.isHAAvailable = isHAAvailable;
 
-        // Salva a configuração no sistema de arquivos
         fileSystem.saveConfigToFile(systemStatus);
 
-        // Utilizando ResponseHelper para enviar a resposta
-        ResponseHelper::sendJsonResponse(request, 200, "MQTT configuration updated successfully");
+        if (!wasAvailable && systemStatus.isHAAvailable) {
+            mqttHandler.begin(systemStatus.mqttServer, systemStatus.mqttPort,
+                              systemStatus.mqttUser, systemStatus.mqttPassword);
+            startMQTTTask();
+        } else if (wasAvailable && !systemStatus.isHAAvailable) {
+            stopMQTTTask();
+        } else if (systemStatus.isHAAvailable) {
+            mqttHandler.begin(systemStatus.mqttServer, systemStatus.mqttPort,
+                              systemStatus.mqttUser, systemStatus.mqttPassword);
+        }
 
-        // Log da mensagem de sucesso utilizando o novo LogHandler
+        ResponseHelper::sendJsonResponse(request, 200, "MQTT configuration updated successfully");
         logger.logMessage("MQTT configuration updated successfully");
     });
 }

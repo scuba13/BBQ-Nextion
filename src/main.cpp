@@ -22,12 +22,13 @@ PubSubClient client(net);
 LogHandler logHandler;
 AsyncWebServer server(80);
 DiagnosticsHandler diagnostics(logHandler);
-WebServerControl webServerControl(sysStat, 
-                                fileSystem, 
-                                logHandler, 
-                                server,
-                                diagnostics);
 MQTTHandler mqttHandler(net, client, sysStat, logHandler);
+WebServerControl webServerControl(sysStat,
+                                fileSystem,
+                                logHandler,
+                                server,
+                                diagnostics,
+                                mqttHandler);
 
 // Inicialização rápida de hardware (sem WiFi)
 void fastInit() {

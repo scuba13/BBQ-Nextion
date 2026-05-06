@@ -22,15 +22,6 @@ static struct {
     unsigned long lastReadTime = 0;
 } tempCache;
 
-// Otimização do controle PID
-static struct {
-    float lastError = 0;
-    float integral = 0;
-    unsigned long lastUpdate = 0;
-    const float Kp = 2.0;
-    const float Ki = 0.5;
-    const float Kd = 1.0;
-} pidControl;
 
 //Internal Temp
 int getCalibratedInternalTemp(SystemStatus &sysStat)
@@ -98,41 +89,22 @@ int getCalibratedTempP(MAX6675 &thermocoupleP, SystemStatus &sysStat)
   return sysStat.calibratedTempP;
 }
 
-void updateRelayState(int temp, SystemStatus &sysStat)
-{
-  if (temp <= sysStat.bbqTemperature)
-  {
-    digitalWrite(RELAY_PIN, HIGH);
-    neopixelWrite(RGB_BUILTIN, RGB_BRIGHTNESS, 0, 0);  // Red
-    sysStat.isRelayOn = true;
-  }
-  else if (temp > sysStat.bbqTemperature)
-  {
-    digitalWrite(RELAY_PIN, LOW);
-    neopixelWrite(RGB_BUILTIN, 0, 0, RGB_BRIGHTNESS);  // Blue
-    sysStat.isRelayOn = false;
-  }
-
-  //logHandler.logMessage("Relay state updated: " + String(sysStat.isRelayOn ? "ON" : "OFF"));
-}
-
-// Controle de temperatura simplificado e otimizado
+// Controle de temperatura com histerese simétrica de 2 graus
 void controlTemperature(SystemStatus& sysStat) {
     int temp = sysStat.calibratedTemp;
-    
-    // Verifica se atingiu temperatura alvo
+    const int HYSTERESIS = 2;
+
     if (temp >= sysStat.bbqTemperature) {
         sysStat.hasReachedSetTemp = true;
         sysStat.startAverage = true;
     }
 
-    // Controle do relé com histerese de 2 graus
-    if (temp <= sysStat.bbqTemperature - 2) {
+    if (temp <= sysStat.bbqTemperature - HYSTERESIS) {
         digitalWrite(RELAY_PIN, HIGH);
         neopixelWrite(RGB_BUILTIN, RGB_BRIGHTNESS, 0, 0);  // Red
         sysStat.isRelayOn = true;
     }
-    else if (temp >= sysStat.bbqTemperature) {
+    else if (temp >= sysStat.bbqTemperature + HYSTERESIS) {
         digitalWrite(RELAY_PIN, LOW);
         neopixelWrite(RGB_BUILTIN, 0, 0, RGB_BRIGHTNESS);  // Blue
         sysStat.isRelayOn = false;

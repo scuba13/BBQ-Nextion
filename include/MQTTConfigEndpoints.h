@@ -6,7 +6,9 @@
 #include "SystemStatus.h"
 #include "FileSystem.h"
 #include "LogHandler.h"
+#include "MQTTHandler.h"
+#include "TaskHandler.h"
 
-void registerMQTTConfigEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, FileSystem& fileSystem, LogHandler& logger);
+void registerMQTTConfigEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, FileSystem& fileSystem, LogHandler& logger, MQTTHandler& mqttHandler);
 
 #endif // MQTT_CONFIG_ENDPOINTS_H

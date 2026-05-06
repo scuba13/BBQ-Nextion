@@ -72,9 +72,15 @@ void OTAHandler::beginUpdate(size_t size, String version) {
 }
 
 bool OTAHandler::writeUpdate(uint8_t* data, size_t len) {
+    if (_checkTimeout()) {
+        logHandler.logError("Timeout do OTA excedido");
+        abortUpdate();
+        return false;
+    }
+
     const int MAX_RETRIES = 3;
     int retries = 0;
-    
+
     while (retries < MAX_RETRIES) {
         if (Update.write(data, len) == len) {
             _status.writtenBytes += len;
@@ -142,25 +148,24 @@ bool OTAHandler::performRollback() {
 }
 
 bool OTAHandler::verifyFirmware() {
-    const esp_partition_t* running = esp_ota_get_running_partition();
-    if (!running) {
-        logHandler.logError("Partição atual não encontrada");
+    const esp_partition_t* nextBoot = esp_ota_get_next_update_partition(NULL);
+    if (!nextBoot) {
+        logHandler.logError("Partição de atualização não encontrada");
         return false;
     }
-    
-    // Verifica assinatura do firmware
+
     uint32_t magicNumber;
-    if (esp_partition_read(running, 0, &magicNumber, sizeof(magicNumber)) != ESP_OK) {
+    if (esp_partition_read(nextBoot, 0, &magicNumber, sizeof(magicNumber)) != ESP_OK) {
         logHandler.logError("Erro ao ler assinatura do firmware");
         return false;
     }
-    
+
     if (magicNumber != ESP_IMAGE_HEADER_MAGIC) {
         logHandler.logError("Assinatura do firmware inválida");
         return false;
     }
-    
-    return _verifyPartition(running);
+
+    return _verifyPartition(nextBoot);
 }
 
 void OTAHandler::checkRollbackNeeded() {

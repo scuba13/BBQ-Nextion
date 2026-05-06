@@ -9,11 +9,8 @@
 extern MAX6675 thermocouple; // Declaração externa da variável
 extern MAX6675 thermocoupleP; // Declaração externa da variável
 
-// Constantes para otimização
 #define TEMP_READ_INTERVAL 500  // Intervalo entre leituras em ms
-#define PID_UPDATE_INTERVAL 100 // Intervalo de atualização do PID em ms
 
-void updateRelayState(int temp, SystemStatus& sysStat);
 int getCalibratedTemp(MAX6675& thermocouple, SystemStatus& sysStat);
 int getCalibratedTempP(MAX6675& thermocoupleP, SystemStatus& sysStat);
 void controlTemperature(SystemStatus& sysStat);

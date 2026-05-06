@@ -6,21 +6,9 @@
 #include <Nextion.h>
 #include "LogHandler.h"
 
-extern LogHandler logHandler; // Certifique-se de que o logHandler esteja declarado externamente ou passado como argumento
-
-// Cache de arquivos frequentes
-static struct {
-    String mqttConfig;
-    String tempConfig;
-    unsigned long lastRead = 0;
-    const unsigned long CACHE_TIMEOUT = 60000; // 1 minuto
-} fsCache;
+extern LogHandler logHandler;
 
 FileSystem::FileSystem() {
-    // Inicializa a estrutura de cache
-    fsCache.mqttConfig = "";
-    fsCache.tempConfig = "";
-    fsCache.lastRead = 0;
 }
 
 void FileSystem::initializeAndLoadConfig(SystemStatus &status, String mac)
@@ -226,27 +214,14 @@ bool FileSystem::begin() {
 }
 
 String FileSystem::readFile(const char* path) {
-    // Verifica cache para arquivos frequentes
-    unsigned long currentTime = millis();
-    if (currentTime - fsCache.lastRead < fsCache.CACHE_TIMEOUT) {
-        if (strcmp(path, "/mqtt_config.json") == 0) return fsCache.mqttConfig;
-        if (strcmp(path, "/temp_config.json") == 0) return fsCache.tempConfig;
-    }
-    
     File file = LittleFS.open(path, "r");
     if (!file) {
         logHandler.logMessage("Falha ao abrir arquivo: " + String(path));
         return "";
     }
-    
+
     String content = file.readString();
     file.close();
-    
-    // Atualiza cache
-    if (strcmp(path, "/mqtt_config.json") == 0) fsCache.mqttConfig = content;
-    if (strcmp(path, "/temp_config.json") == 0) fsCache.tempConfig = content;
-    fsCache.lastRead = currentTime;
-    
     return content;
 }
 
@@ -256,12 +231,11 @@ bool FileSystem::writeFile(const char* path, const char* message) {
         logHandler.logMessage("Falha ao abrir arquivo para escrita: " + String(path));
         return false;
     }
-    
-    // Escrita otimizada usando buffer
+
     const size_t BUFFER_SIZE = 256;
     size_t messageLen = strlen(message);
     size_t written = 0;
-    
+
     while (written < messageLen) {
         size_t toWrite = min(BUFFER_SIZE, messageLen - written);
         if (file.write((uint8_t*)message + written, toWrite) != toWrite) {
@@ -270,14 +244,9 @@ bool FileSystem::writeFile(const char* path, const char* message) {
         }
         written += toWrite;
     }
-    
+
     file.flush();
     file.close();
-    
-    // Invalida cache se necessário
-    if (strcmp(path, "/mqtt_config.json") == 0) fsCache.mqttConfig = "";
-    if (strcmp(path, "/temp_config.json") == 0) fsCache.tempConfig = "";
-    
     return true;
 }
 
@@ -286,11 +255,6 @@ bool FileSystem::deleteFile(const char* path) {
         logHandler.logMessage("Falha ao deletar arquivo: " + String(path));
         return false;
     }
-    
-    // Invalida cache se necessário
-    if (strcmp(path, "/mqtt_config.json") == 0) fsCache.mqttConfig = "";
-    if (strcmp(path, "/temp_config.json") == 0) fsCache.tempConfig = "";
-    
     return true;
 }
 

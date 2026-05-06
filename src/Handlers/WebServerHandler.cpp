@@ -11,17 +11,19 @@
 #include <LittleFS.h>
 #include <FS.h>
 
-WebServerControl::WebServerControl(SystemStatus& systemStatus, 
-                                 FileSystem& fileSystem, 
-                                 LogHandler& logger, 
+WebServerControl::WebServerControl(SystemStatus& systemStatus,
+                                 FileSystem& fileSystem,
+                                 LogHandler& logger,
                                  AsyncWebServer& server,
-                                 DiagnosticsHandler& diagnosticsHandler)
+                                 DiagnosticsHandler& diagnosticsHandler,
+                                 MQTTHandler& mqttHandler)
     : _systemStatus(systemStatus)
     , _fileSystem(fileSystem)
     , _logger(logger)
     , _server(server)
     , _otaHandler(logger)
-    , _diagnostics(diagnosticsHandler) {}
+    , _diagnostics(diagnosticsHandler)
+    , _mqttHandler(mqttHandler) {}
 
 void WebServerControl::begin() {
 
@@ -30,7 +32,7 @@ void WebServerControl::begin() {
     registerSystemEndpoints(_server, _systemStatus, _logger, _otaHandler);
     registerMonitorEndpoints(_server, _systemStatus, _logger);
     registerTemperatureEndpoints(_server, _systemStatus, _logger);
-    registerMQTTConfigEndpoints(_server, _systemStatus, _fileSystem, _logger);
+    registerMQTTConfigEndpoints(_server, _systemStatus, _fileSystem, _logger, _mqttHandler);
     registerTempConfigEndpoints(_server, _systemStatus, _fileSystem, _logger);
     registerGeneralEndpoints(_server, _systemStatus, _logger, _otaHandler);
     registerEnergyEndpoints(_server, _systemStatus, _logger);

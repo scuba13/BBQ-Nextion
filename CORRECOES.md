@@ -71,7 +71,7 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 ## Prioridade 🟠 — Bugs de Lógica
 
 ### C-05 — Handle de task deletada permanece no vetor de monitoramento
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Arquivos:** `src/Handlers/DiagnosticsHandler.cpp:49–76`
 - **Problema:** `handleTaskTimeout()` chama `vTaskDelete(task.handle)` mas a `TaskInfo` continua em `monitoredTasks`. Na próxima iteração de `checkTasks()`, `eTaskGetState()` é chamado com handle inválido → comportamento indefinido / crash.
 - **Correção:** Em `checkTasks()`, após detectar timeout e chamar `handleTaskTimeout()`, remover a entrada do vetor:
@@ -91,7 +91,7 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 ---
 
 ### C-06 — `isHealthy()` compara bytes com threshold percentual
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Arquivos:** `src/Handlers/DiagnosticsHandler.cpp:138`
 - **Problema:** `metrics.freeStack = uxTaskGetStackHighWaterMark(NULL)` retorna bytes disponíveis no stack da task atual (high water mark). O comentário diz "20%" mas o threshold `> 20` é irrisório (20 bytes).
 - **Correção:** Definir threshold em bytes condizente com os stacks configurados (`TEMP_TASK_STACK = 3072`, `CONTROL_TASK_STACK = 2048`). Exemplo: `bool stackOk = metrics.freeStack > 256;` — ou calcular a percentagem a partir do tamanho total do stack, o que requer passar o tamanho total como parâmetro. Corrigir também o comentário.
@@ -108,7 +108,7 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 ---
 
 ### C-08 — `OTAHandler::verifyFirmware()` verifica a partição errada
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Arquivos:** `src/Handlers/OTAHandler.cpp:144`
 - **Problema:** Após `Update.end()`, o novo firmware foi gravado na partição de update, mas o sistema ainda executa da partição anterior. `esp_ota_get_running_partition()` retorna a partição **atual** (antiga). A verificação de `ESP_IMAGE_HEADER_MAGIC` confirma o firmware antigo, não o novo.
 - **Correção:** Verificar a próxima partição de boot (onde o novo firmware foi gravado):
@@ -126,7 +126,7 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 ---
 
 ### C-09 — Histerese de temperatura assimétrica
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Arquivos:** `src/Handlers/TemperatureControlHandler.cpp:130`
 - **Problema:** O relay liga em `setpoint - 2°C` e desliga em `setpoint`. O ponto de equilíbrio fica sempre 0–2°C abaixo do setpoint desejado. O valor de histerese é hardcoded e não configurável.
 - **Correção sugerida:** Centralizar a histerese em torno do setpoint:
@@ -143,7 +143,7 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 ---
 
 ### C-10 — MQTT task não inicia/para quando `isHAAvailable` muda
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Arquivos:** `src/Endpoints/MQTTConfigEndpoints.cpp:92`, `src/Handlers/TaskHandler.cpp`
 - **Problema:** O endpoint PATCH de `/api/v1/mqtt/config` salva a config e atualiza `sysStat.isHAAvailable`, mas não chama `startMQTTTask()` / `stopMQTTTask()`. A mudança só tem efeito após reboot.
 - **Correção:** No endpoint PATCH, após salvar, verificar o delta de `isHAAvailable` e agir:
@@ -162,7 +162,7 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 ---
 
 ### C-11 — Código morto: `updateRelayState()`, `pidControl`, `CureState`, campos não usados
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Arquivos:** `include/TemperatureControl.h`, `src/Handlers/TemperatureControlHandler.cpp`, `include/SystemStatus.h`
 - **Itens para remover:**
   - `updateRelayState()` — declarada, implementada, nunca chamada
@@ -409,7 +409,7 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 ---
 
 ### C-31 — `FileSystem::saveConfig()`, `resetToDefaults()`, `loadConfigFile()`, `saveConfigFile()` declarados mas não implementados
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Arquivos:** `include/FileSystem.h`, `src/Handlers/FileSystem.cpp`
 - **Problema:** O header declara `saveConfig()`, `resetToDefaults()`, `loadConfigFile()`, `saveConfigFile()`. Apenas `loadConfig()` está em `FileSystem.cpp`, que internamente chama `loadConfigFile()` e `resetToDefaults()` — sem implementação. Se `loadConfig()` for chamada (não é atualmente), o linker falha. É um contrato de interface quebrado.
 - **Correção (opção A):** Implementar os métodos faltantes em `FileSystem.cpp` usando o mesmo padrão de `FileSystemHandler.cpp`.
@@ -470,7 +470,7 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 ---
 
 ### C-37 — `_checkTimeout()` implementado mas nunca chamado no OTA
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Arquivos:** `src/Handlers/OTAHandler.cpp:238`, `src/Handlers/OTAHandler.cpp:74`
 - **Problema:** `OTAHandler` define `UPDATE_TIMEOUT = 300000` (5 minutos) e implementa `_checkTimeout()`, mas nunca o chama em `writeUpdate()`. Um upload travado pode ficar pendurado indefinidamente, bloqueando o firmware update e deixando o dispositivo num estado intermediário.
 - **Correção:** Verificar timeout no início de `writeUpdate()`:
@@ -498,7 +498,7 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 ---
 
 ### C-39 — `-Wno-return-type` suprime bugs reais
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Arquivos:** `platformio.ini`
 - **Problema:** `build_flags` inclui `-Wno-return-type`, que silencia warnings de funções com tipo de retorno declarado mas sem `return`. Isso pode mascarar funções que retornam lixo de stack. Os outros `-Wno-*` têm justificativa (libs de terceiro), mas `-Wno-return-type` é arriscado para código próprio.
 - **Correção:** Remover `-Wno-return-type`. Corrigir os erros que aparecerem (provavelmente poucos). Se necessário para libs externas, usar `-Wno-return-type` apenas para a lib específica via `lib_build_flags`.
@@ -762,13 +762,13 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 | C-02 | `src/main.cpp`, `src/Handlers/MQTTHandler.cpp` | 🔴 Crítico | `[ ]` |
 | C-03 | `include/MQTTHandler.h`, `src/Handlers/MQTTHandler.cpp` | 🔴 Crítico | `[ ]` |
 | C-04 | `src/main.cpp`, `src/Handlers/WiFiHandler.cpp` | 🔴 Crítico | `[ ]` |
-| C-05 | `src/Handlers/DiagnosticsHandler.cpp` | 🟠 Lógica | `[ ]` |
-| C-06 | `src/Handlers/DiagnosticsHandler.cpp` | 🟠 Lógica | `[ ]` |
+| C-05 | `src/Handlers/DiagnosticsHandler.cpp` | 🟠 Lógica | `[x]` |
+| C-06 | `src/Handlers/DiagnosticsHandler.cpp` | 🟠 Lógica | `[x]` |
 | C-07 | `src/Endpoints/SystemEndpoints.cpp` | 🟠 Lógica | `[ ]` |
-| C-08 | `src/Handlers/OTAHandler.cpp` | 🟠 Lógica | `[ ]` |
-| C-09 | `src/Handlers/TemperatureControlHandler.cpp` | 🟠 Lógica | `[ ]` |
-| C-10 | `src/Endpoints/MQTTConfigEndpoints.cpp` | 🟠 Lógica | `[ ]` |
-| C-11 | `include/TemperatureControl.h`, `include/SystemStatus.h` | 🟠 Lógica | `[ ]` |
+| C-08 | `src/Handlers/OTAHandler.cpp` | 🟠 Lógica | `[x]` |
+| C-09 | `src/Handlers/TemperatureControlHandler.cpp` | 🟠 Lógica | `[x]` |
+| C-10 | `src/Endpoints/MQTTConfigEndpoints.cpp` | 🟠 Lógica | `[x]` |
+| C-11 | `include/TemperatureControl.h`, `include/SystemStatus.h` | 🟠 Lógica | `[x]` |
 | C-12 | `src/Endpoints/*.cpp` | 🟡 Qualidade | `[ ]` |
 | C-13 | `src/Endpoints/MQTTConfigEndpoints.cpp` | 🟡 Qualidade | `[ ]` |
 | C-14 | `src/Endpoints/TemperatureEndpoints.cpp` | 🟡 Qualidade | `[ ]` |
@@ -788,15 +788,15 @@ Ao iniciar uma correção, marque como `[ em andamento ]`. Ao concluir, marque c
 | C-28 | `src/Endpoints/*.cpp` | 🔐 Segurança | `[ ]` |
 | C-29 | `src/Handlers/TaskHandler.cpp` | 🔴 Crítico | `[ ]` |
 | C-30 | `src/Handlers/NextionHandler.cpp` | 🔴 Crítico | `[ ]` |
-| C-31 | `include/FileSystem.h`, `src/Handlers/FileSystem.cpp` | 🟠 Lógica | `[ ]` |
-| C-32 | `src/Handlers/FileSystem.cpp` | 🟠 Lógica | `[ ]` |
+| C-31 | `include/FileSystem.h`, `src/Handlers/FileSystem.cpp` | 🟠 Lógica | `[x]` |
+| C-32 | `src/Handlers/FileSystem.cpp` | 🟠 Lógica | `[x]` |
 | C-33 | `src/Handlers/FileSystemHandler.cpp` | 🟡 Qualidade | `[ ]` |
 | C-34 | `src/Handlers/MQTTHandler.cpp` | 🟡 Qualidade | `[ ]` |
 | C-35 | `src/Endpoints/*.cpp`, `src/Handlers/LogHandler.cpp` | 🟡 Qualidade | `[ ]` |
 | C-36 | `src/main.cpp` | 🟡 Qualidade | `[ ]` |
-| C-37 | `src/Handlers/OTAHandler.cpp` | 🟠 Lógica | `[ ]` |
+| C-37 | `src/Handlers/OTAHandler.cpp` | 🟠 Lógica | `[x]` |
 | C-38 | `platformio.ini` | 🟢 Performance | `[ ]` |
-| C-39 | `platformio.ini` | 🟠 Lógica | `[ ]` |
+| C-39 | `platformio.ini` | 🟠 Lógica | `[x]` |
 | C-40 | `include/SystemStatus.h` | 🟡 Qualidade | `[ ]` |
 | C-41 | `src/Webhooks/`, `include/Webhooks/` | 🟡 Qualidade | `[ ]` |
 | C-42 | `README.md` | 🟡 Qualidade | `[ ]` |
@@ -832,16 +832,16 @@ Sprint 1 — Estabilidade crítica
   C-32  ✅ FileSystem.cpp duplicado — remover
   C-36  ✅ Serial.begin() ausente
 
-Sprint 2 — Lógica e bugs
-  C-05  handle de task deletada no vetor
-  C-06  isHealthy() bytes vs %
-  C-08  OTA verifica partição errada
-  C-09  histerese assimétrica
-  C-10  MQTT task não inicia/para
-  C-11  código morto (updateRelayState, pidControl, etc.)
-  C-31  métodos não implementados em FileSystem
-  C-37  timeout OTA nunca verificado
-  C-39  -Wno-return-type mascara bugs
+Sprint 2 — Lógica e bugs ✅
+  C-05  ✅ handle de task deletada no vetor
+  C-06  ✅ isHealthy() bytes vs %
+  C-08  ✅ OTA verifica partição errada
+  C-09  ✅ histerese assimétrica
+  C-10  ✅ MQTT task não inicia/para
+  C-11  ✅ código morto (updateRelayState, pidControl, etc.)
+  C-31  ✅ métodos não implementados em FileSystem
+  C-37  ✅ timeout OTA nunca verificado
+  C-39  ✅ -Wno-return-type mascara bugs (já estava comentado)
 
 Sprint 3 — API, persistência e logging
   C-12  idioma misto nas respostas

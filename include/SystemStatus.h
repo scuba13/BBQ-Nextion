@@ -4,19 +4,10 @@
 #define NUM_SAMPLES 20
 #define MOVING_AVERAGE_SIZE 180
 
-struct CureState
-{
-    int currentStage = -1;            // Representa o estágio atual do processo de cura. Inicialmente, é -1.
-    unsigned long stageStartTime = 0; // O tempo (millis) em que o estágio atual começou.
-    bool completed = false;           // Indica se o processo de cura foi concluído.
-};
-
 struct SystemStatus
 {
     int tempCalibration = 0;
     int tempCalibrationP = 0;
-    int lastPos = -1;
-    int currentPos = 0;
     int bbqTemperature = 0;
     int proteinTemperature = 0;
     bool isRelayOn = false;
