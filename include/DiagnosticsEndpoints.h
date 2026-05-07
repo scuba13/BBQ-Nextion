@@ -4,7 +4,13 @@
 #include <ESPAsyncWebServer.h>
 #include "DiagnosticsHandler.h"
 #include "LogHandler.h"
+#include "SystemStatus.h"
+#include "MQTTHandler.h"
 
-void registerDiagnosticsEndpoints(AsyncWebServer& server, DiagnosticsHandler& diagnostics, LogHandler& logger);
+void registerDiagnosticsEndpoints(AsyncWebServer& server,
+                                   DiagnosticsHandler& diagnostics,
+                                   LogHandler& logger,
+                                   SystemStatus& systemStatus,
+                                   MQTTHandler& mqttHandler);
 
-#endif 
+#endif

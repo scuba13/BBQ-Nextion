@@ -184,6 +184,14 @@ void diagnosticsTaskFunc(void* parameter) {
     }
 }
 
+TaskStackInfo getTaskStackWatermarks() {
+    return {
+        tempTaskHandle    ? uxTaskGetStackHighWaterMark(tempTaskHandle)    : 0,
+        controlTaskHandle ? uxTaskGetStackHighWaterMark(controlTaskHandle) : 0,
+        mqttTaskHandle    ? uxTaskGetStackHighWaterMark(mqttTaskHandle)    : 0,
+    };
+}
+
 void startDiagnosticsTask(DiagnosticsHandler& diag) {
     diagHandler = &diag;
     xTaskCreatePinnedToCore(

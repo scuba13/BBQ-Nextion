@@ -36,7 +36,7 @@ void WebServerControl::begin() {
     registerMQTTConfigEndpoints(_server, _systemStatus, _fileSystem, _logger, _mqttHandler);
     registerTempConfigEndpoints(_server, _systemStatus, _fileSystem, _logger);
     registerGeneralEndpoints(_server, _systemStatus, _logger, _otaHandler);
-    registerDiagnosticsEndpoints(_server, _diagnostics, _logger);
+    registerDiagnosticsEndpoints(_server, _diagnostics, _logger, _systemStatus, _mqttHandler);
     registerAuthEndpoints(_server, _systemStatus, _fileSystem, _logger);
     registerDebugEndpoints(_server, _systemStatus, _logger);
 

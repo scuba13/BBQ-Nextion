@@ -232,6 +232,10 @@ void MQTTHandler::verifyAndReconnect(SystemStatus& systemStatus) {
     }
 }
 
+bool MQTTHandler::isConnected() {
+    return client.connected();
+}
+
 void MQTTHandler::managePublishing(SystemStatus& systemStatus) {
     if (client.connected()) {
         publishAllMessages(systemStatus);

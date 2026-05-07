@@ -21,6 +21,7 @@ public:
     void checkAndReconnectAwsIoT();
     void verifyAndReconnect(SystemStatus &systemStatus);
     void managePublishing(SystemStatus &systemStatus);
+    bool isConnected();
 
 private:
     WiFiClient &net;      // Usando referência
