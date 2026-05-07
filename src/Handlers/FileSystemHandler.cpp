@@ -117,7 +117,7 @@ void FileSystem::initializeAndLoadConfig(SystemStatus &status, String mac)
     logHandler.logMessage("maxCaliTemp: " + String(status.maxCaliTemp));
     logHandler.logMessage("minCaliTempP: " + String(status.minCaliTempP));
     logHandler.logMessage("maxCaliTempP: " + String(status.maxCaliTempP));
-    logHandler.logMessage("aiKey: " + String(status.aiKey));
+    logHandler.logMessage("aiKey: " + String(status.aiKey[0] ? "[configurada]" : "[vazia]"));
     logHandler.logMessage("tip: " + String(status.tip));
 
     logHandler.logMessage("Configurações carregadas com sucesso.");
