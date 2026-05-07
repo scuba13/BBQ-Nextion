@@ -92,14 +92,20 @@ void DiagnosticsHandler::logMetrics() {
         Metrics metrics = getMetrics();
         
         String report = "=== Diagnóstico do Sistema ===\n";
-        report += "Heap Livre: " + String(metrics.freeHeap) + " bytes\n";
-        report += "Heap Mínimo: " + String(metrics.minFreeHeap) + " bytes\n";
-        report += "Maior Alocação: " + String(metrics.maxAllocHeap) + " bytes\n";
-        report += "CPU Freq: " + String(metrics.cpuFreqMHz) + " MHz\n";
-        report += "Stack Livre: " + String(metrics.freeStack) + " bytes\n";
-        report += "Fragmentação: " + String(metrics.heapFragmentation) + "%\n";
-        report += "Uptime: " + String(metrics.uptime) + " segundos\n";
-        
+        report += "Heap Livre: "      + String(metrics.freeHeap)          + " bytes\n";
+        report += "Heap Mínimo: "     + String(metrics.minFreeHeap)        + " bytes\n";
+        report += "Maior Alocação: "  + String(metrics.maxAllocHeap)       + " bytes\n";
+        report += "Fragmentação: "    + String(metrics.heapFragmentation)  + "%\n";
+        report += "Stack Livre: "     + String(metrics.freeStack)          + " bytes\n";
+        report += "CPU Freq: "        + String(metrics.cpuFreqMHz)         + " MHz\n";
+        report += "Uptime: "          + String(metrics.uptime)             + "s\n";
+        report += "WiFi Reconex: "    + String(_counters.wifiReconnections)  + "\n";
+        report += "MQTT Reconex: "    + String(_counters.mqttReconnections)  + "\n";
+        report += "Erros BBQ: "       + String(_counters.sensorBBQErrors)    + "\n";
+        report += "Erros Proteína: "  + String(_counters.sensorPrtErrors)    + "\n";
+        report += "Erros Interno: "   + String(_counters.sensorIntErrors)    + "\n";
+        report += "Emergências Relé: "+ String(_counters.relayEmergencies)   + "\n";
+
         _logger.logMessage(report);
         lastMetricsLog = now;
     }

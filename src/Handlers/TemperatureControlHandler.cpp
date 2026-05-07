@@ -4,9 +4,13 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include "LogHandler.h"
+#include "DiagnosticsHandler.h"
 #include "SysStatMutex.h"
 
-extern LogHandler logHandler; // Certifique-se de que o logHandler esteja declarado externamente ou passado como argumento
+#define MAX_SAFE_TEMP 280  // temperatura máxima absoluta — failsafe de segurança física
+
+extern LogHandler logHandler;
+extern DiagnosticsHandler diagnostics;
 
 OneWire oneWire(Ds18b2);
 DallasTemperature sensors(&oneWire);
@@ -31,6 +35,7 @@ int getCalibratedInternalTemp(SystemStatus &sysStat)
 
   // -127 = sensor desconectado; 85 = power-on reset do DS18B20
   if (temp == DEVICE_DISCONNECTED_C || temp == 85.0f) {
+      diagnostics.countSensorIntError();
       return sysStat.calibratedTempInternal; // mantém última leitura válida
   }
 
@@ -50,6 +55,7 @@ int getCalibratedTemp(MAX6675& thermocouple, SystemStatus& sysStat) {
     // Valida leitura antes de usar (NaN ou fora de range = falha SPI / termopar aberto)
     float raw = thermocouple.readCelsius();
     if (isnan(raw) || raw <= 0.0f || raw > 500.0f) {
+        diagnostics.countSensorBBQError();
         return sysStat.calibratedTemp; // mantém última leitura válida
     }
 
@@ -79,6 +85,7 @@ int getCalibratedTempP(MAX6675 &thermocoupleP, SystemStatus &sysStat)
 {
   float raw = thermocoupleP.readCelsius();
   if (isnan(raw) || raw <= 0.0f || raw > 500.0f) {
+      diagnostics.countSensorPrtError();
       return sysStat.calibratedTempP; // mantém última leitura válida
   }
 
@@ -108,6 +115,18 @@ int getCalibratedTempP(MAX6675 &thermocoupleP, SystemStatus &sysStat)
 void controlTemperature(SystemStatus& sysStat) {
     int temp = sysStat.calibratedTemp;
     const int HYSTERESIS = 2;
+
+    // Failsafe absoluto: temperatura acima do limite seguro → relé desligado imediatamente
+    if (temp >= MAX_SAFE_TEMP) {
+        if (sysStat.isRelayOn) {
+            digitalWrite(RELAY_PIN, LOW);
+            sysStat.isRelayOn = false;
+            diagnostics.countRelayEmergency();
+            logHandler.logError("EMERGENCIA: temp " + String(temp) +
+                                "C acima do limite de " + String(MAX_SAFE_TEMP) + "C — relé desligado!");
+        }
+        return; // não executa a lógica normal
+    }
 
     if (temp >= sysStat.bbqTemperature) {
         sysStat.hasReachedSetTemp = true;

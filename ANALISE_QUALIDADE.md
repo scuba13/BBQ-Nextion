@@ -374,13 +374,13 @@ Ao iniciar uma análise, marque como `[ em andamento ]`. Ao concluir, marque com
 
 | ID | Área | Prioridade | Status |
 |---|---|---|---|
-| Q-01 | Segurança Física | 🔴 Crítico | `[ ]` |
-| Q-02 | Segurança Física | 🔴 Crítico | `[ ]` |
+| Q-01 | Segurança Física | 🔴 Crítico | `[x]` |
+| Q-02 | Segurança Física | 🔴 Crítico | `[x]` |
 | Q-03 | Segurança Física | 🟠 Alto | `[ ]` |
 | Q-04 | Confiabilidade | 🔴 Crítico | `[ ]` |
 | Q-05 | Confiabilidade | 🔴 Crítico | `[ ]` |
-| Q-06 | Confiabilidade | 🟠 Alto | `[ ]` |
-| Q-07 | Confiabilidade | 🟠 Alto | `[ ]` |
+| Q-06 | Confiabilidade | 🟠 Alto | `[x]` |
+| Q-07 | Confiabilidade | 🟠 Alto | `[x]` |
 | Q-08 | Observabilidade | 🟠 Alto | `[ ]` |
 | Q-09 | Observabilidade | 🟡 Médio | `[ ]` |
 | Q-10 | Observabilidade | 🟡 Médio | `[ ]` |

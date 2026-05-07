@@ -35,10 +35,12 @@ WebServerControl webServerControl(sysStat,
 
 // Inicialização rápida de hardware (sem WiFi)
 void fastInit() {
-    Serial.begin(115200);
-    neopixelWrite(RGB_BUILTIN, 0, 0, RGB_BRIGHTNESS);
+    // Relé PRIMEIRO: evita estado indefinido no GPIO durante os milissegundos do boot
     pinMode(RELAY_PIN, OUTPUT);
     digitalWrite(RELAY_PIN, LOW);
+
+    Serial.begin(115200);
+    neopixelWrite(RGB_BUILTIN, 0, 0, RGB_BRIGHTNESS);
     initNextion(sysStat);
     initial.show();
 }
@@ -54,6 +56,16 @@ void setup() {
 
     // Inicializa log após LittleFS estar disponível
     logHandler.begin();
+
+    // Registra causa do último reboot — essencial para debugging em campo
+    static const char* resetReasons[] = {
+        "desconhecido", "power-on", "reset externo", "software",
+        "panic/exception", "watchdog int.", "watchdog task",
+        "watchdog outros", "sleep profundo", "brownout", "SDIO"
+    };
+    int rrIdx = (int)esp_reset_reason();
+    if (rrIdx < 0 || rrIdx > 10) rrIdx = 0;
+    logHandler.logMessage("Causa do reboot: " + String(resetReasons[rrIdx]));
 
     // Configura MQTT se habilitado
     if (sysStat.isHAAvailable) {
