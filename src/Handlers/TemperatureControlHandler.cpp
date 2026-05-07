@@ -6,8 +6,7 @@
 #include "LogHandler.h"
 #include "DiagnosticsHandler.h"
 #include "SysStatMutex.h"
-
-#define MAX_SAFE_TEMP 280  // temperatura máxima absoluta — failsafe de segurança física
+#include "DebugInjector.h"
 
 extern LogHandler logHandler;
 extern DiagnosticsHandler diagnostics;
@@ -45,8 +44,13 @@ int getCalibratedInternalTemp(SystemStatus &sysStat)
 
 // BBQ Collection Functions - Otimizado
 int getCalibratedTemp(MAX6675& thermocouple, SystemStatus& sysStat) {
+    if (debugInjectorIsActive()) {
+        sysStat.calibratedTemp = (int)round(debugInjector.bbqTemp);
+        return sysStat.calibratedTemp;
+    }
+
     unsigned long currentTime = millis();
-    
+
     // Usa cache se dentro do intervalo
     if (currentTime - tempCache.lastReadTime < TEMP_READ_INTERVAL) {
         return tempCache.lastBBQTemp;
@@ -83,6 +87,11 @@ int getCalibratedTemp(MAX6675& thermocouple, SystemStatus& sysStat) {
 // Protein Collection Functions
 int getCalibratedTempP(MAX6675 &thermocoupleP, SystemStatus &sysStat)
 {
+  if (debugInjectorIsActive()) {
+      sysStat.calibratedTempP = (int)round(debugInjector.proteinTemp);
+      return sysStat.calibratedTempP;
+  }
+
   float raw = thermocoupleP.readCelsius();
   if (isnan(raw) || raw <= 0.0f || raw > 500.0f) {
       diagnostics.countSensorPrtError();

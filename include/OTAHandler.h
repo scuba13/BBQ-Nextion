@@ -6,14 +6,11 @@
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include "LogHandler.h"
+#include "Config.h"
 #include <esp_ota_ops.h>
 #include <esp_partition.h>
 
 #define OTA_BUFFER_SIZE 4096
-#define MAX_FIRMWARE_SIZE (4 * 1024 * 1024)  // 4MB máximo
-#define UPDATE_TIMEOUT 300000  // 5 minutos timeout
-#define FIRMWARE_VERSION "1.0.0"  // Versão atual do firmware
-#define MIN_HEAP_FOR_UPDATE 40000 // 40KB mínimo de heap livre para update
 
 class OTAHandler {
 public:

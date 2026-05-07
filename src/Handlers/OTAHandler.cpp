@@ -11,10 +11,6 @@ extern LogHandler logHandler;
 #define MIN_FREE_SPACE 65536  // 64KB mínimo livre
 #define PROGRESS_INTERVAL 10  // Intervalo de 10% para logs
 #define OTA_BUFFER_SIZE 4096
-#define MAX_FIRMWARE_SIZE (4 * 1024 * 1024)  // 4MB máximo
-#define UPDATE_TIMEOUT 300000  // 5 minutos timeout
-#define MIN_HEAP_FOR_UPDATE 40000 // 40KB mínimo de heap livre para update
-#define FIRMWARE_VERSION "1.0.0"  // Versão atual do firmware
 
 OTAHandler::OTAHandler(LogHandler& logger) : _logger(logger) {
     _status.inProgress = false;
@@ -44,7 +40,7 @@ void OTAHandler::beginUpdate(size_t size, String version, String md5) {
         return;
     }
 
-    if (size > MAX_FIRMWARE_SIZE) {
+    if (size > OTA_MAX_SIZE) {
         logHandler.logError("Firmware muito grande");
         return;
     }
@@ -246,12 +242,12 @@ void OTAHandler::_updateProgress(size_t written) {
 }
 
 bool OTAHandler::_checkTimeout() {
-    return (millis() - _status.startTime) > UPDATE_TIMEOUT;
+    return (millis() - _status.startTime) > OTA_TIMEOUT_MS;
 }
 
 bool OTAHandler::hasEnoughSpace() {
     size_t freeHeap = ESP.getFreeHeap();
-    if (freeHeap < MIN_HEAP_FOR_UPDATE) {
+    if (freeHeap < OTA_MIN_HEAP_BYTES) {
         logHandler.logError("Heap insuficiente para update: " + String(freeHeap) + " bytes");
         return false;
     }

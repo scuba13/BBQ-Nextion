@@ -1,8 +1,7 @@
 #ifndef SYSTEM_STATUS_H
 #define SYSTEM_STATUS_H
 
-#define NUM_SAMPLES 20
-#define MOVING_AVERAGE_SIZE 180
+#include "Config.h"
 
 struct SystemStatus
 {

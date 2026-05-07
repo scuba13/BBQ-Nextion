@@ -8,6 +8,7 @@
 #include "MonitorEndpoints.h"
 #include "DiagnosticsEndpoints.h"
 #include "AuthEndpoints.h"
+#include "DebugEndpoints.h"
 #include <LittleFS.h>
 #include <FS.h>
 
@@ -37,6 +38,7 @@ void WebServerControl::begin() {
     registerGeneralEndpoints(_server, _systemStatus, _logger, _otaHandler);
     registerDiagnosticsEndpoints(_server, _diagnostics, _logger);
     registerAuthEndpoints(_server, _systemStatus, _fileSystem, _logger);
+    registerDebugEndpoints(_server, _systemStatus, _logger);
 
     // Adicionar handler global para OPTIONS
     _server.onNotFound([](AsyncWebServerRequest *request){

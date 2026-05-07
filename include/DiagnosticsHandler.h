@@ -3,14 +3,10 @@
 
 #include <Arduino.h>
 #include "LogHandler.h"
+#include "Config.h"
 #include <esp_heap_caps.h>
 #include <esp_system.h>
 #include <esp_task_wdt.h>
-
-// Configurações do Watchdog
-#define WDT_TIMEOUT_SECONDS 30
-#define SOFT_WDT_INTERVAL 60000  // 60 segundos
-#define MAX_TASK_BLOCKED_TIME 10000  // 10 segundos
 
 class DiagnosticsHandler {
 public:
@@ -60,7 +56,7 @@ private:
     LogHandler& _logger;
     unsigned long lastMetricsLog = 0;
     unsigned long lastWatchdogFeed = 0;
-    const unsigned long METRICS_INTERVAL = 300000; // 5 minutos — reduz ruído no log
+    const unsigned long METRICS_INTERVAL = LOG_METRICS_INTERVAL;
     bool watchdogEnabled = false;
     HealthCounters _counters;
     

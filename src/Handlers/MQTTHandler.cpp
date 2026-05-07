@@ -6,10 +6,8 @@
 extern LogHandler logHandler;
 
 // Configurações otimizadas
-#define MQTT_BUFFER_SIZE 1024
-#define MQTT_KEEP_ALIVE 30
+#define MQTT_KEEP_ALIVE MQTT_KEEPALIVE_SEC
 #define MQTT_QOS 1
-#define MQTT_RETRY_INTERVAL 5000
 #define MAX_PAYLOAD_SIZE 256
 
 // Cache de mensagens
@@ -26,7 +24,7 @@ MQTTHandler::MQTTHandler(WiFiClient& net, PubSubClient& client, SystemStatus& sy
 }
 
 void MQTTHandler::begin(const char* server, int port, const char* user, const char* password) {
-    client.setBufferSize(MQTT_BUFFER_SIZE);
+    client.setBufferSize(MQTT_BUFFER_BYTES);
     client.setKeepAlive(MQTT_KEEP_ALIVE);
     
     // Configurações de conexão
@@ -68,7 +66,7 @@ bool MQTTHandler::connect() {
     static unsigned long lastAttempt = 0;
     unsigned long now = millis();
     
-    if (now - lastAttempt < MQTT_RETRY_INTERVAL) {
+    if (now - lastAttempt < MQTT_RETRY_MS) {
         return false;
     }
     lastAttempt = now;

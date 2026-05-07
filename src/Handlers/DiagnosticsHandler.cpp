@@ -51,7 +51,7 @@ void DiagnosticsHandler::checkTasks() {
 
     for (auto it = monitoredTasks.begin(); it != monitoredTasks.end(); ) {
         eTaskState state = eTaskGetState(it->handle);
-        if (state == eBlocked && now - it->lastActiveTime > MAX_TASK_BLOCKED_TIME) {
+        if (state == eBlocked && now - it->lastActiveTime > MAX_TASK_BLOCKED_MS) {
             handleTaskTimeout(*it);
             it = monitoredTasks.erase(it);
         } else {
