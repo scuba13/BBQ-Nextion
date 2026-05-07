@@ -143,6 +143,16 @@ void controlTemperature(SystemStatus& sysStat) {
     }
 
     collectSample(sysStat);
+
+    // Detecta transição: proteína atingiu setpoint (loga e publica uma única vez)
+    if (sysStat.proteinTemperature > 0 &&
+        !sysStat.proteinReached &&
+        sysStat.calibratedTempP >= sysStat.proteinTemperature) {
+        sysStat.proteinReached = true;
+        logHandler.logMessage("Proteína atingiu temperatura alvo: " +
+                              String(sysStat.calibratedTempP) + "C / setpoint: " +
+                              String(sysStat.proteinTemperature) + "C");
+    }
 }
 
 void addSample(int temp, SystemStatus &sysStat)
@@ -202,6 +212,7 @@ void resetSystem(SystemStatus &sysStat)
   sysStat.numSamples = 0;
   sysStat.numSamplesP = 0;
   sysStat.hasReachedSetTemp = false;
+  sysStat.proteinReached = false;
 
   sysStat.sampleIndex = 0;
   sysStat.nextSampleIndex = 0;

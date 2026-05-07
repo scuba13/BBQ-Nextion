@@ -376,7 +376,7 @@ Ao iniciar uma análise, marque como `[ em andamento ]`. Ao concluir, marque com
 |---|---|---|---|
 | Q-01 | Segurança Física | 🔴 Crítico | `[x]` |
 | Q-02 | Segurança Física | 🔴 Crítico | `[x]` |
-| Q-03 | Segurança Física | 🟠 Alto | `[ ]` |
+| Q-03 | Segurança Física | 🟠 Alto | `[x]` |
 | Q-04 | Confiabilidade | 🔴 Crítico | `[ ]` |
 | Q-05 | Confiabilidade | 🔴 Crítico | `[ ]` |
 | Q-06 | Confiabilidade | 🟠 Alto | `[x]` |

@@ -17,6 +17,7 @@ struct SystemStatus
     bool startAverage = false;
     int averageTemp = 0;
     bool hasReachedSetTemp = false;
+    bool proteinReached = false;  // proteína atingiu setpoint — reseta só com resetSystem()
 
     // BBQ Variables Temp
     float tempSamples[NUM_SAMPLES];

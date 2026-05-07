@@ -211,6 +211,7 @@ void MQTTHandler::publishAllMessages(SystemStatus& systemStatus) {
     pub("relay/state",                    systemStatus.isRelayOn ? "electric" : "off");
     pub("sensor/protein_temperature",     String(systemStatus.calibratedTempP));
     pub("sensor/protein_set_temperature", String(systemStatus.proteinTemperature));
+    pub("sensor/protein_ready",           systemStatus.proteinReached ? "1" : "0");
     pub("relay_protein/state",            systemStatus.proteinTemperature > 0 ? "electric" : "off");
     pub("sensor/bbq_average_temperature", String(systemStatus.averageTemp));
 }
