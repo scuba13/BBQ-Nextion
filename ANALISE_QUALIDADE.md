@@ -381,7 +381,7 @@ Ao iniciar uma análise, marque como `[ em andamento ]`. Ao concluir, marque com
 | Q-05 | Confiabilidade | 🔴 Crítico | `[ ]` |
 | Q-06 | Confiabilidade | 🟠 Alto | `[x]` |
 | Q-07 | Confiabilidade | 🟠 Alto | `[x]` |
-| Q-08 | Observabilidade | 🟠 Alto | `[ ]` |
+| Q-08 | Observabilidade | 🟠 Alto | `[x]` |
 | Q-09 | Observabilidade | 🟡 Médio | `[ ]` |
 | Q-10 | Observabilidade | 🟡 Médio | `[ ]` |
 | Q-11 | Estrutura | 🟡 Médio | `[ ]` |
@@ -389,10 +389,10 @@ Ao iniciar uma análise, marque como `[ em andamento ]`. Ao concluir, marque com
 | Q-13 | Estrutura | 🟠 Alto | `[ ]` |
 | Q-14 | Testabilidade | 🟡 Médio | `[ ]` |
 | Q-15 | Testabilidade | 🟡 Médio | `[ ]` |
-| Q-16 | OTA | 🟠 Alto | `[ ]` |
+| Q-16 | OTA | 🟠 Alto | `[x]` |
 | Q-17 | OTA | 🟡 Médio | `[ ]` |
-| Q-18 | Desgaste Flash | 🟡 Médio | `[ ]` |
-| Q-19 | Desgaste Flash | 🟡 Médio | `[ ]` |
+| Q-18 | Desgaste Flash | 🟡 Médio | `[x]` |
+| Q-19 | Desgaste Flash | 🟡 Médio | `[x]` |
 
 ---
 

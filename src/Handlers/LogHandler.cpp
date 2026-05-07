@@ -1,6 +1,7 @@
 #include "LogHandler.h"
 #include <FS.h>
 #include <LittleFS.h>
+#include <time.h>
 
 LogHandler::LogHandler() {
     memset(logBuffer, 0, LOG_BUFFER_SIZE);
@@ -107,15 +108,25 @@ void LogHandler::clearLogs() {
 
 void LogHandler::writeLog(const String &level, const String &message) {
     if (_logMutex == nullptr || xSemaphoreTake(_logMutex, pdMS_TO_TICKS(100)) != pdTRUE) {
-        // Fallback sem mutex: imprime só no serial para não perder a mensagem
         Serial.printf("[NO-MUTEX][%s] %s\n", level.c_str(), message.c_str());
         return;
     }
 
     unsigned long now = millis();
     char msgBuf[256];
-    int len = snprintf(msgBuf, sizeof(msgBuf), "%lus: [%s] %s\n",
+    int len;
+
+    // Usa timestamp NTP se sincronizado, senão usa millis()
+    struct tm timeinfo;
+    if (getLocalTime(&timeinfo, 0)) {
+        len = snprintf(msgBuf, sizeof(msgBuf), "%02d/%02d %02d:%02d:%02d [%s] %s\n",
+                       timeinfo.tm_mday, timeinfo.tm_mon + 1,
+                       timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec,
+                       level.c_str(), message.c_str());
+    } else {
+        len = snprintf(msgBuf, sizeof(msgBuf), "%lus: [%s] %s\n",
                        now / 1000UL, level.c_str(), message.c_str());
+    }
     if (len < 0) len = 0;
     if (len >= (int)sizeof(msgBuf)) len = (int)sizeof(msgBuf) - 1;
 

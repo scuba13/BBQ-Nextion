@@ -40,7 +40,9 @@ void registerSystemEndpoints(AsyncWebServer &server, SystemStatus &systemStatus,
             if (!index) {
                 String version = request->hasHeader("X-Firmware-Version") ?
                                request->header("X-Firmware-Version") : "unknown";
-                otaHandler.beginUpdate(request->contentLength(), version);
+                String md5 = request->hasHeader("X-Firmware-MD5") ?
+                               request->header("X-Firmware-MD5") : "";
+                otaHandler.beginUpdate(request->contentLength(), version, md5);
             }
             if (otaHandler.getStatus().inProgress) {
                 if (!otaHandler.writeUpdate(data, len)) {

@@ -1,5 +1,6 @@
 #include "WiFiHandler.h"
 #include <Arduino.h>
+#include <time.h>
 #include "NextionHandler.h"
 #include "LogHandler.h"
 
@@ -28,11 +29,15 @@ void initWiFi(SystemStatus &sysStat, LogHandler &logHandler) {
     
     if (wifiManager.autoConnect("LazyQ Inc.")) {
         logHandler.logMessage("WiFi conectado - IP: " + WiFi.localIP().toString());
-        
+
+        // Sincroniza hora via NTP (UTC-3 = Brasília)
+        configTime(-3 * 3600, 0, "pool.ntp.org", "time.nist.gov");
+        logHandler.logMessage("NTP sincronizando...");
+
         if (MDNS.begin("bbq")) {
             MDNS.addService("http", "tcp", 80);
         }
-        
+
         welcome.show();
     } else {
         logHandler.logMessage("Falha na conexão WiFi");

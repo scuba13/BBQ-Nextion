@@ -31,7 +31,7 @@ public:
         int progress;
     };
 
-    void beginUpdate(size_t size, String version);
+    void beginUpdate(size_t size, String version, String md5 = "");
     bool writeUpdate(uint8_t* data, size_t len);
     bool endUpdate();
     void abortUpdate();

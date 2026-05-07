@@ -28,7 +28,7 @@ OTAHandler::OTAHandler(LogHandler& logger) : _logger(logger) {
     _lastProgressUpdate = 0;
 }
 
-void OTAHandler::beginUpdate(size_t size, String version) {
+void OTAHandler::beginUpdate(size_t size, String version, String md5) {
     if (!hasEnoughSpace()) {
         logHandler.logError("Espaço insuficiente para atualização");
         return;
@@ -65,6 +65,12 @@ void OTAHandler::beginUpdate(size_t size, String version) {
         logHandler.logError("Não foi possível iniciar atualização");
         _status.inProgress = false;
         return;
+    }
+
+    // Se cliente enviou MD5 esperado, a lib Update verifica automaticamente no end()
+    if (md5.length() == 32) {
+        Update.setMD5(md5.c_str());
+        logHandler.logMessage("MD5 esperado: " + md5);
     }
 
     logHandler.logMessage("Iniciando atualização OTA: " + version);

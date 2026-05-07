@@ -152,16 +152,26 @@ void FileSystem::saveConfigToFile(const SystemStatus &status)
     doc["tip"] = status.tip;
     doc["apiKey"] = status.apiKey;
 
-    if (serializeJson(doc, configFile) == 0)
-    {
-        logHandler.logMessage("Failed to write to config file");
-    }
-    else
-    {
-        logHandler.logMessage("Configuration saved successfully");
+    bool ok = serializeJson(doc, configFile) > 0;
+    configFile.close();
+
+    if (!ok) {
+        logHandler.logMessage("Falha ao escrever config.json");
+        return;
     }
 
-    configFile.close();
+    // Backup: copia para config.bak.json após cada save bem-sucedido
+    File src = LittleFS.open("/config.json", "r");
+    File bak = LittleFS.open("/config.bak.json", "w");
+    if (src && bak) {
+        uint8_t buf[128];
+        size_t n;
+        while ((n = src.read(buf, sizeof(buf))) > 0) bak.write(buf, n);
+    }
+    if (src) src.close();
+    if (bak) bak.close();
+
+    logHandler.logMessage("Configuração salva com sucesso");
 }
 
 void FileSystem::verifyFileSystem()
