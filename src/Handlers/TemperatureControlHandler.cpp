@@ -120,10 +120,8 @@ int getCalibratedTempP(MAX6675 &thermocoupleP, SystemStatus &sysStat)
   return sysStat.calibratedTempP;
 }
 
-// Controle de temperatura com histerese simétrica de 2 graus
 void controlTemperature(SystemStatus& sysStat) {
     int temp = sysStat.calibratedTemp;
-    const int HYSTERESIS = 2;
 
     // Failsafe absoluto: temperatura acima do limite seguro → relé desligado imediatamente
     if (temp >= MAX_SAFE_TEMP) {
@@ -142,13 +140,14 @@ void controlTemperature(SystemStatus& sysStat) {
         sysStat.startAverage = true;
     }
 
-    if (temp <= sysStat.bbqTemperature - HYSTERESIS) {
+    if (temp <= sysStat.bbqTemperature + TEMP_HYSTERESIS) {
         digitalWrite(RELAY_PIN, HIGH);
         sysStat.isRelayOn = true;
     }
-    else if (temp >= sysStat.bbqTemperature + HYSTERESIS) {
+    else if (temp >= sysStat.bbqTemperature) {
         digitalWrite(RELAY_PIN, LOW);
         sysStat.isRelayOn = false;
+
     }
 
     collectSample(sysStat);
