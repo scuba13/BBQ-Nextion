@@ -377,20 +377,20 @@ Ao iniciar uma análise, marque como `[ em andamento ]`. Ao concluir, marque com
 | Q-01 | Segurança Física | 🔴 Crítico | `[x]` |
 | Q-02 | Segurança Física | 🔴 Crítico | `[x]` |
 | Q-03 | Segurança Física | 🟠 Alto | `[x]` |
-| Q-04 | Confiabilidade | 🔴 Crítico | `[ ]` |
-| Q-05 | Confiabilidade | 🔴 Crítico | `[ ]` |
+| Q-04 | Confiabilidade | 🔴 Crítico | `[ ]` requer hardware (24h) |
+| Q-05 | Confiabilidade | 🔴 Crítico | `[ ]` requer hardware |
 | Q-06 | Confiabilidade | 🟠 Alto | `[x]` |
 | Q-07 | Confiabilidade | 🟠 Alto | `[x]` |
 | Q-08 | Observabilidade | 🟠 Alto | `[x]` |
 | Q-09 | Observabilidade | 🟡 Médio | `[ ]` |
-| Q-10 | Observabilidade | 🟡 Médio | `[ ]` |
-| Q-11 | Estrutura | 🟡 Médio | `[ ]` |
-| Q-12 | Estrutura | 🟡 Médio | `[ ]` |
-| Q-13 | Estrutura | 🟠 Alto | `[ ]` |
+| Q-10 | Observabilidade | 🟡 Médio | `[ ]` requer hardware + HMI |
+| Q-11 | Estrutura | 🟡 Médio | `[ ]` Sprint 6 |
+| Q-12 | Estrutura | 🟡 Médio | `[x]` |
+| Q-13 | Estrutura | 🟠 Alto | `[x]` confirmado via tela.HMI |
 | Q-14 | Testabilidade | 🟡 Médio | `[ ]` |
-| Q-15 | Testabilidade | 🟡 Médio | `[ ]` |
+| Q-15 | Testabilidade | 🟡 Médio | `[x]` |
 | Q-16 | OTA | 🟠 Alto | `[x]` |
-| Q-17 | OTA | 🟡 Médio | `[ ]` |
+| Q-17 | OTA | 🟡 Médio | `[x]` analisado, sem mudança necessária |
 | Q-18 | Desgaste Flash | 🟡 Médio | `[x]` |
 | Q-19 | Desgaste Flash | 🟡 Médio | `[x]` |
 

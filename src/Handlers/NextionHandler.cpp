@@ -46,46 +46,45 @@ static struct {
 } nexCache;
 
 // Definition of Nextion components
-NexPage wifi = NexPage(0, 0, "wifi");
-NexPage welcome = NexPage(1, 0, "welcome");
-NexPage menu = NexPage(2, 0, "menu");
-NexPage monitor = NexPage(3, 0, "monitor");
-NexPage BBQTemp = NexPage(4, 0, "BBQTemp");
-NexPage ChunkTemp = NexPage(5, 0, "ChunkTemp");
-NexPage ap = NexPage(7, 0, "ap");
-NexPage initial = NexPage(8, 0, "init");
+NexPage wifi = NexPage(NEXTION_PAGE_WIFI,        0, "wifi");
+NexPage welcome = NexPage(NEXTION_PAGE_WELCOME,  0, "welcome");
+NexPage menu = NexPage(NEXTION_PAGE_MENU,        0, "menu");
+NexPage monitor = NexPage(NEXTION_PAGE_MONITOR,  0, "monitor");
+NexPage BBQTemp = NexPage(NEXTION_PAGE_BBQ_TEMP, 0, "BBQTemp");
+NexPage ChunkTemp = NexPage(NEXTION_PAGE_CHUNK_TEMP, 0, "ChunkTemp");
+NexPage ap = NexPage(NEXTION_PAGE_AP,            0, "ap");
+NexPage initial = NexPage(NEXTION_PAGE_INIT,     0, "init");
 
 // Page Monitor
-NexNumber bbqTempSet = NexNumber(3, 10, "bbqTempSet");
-NexNumber bbqTemp = NexNumber(3, 1, "bbqTemp");
-NexNumber chunkTempSet = NexNumber(3, 11, "chunkTempSet");
-NexNumber chunkTemp = NexNumber(3, 2, "chunkTemp");
-NexNumber bbqTempAvg = NexNumber(3, 8, "bbqTempAvg");
-NexButton stopPush = NexButton(3, 18, "stop");
+NexNumber bbqTempSet = NexNumber(NEXTION_PAGE_MONITOR, 10, "bbqTempSet");
+NexNumber bbqTemp    = NexNumber(NEXTION_PAGE_MONITOR,  1, "bbqTemp");
+NexNumber chunkTempSet = NexNumber(NEXTION_PAGE_MONITOR, 11, "chunkTempSet");
+NexNumber chunkTemp  = NexNumber(NEXTION_PAGE_MONITOR,  2, "chunkTemp");
+NexNumber bbqTempAvg = NexNumber(NEXTION_PAGE_MONITOR,  8, "bbqTempAvg");
+NexButton stopPush   = NexButton(NEXTION_PAGE_MONITOR, 18, "stop");
 
 // Page BBQTemp
-NexNumber setBBQTemp = NexNumber(4, 1, "setBBQTemp");
-NexNumber minBBQTemp = NexNumber(4, 6, "minBBQTemp");
-NexNumber maxBBQTemp = NexNumber(4, 7, "maxBBQTemp");
-NexButton setBBQTempPush = NexButton(4, 8, "setBBQ");
+NexNumber setBBQTemp  = NexNumber(NEXTION_PAGE_BBQ_TEMP, 1, "setBBQTemp");
+NexNumber minBBQTemp  = NexNumber(NEXTION_PAGE_BBQ_TEMP, 6, "minBBQTemp");
+NexNumber maxBBQTemp  = NexNumber(NEXTION_PAGE_BBQ_TEMP, 7, "maxBBQTemp");
+NexButton setBBQTempPush = NexButton(NEXTION_PAGE_BBQ_TEMP, 8, "setBBQ");
 
 // Page ChunkTemp
-NexNumber setChunkTemp = NexNumber(5, 1, "setChunkTemp");
-NexNumber minChunkTemp = NexNumber(5, 6, "minChunkTemp");
-NexNumber maxChunkTemp = NexNumber(5, 7, "maxChunkTemp");
-NexButton setChunkTempPush = NexButton(5, 8, "setChunk");
+NexNumber setChunkTemp  = NexNumber(NEXTION_PAGE_CHUNK_TEMP, 1, "setChunkTemp");
+NexNumber minChunkTemp  = NexNumber(NEXTION_PAGE_CHUNK_TEMP, 6, "minChunkTemp");
+NexNumber maxChunkTemp  = NexNumber(NEXTION_PAGE_CHUNK_TEMP, 7, "maxChunkTemp");
+NexButton setChunkTempPush = NexButton(NEXTION_PAGE_CHUNK_TEMP, 8, "setChunk");
 
+// Page Calibration (page ID 6, confirmado contra tela.HMI)
+NexNumber caliBBQTemp   = NexNumber(NEXTION_PAGE_CALIBRATION,  4, "caliBBQTemp");
+NexNumber minCaliBBQTemp = NexNumber(NEXTION_PAGE_CALIBRATION, 12, "minCaliBBQTemp");
+NexNumber maxCaliBBQTemp = NexNumber(NEXTION_PAGE_CALIBRATION, 13, "maxCaliBBQTemp");
 
-// Page Calibration
-NexNumber caliBBQTemp = NexNumber(6, 4, "caliBBQTemp");
-NexNumber minCaliBBQTemp = NexNumber(6, 12, "minCaliBBQTemp");
-NexNumber maxCaliBBQTemp = NexNumber(6, 13, "maxCaliBBQTemp");
+NexNumber caliChunkTemp  = NexNumber(NEXTION_PAGE_CALIBRATION,  7, "caliChunkTemp");
+NexNumber minCaliChuTemp = NexNumber(NEXTION_PAGE_CALIBRATION, 14, "minCaliChuTemp");
+NexNumber maxCaliChuTemp = NexNumber(NEXTION_PAGE_CALIBRATION, 15, "maxCaliChuTemp");
 
-NexNumber caliChunkTemp = NexNumber(6, 7, "caliChunkTemp");
-NexNumber minCaliChuTemp = NexNumber(6, 14, "minCaliChuTemp");
-NexNumber maxCaliChuTemp = NexNumber(6, 15, "maxCaliChuTemp");
-
-NexButton setCaliPush = NexButton(6, 10, "setCali");
+NexButton setCaliPush = NexButton(NEXTION_PAGE_CALIBRATION, 10, "setCali");
 
 NexTouch *nex_listen_list[] = {
     &setBBQTempPush,
@@ -300,7 +299,7 @@ void updateNextionMonitorVariables(SystemStatus &sysStat, uint8_t pageId)
     }
     nexCache.lastUpdate = currentTime;
 
-    if (pageId != 3) {
+    if (pageId != NEXTION_PAGE_MONITOR) {
         nexCache.lastPageId = pageId;
         return;
     }
@@ -342,7 +341,7 @@ void updateNextionSetBBQVariables(SystemStatus &sysStat, uint8_t pageId)
 {
     bool forceUpdate = (pageId != lastPageIdBBQ);
 
-    if (pageId != 4)
+    if (pageId != NEXTION_PAGE_BBQ_TEMP)
     {
         lastPageIdBBQ = pageId;
         initialUpdateDoneBBQ = false;
@@ -373,7 +372,7 @@ void updateNextionSetChunkVariables(SystemStatus &sysStat, uint8_t pageId)
 {
     bool forceUpdate = (pageId != lastPageIdChunk);
 
-    if (pageId != 5)
+    if (pageId != NEXTION_PAGE_CHUNK_TEMP)
     {
         lastPageIdChunk = pageId;
         initialUpdateDoneChunk = false;
@@ -404,7 +403,7 @@ void updateNextionSetCaliVariables(SystemStatus &sysStat, uint8_t pageId)
 {
     bool forceUpdate = (pageId != lastPageIdCali);
 
-    if (pageId != 6)
+    if (pageId != NEXTION_PAGE_CALIBRATION)
     {
         lastPageIdCali = pageId;
         initialUpdateDoneCali = false;
