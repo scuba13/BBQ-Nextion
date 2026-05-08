@@ -140,14 +140,13 @@ void controlTemperature(SystemStatus& sysStat) {
         sysStat.startAverage = true;
     }
 
-    if (temp <= sysStat.bbqTemperature + TEMP_HYSTERESIS) {
-        digitalWrite(RELAY_PIN, HIGH);
-        sysStat.isRelayOn = true;
-    }
-    else if (temp >= sysStat.bbqTemperature) {
+    if (temp >= sysStat.bbqTemperature) {
         digitalWrite(RELAY_PIN, LOW);
         sysStat.isRelayOn = false;
-
+    }
+    else if (temp <= sysStat.bbqTemperature - TEMP_HYSTERESIS) {
+        digitalWrite(RELAY_PIN, HIGH);
+        sysStat.isRelayOn = true;
     }
 
     collectSample(sysStat);
