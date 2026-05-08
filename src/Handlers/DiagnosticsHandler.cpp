@@ -88,7 +88,7 @@ void DiagnosticsHandler::disableWatchdog() {
 
 void DiagnosticsHandler::logMetrics() {
     unsigned long now = millis();
-    if (now - lastMetricsLog >= METRICS_INTERVAL) {
+    if (now - lastMetricsLog >= LOG_METRICS_INTERVAL) {
         Metrics metrics = getMetrics();
         
         String report = "=== Diagnóstico do Sistema ===\n";

@@ -56,7 +56,6 @@ private:
     LogHandler& _logger;
     unsigned long lastMetricsLog = 0;
     unsigned long lastWatchdogFeed = 0;
-    const unsigned long METRICS_INTERVAL = LOG_METRICS_INTERVAL;
     bool watchdogEnabled = false;
     HealthCounters _counters;
     

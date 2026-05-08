@@ -182,7 +182,6 @@ void calculateAverage(SystemStatus &sysStat)
     sum += sysStat.samples[i];
   }
   sysStat.averageTemp = sum / sysStat.avgNumSamples;
-  logHandler.logMessage("Average Temp: " + String(sysStat.averageTemp));
 }
 
 void collectSample(SystemStatus &sysStat)
