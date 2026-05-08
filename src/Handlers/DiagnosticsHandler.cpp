@@ -1,4 +1,4 @@
-#include "DiagnosticsHandler.h"
+#include "Handlers/DiagnosticsHandler.h"
 #include <esp_int_wdt.h>
 #include <esp_system.h>
 

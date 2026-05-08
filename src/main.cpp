@@ -2,18 +2,18 @@
 #include "SystemStatus.h"
 #include "SysStatMutex.h"
 #include "PinDefinitions.h"
-#include "WebServerControl.h"
-#include "TemperatureControl.h"
+#include "Handlers/WebServerHandler.h"
+#include "Handlers/TemperatureHandler.h"
 #include <Arduino.h>
 #include <PubSubClient.h>
-#include "MQTTHandler.h"
+#include "Handlers/MQTTHandler.h"
 #include <ESPmDNS.h>
-#include "LogHandler.h"
-#include "FileSystem.h"
-#include "NextionHandler.h"
-#include "TaskHandler.h"
-#include "WiFiHandler.h"
-#include "DiagnosticsHandler.h"
+#include "Handlers/LogHandler.h"
+#include "Handlers/FileSystem.h"
+#include "Handlers/NextionHandler.h"
+#include "Handlers/TaskHandler.h"
+#include "Handlers/WiFiHandler.h"
+#include "Handlers/DiagnosticsHandler.h"
 
 SemaphoreHandle_t sysStatMutex = nullptr;
 

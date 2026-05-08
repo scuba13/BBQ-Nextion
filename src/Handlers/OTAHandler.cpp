@@ -1,8 +1,8 @@
-#include "OTAHandler.h"
+#include "Handlers/OTAHandler.h"
 #include <esp_ota_ops.h>
 #include <esp_system.h>
 #include <MD5Builder.h>
-#include "LogHandler.h"
+#include "Handlers/LogHandler.h"
 #include <algorithm>
 
 extern LogHandler logHandler;

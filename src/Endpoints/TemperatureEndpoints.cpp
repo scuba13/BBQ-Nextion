@@ -1,6 +1,6 @@
-#include "TemperatureEndpoints.h"
-#include "LogHandler.h"
-#include "ResponseHelper.h"
+#include "Endpoints/TemperatureEndpoints.h"
+#include "Handlers/LogHandler.h"
+#include "Endpoints/ResponseHelper.h"
 #include "SysStatMutex.h"
 
 void registerTemperatureEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, LogHandler& logger) {

@@ -1,6 +1,6 @@
-#include "TempConfigEndpoints.h"
-#include "LogHandler.h"
-#include "ResponseHelper.h"
+#include "Endpoints/TempConfigEndpoints.h"
+#include "Handlers/LogHandler.h"
+#include "Endpoints/ResponseHelper.h"
 #include "SysStatMutex.h"
 #include <ArduinoJson.h>
 

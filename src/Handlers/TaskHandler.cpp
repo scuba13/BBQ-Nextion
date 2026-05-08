@@ -1,11 +1,11 @@
-#include "TaskHandler.h"
+#include "Handlers/TaskHandler.h"
 #include <Arduino.h>
 #include <Nextion.h>
 #include <esp_task_wdt.h>
-#include "LogHandler.h"
-#include "NextionHandler.h"
-#include "TemperatureControl.h"
-#include "DiagnosticsHandler.h"
+#include "Handlers/LogHandler.h"
+#include "Handlers/NextionHandler.h"
+#include "Handlers/TemperatureHandler.h"
+#include "Handlers/DiagnosticsHandler.h"
 #include "SysStatMutex.h"
 
 // Declarações externas

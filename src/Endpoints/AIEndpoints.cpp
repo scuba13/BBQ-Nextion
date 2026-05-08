@@ -1,7 +1,7 @@
-#include "AIEndpoints.h"
+#include "Endpoints/AIEndpoints.h"
 #include <ArduinoJson.h>
-#include "LogHandler.h"
-#include "ResponseHelper.h"
+#include "Handlers/LogHandler.h"
+#include "Endpoints/ResponseHelper.h"
 #include "SysStatMutex.h"
 
 void registerAIEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, LogHandler& logger, FileSystem& fileSystem) {

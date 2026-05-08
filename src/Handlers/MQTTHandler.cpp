@@ -1,6 +1,6 @@
-#include "MQTTHandler.h"
-#include "TemperatureControl.h"
-#include "LogHandler.h"
+#include "Handlers/MQTTHandler.h"
+#include "Handlers/TemperatureHandler.h"
+#include "Handlers/LogHandler.h"
 #include "SysStatMutex.h"
 
 extern LogHandler logHandler;

@@ -1,5 +1,5 @@
-#include "AuthEndpoints.h"
-#include "ResponseHelper.h"
+#include "Endpoints/AuthEndpoints.h"
+#include "Endpoints/ResponseHelper.h"
 #include "SysStatMutex.h"
 #include <ArduinoJson.h>
 

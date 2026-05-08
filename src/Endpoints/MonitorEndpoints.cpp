@@ -1,6 +1,6 @@
-#include "MonitorEndpoints.h"
-#include "LogHandler.h"       // Inclua o novo LogHandler aqui
-#include "ResponseHelper.h"   // Inclua o ResponseHelper aqui
+#include "Endpoints/MonitorEndpoints.h"
+#include "Handlers/LogHandler.h"       // Inclua o novo LogHandler aqui
+#include "Endpoints/ResponseHelper.h"   // Inclua o ResponseHelper aqui
 #include <ArduinoJson.h>
 
 void registerMonitorEndpoints(AsyncWebServer &server, SystemStatus &systemStatus, LogHandler &logger)

@@ -1,6 +1,6 @@
-#include "DebugEndpoints.h"
+#include "Endpoints/DebugEndpoints.h"
 #include "DebugInjector.h"
-#include "ResponseHelper.h"
+#include "Endpoints/ResponseHelper.h"
 #include <ArduinoJson.h>
 
 // Global state for debug injection (auto-expires)

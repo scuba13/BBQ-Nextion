@@ -4,8 +4,8 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include "SystemStatus.h"
-#include "MQTTHandler.h"
-#include "DiagnosticsHandler.h"
+#include "Handlers/MQTTHandler.h"
+#include "Handlers/DiagnosticsHandler.h"
 
 struct TaskStackInfo {
     UBaseType_t tempTask;    // bytes livres — TempTask

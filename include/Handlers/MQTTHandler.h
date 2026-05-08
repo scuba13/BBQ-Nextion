@@ -4,7 +4,7 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include "SystemStatus.h"
-#include "LogHandler.h"
+#include "Handlers/LogHandler.h"
 
 class MQTTHandler
 {

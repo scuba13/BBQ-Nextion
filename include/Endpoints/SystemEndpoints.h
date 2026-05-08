@@ -3,8 +3,8 @@
 
 #include <ESPAsyncWebServer.h>
 #include "SystemStatus.h"
-#include "LogHandler.h"
-#include "OTAHandler.h"
+#include "Handlers/LogHandler.h"
+#include "Handlers/OTAHandler.h"
 
 void registerSystemEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, LogHandler& logger, OTAHandler& otaHandler);
 

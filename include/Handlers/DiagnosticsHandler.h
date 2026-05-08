@@ -2,7 +2,7 @@
 #define DIAGNOSTICS_HANDLER_H
 
 #include <Arduino.h>
-#include "LogHandler.h"
+#include "Handlers/LogHandler.h"
 #include "Config.h"
 #include <esp_heap_caps.h>
 #include <esp_system.h>

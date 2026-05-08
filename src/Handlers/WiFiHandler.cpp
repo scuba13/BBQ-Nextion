@@ -1,8 +1,8 @@
-#include "WiFiHandler.h"
+#include "Handlers/WiFiHandler.h"
 #include <Arduino.h>
 #include <time.h>
-#include "NextionHandler.h"
-#include "LogHandler.h"
+#include "Handlers/NextionHandler.h"
+#include "Handlers/LogHandler.h"
 
 extern LogHandler logHandler;
 

@@ -1,10 +1,9 @@
-#ifndef MonitorEndpoints_h
-#define MonitorEndpoints_h
+#ifndef MONITOR_ENDPOINTS_H
+#define MONITOR_ENDPOINTS_H
 
-#include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include "SystemStatus.h"
-#include "LogHandler.h"
+#include "Handlers/LogHandler.h"
 
 void registerMonitorEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, LogHandler& logger);
 

@@ -1,6 +1,6 @@
-#include "DiagnosticsEndpoints.h"
-#include "ResponseHelper.h"
-#include "TaskHandler.h"
+#include "Endpoints/DiagnosticsEndpoints.h"
+#include "Endpoints/ResponseHelper.h"
+#include "Handlers/TaskHandler.h"
 #include <WiFi.h>
 #include <ArduinoJson.h>
 #include <esp_system.h>

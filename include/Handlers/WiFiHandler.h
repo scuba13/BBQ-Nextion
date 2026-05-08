@@ -3,7 +3,7 @@
 
 #include <WiFiManager.h>
 #include "SystemStatus.h"
-#include "LogHandler.h"
+#include "Handlers/LogHandler.h"
 #include <ESPmDNS.h>
 
 // Declaração das funções

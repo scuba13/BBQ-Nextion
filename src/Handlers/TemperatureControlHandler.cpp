@@ -1,10 +1,10 @@
-#include "TemperatureControl.h"
+#include "Handlers/TemperatureHandler.h"
 #include "PinDefinitions.h"
 #include <Arduino.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
-#include "LogHandler.h"
-#include "DiagnosticsHandler.h"
+#include "Handlers/LogHandler.h"
+#include "Handlers/DiagnosticsHandler.h"
 #include "SysStatMutex.h"
 #include "DebugInjector.h"
 

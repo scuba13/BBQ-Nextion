@@ -1,10 +1,10 @@
-#include "SystemEndpoints.h"
-#include "LogHandler.h"
-#include "ResponseHelper.h"
+#include "Endpoints/SystemEndpoints.h"
+#include "Handlers/LogHandler.h"
+#include "Endpoints/ResponseHelper.h"
 #include "SysStatMutex.h"
 #include <ArduinoJson.h>
-#include "OTAHandler.h"
-#include "TemperatureControl.h"
+#include "Handlers/OTAHandler.h"
+#include "Handlers/TemperatureHandler.h"
 
 void registerSystemEndpoints(AsyncWebServer &server, SystemStatus &systemStatus, LogHandler &logger, OTAHandler &otaHandler)
 {

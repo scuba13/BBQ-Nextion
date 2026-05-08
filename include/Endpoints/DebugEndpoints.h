@@ -3,7 +3,7 @@
 
 #include <ESPAsyncWebServer.h>
 #include "SystemStatus.h"
-#include "LogHandler.h"
+#include "Handlers/LogHandler.h"
 
 void registerDebugEndpoints(AsyncWebServer &server, SystemStatus &systemStatus, LogHandler &logger);
 

@@ -1,12 +1,12 @@
-#ifndef WebServerControl_h
-#define WebServerControl_h
+#ifndef WEB_SERVER_CONTROL_H
+#define WEB_SERVER_CONTROL_H
 
 #include "SystemStatus.h"
-#include "FileSystem.h"
-#include "LogHandler.h"
-#include "OTAHandler.h"
-#include "DiagnosticsHandler.h"
-#include "MQTTHandler.h"
+#include "Handlers/FileSystem.h"
+#include "Handlers/LogHandler.h"
+#include "Handlers/OTAHandler.h"
+#include "Handlers/DiagnosticsHandler.h"
+#include "Handlers/MQTTHandler.h"
 
 class WebServerControl {
 public:

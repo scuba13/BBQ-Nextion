@@ -2,8 +2,8 @@
 #include <FS.h>
 #include <LittleFS.h>
 #include "SystemStatus.h"
-#include "FileSystem.h"
-#include "LogHandler.h"
+#include "Handlers/FileSystem.h"
+#include "Handlers/LogHandler.h"
 
 extern LogHandler logHandler;
 
