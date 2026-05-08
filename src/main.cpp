@@ -95,13 +95,12 @@ void loop() {
     // getCurrentPageId usa Serial2 apenas — sem acesso a sysStat, fora do lock
     uint8_t currentPage = getCurrentPageId();
 
-    // Nextion update functions lêem sysStat — protegidas pelo mutex
-    sysStatLock();
+    // Cada função de update copia os campos necessários do sysStat sob seu próprio
+    // lock interno e faz as escritas seriais fora do mutex (B-03)
     updateNextionMonitorVariables(sysStat, currentPage);
     updateNextionSetBBQVariables(sysStat, currentPage);
     updateNextionSetChunkVariables(sysStat, currentPage);
     updateNextionSetCaliVariables(sysStat, currentPage);
-    sysStatUnlock();
 
     diagnostics.watchdogFeed();
 

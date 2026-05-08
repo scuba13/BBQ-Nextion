@@ -77,6 +77,11 @@
 #define NEXTION_PAGE_CALIBRATION 6
 #define NEXTION_PAGE_AP          7
 #define NEXTION_PAGE_INIT        8
+#define NEXTION_PAGE_NONE     0xFF  // sentinela: nenhuma página ativa
+
+// IDs de imagem de fundo da página Monitor (relay on/off)
+#define NEXTION_BG_RELAY_ON      4
+#define NEXTION_BG_RELAY_OFF     1
 
 // =============================================================================
 // Limites padrão de temperatura (usados na criação do config.json)

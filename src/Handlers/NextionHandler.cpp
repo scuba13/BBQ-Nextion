@@ -1,6 +1,7 @@
 #include "Handlers/NextionHandler.h"
 #include "Handlers/NextionComponents.h"
 #include "Handlers/LogHandler.h"
+#include "Handlers/FileSystem.h"
 #include "SysStatMutex.h"
 
 extern LogHandler logHandler;
@@ -8,18 +9,18 @@ extern LogHandler logHandler;
 #define nexSerial Serial2
 
 // State tracking for change detection
-static float lastMinBBQTemp = 0;
-static float lastMaxBBQTemp = 0;
+static float lastMinBBQTemp   = 0;
+static float lastMaxBBQTemp   = 0;
 static float lastMinChunkTemp = 0;
 static float lastMaxChunkTemp = 0;
-static float lastMinCaliBBQ = 0;
-static float lastMaxCaliBBQ = 0;
+static float lastMinCaliBBQ   = 0;
+static float lastMaxCaliBBQ   = 0;
 static float lastMinCaliChunk = 0;
 static float lastMaxCaliChunk = 0;
 
-static uint32_t lastPageIdBBQ   = -1;
-static uint32_t lastPageIdChunk = -1;
-static uint32_t lastPageIdCali  = -1;
+static uint32_t lastPageIdBBQ   = NEXTION_PAGE_NONE;
+static uint32_t lastPageIdChunk = NEXTION_PAGE_NONE;
+static uint32_t lastPageIdCali  = NEXTION_PAGE_NONE;
 
 static bool initialUpdateDoneBBQ   = false;
 static bool initialUpdateDoneChunk = false;
@@ -32,9 +33,11 @@ static struct {
     int lastProbeTarget = -999;
     int lastAvgTemp     = -999;
     bool lastRelayState = false;
-    uint32_t lastPageId = 0;
+    uint32_t lastPageId = NEXTION_PAGE_NONE;
     unsigned long lastUpdate = 0;
 } nexCache;
+
+// --- Callbacks de botão ---
 
 void setBBQTempPushCallback(void *ptr)
 {
@@ -43,15 +46,25 @@ void setBBQTempPushCallback(void *ptr)
 
     uint32_t value;
     if (!setBBQTemp.getValue(&value)) {
-        logHandler.logMessage("Error: Failed to get value from setBBQTemp");
+        logHandler.logMessage("Nextion: falha ao ler setBBQTemp");
+        return;
+    }
+
+    // D-02: validação de range
+    int temp = static_cast<int>(value);
+    if (temp < 30 || temp > 250) {
+        logHandler.logMessage("Nextion: BBQ temp fora do range: " + String(temp));
         return;
     }
 
     sysStatLock();
-    systemStatus->bbqTemperature = static_cast<int>(value);
+    systemStatus->bbqTemperature = temp;
     sysStatUnlock();
 
-    logHandler.logMessage("BBQTempValue: " + String(value));
+    // B-01: persiste após unlock
+    FileSystem::saveConfigToFile(*systemStatus);
+
+    logHandler.logMessage("BBQ temp setada: " + String(temp));
     monitor.show();
 }
 
@@ -62,15 +75,25 @@ void setChunkTempPushCallback(void *ptr)
 
     uint32_t value;
     if (!setChunkTemp.getValue(&value)) {
-        logHandler.logMessage("Error: Failed to get value from setChunkTemp");
+        logHandler.logMessage("Nextion: falha ao ler setChunkTemp");
+        return;
+    }
+
+    // D-02: validação de range
+    int temp = static_cast<int>(value);
+    if (temp < 25 || temp > 100) {
+        logHandler.logMessage("Nextion: proteína temp fora do range: " + String(temp));
         return;
     }
 
     sysStatLock();
-    systemStatus->proteinTemperature = static_cast<int>(value);
+    systemStatus->proteinTemperature = temp;
     sysStatUnlock();
 
-    logHandler.logMessage("ChunkTempValue: " + String(value));
+    // B-01: persiste após unlock
+    FileSystem::saveConfigToFile(*systemStatus);
+
+    logHandler.logMessage("Proteína temp setada: " + String(temp));
     monitor.show();
 }
 
@@ -79,6 +102,8 @@ void setStopPushCallback(void *ptr)
     if (ptr == nullptr) return;
     SystemStatus *systemStatus = static_cast<SystemStatus *>(ptr);
     resetSystem(*systemStatus);
+    // resetSystem zera os setpoints — salva o estado limpo
+    FileSystem::saveConfigToFile(*systemStatus);
 }
 
 void setCaliPushCallback(void *ptr)
@@ -88,11 +113,11 @@ void setCaliPushCallback(void *ptr)
 
     uint32_t bbq, chunk;
     if (!caliBBQTemp.getValue(&bbq)) {
-        logHandler.logMessage("Error: Failed to get value from Cali BBQ");
+        logHandler.logMessage("Nextion: falha ao ler caliBBQTemp");
         return;
     }
     if (!caliChunkTemp.getValue(&chunk)) {
-        logHandler.logMessage("Error: Failed to get value from Cali Chunk");
+        logHandler.logMessage("Nextion: falha ao ler caliChunkTemp");
         return;
     }
 
@@ -101,42 +126,51 @@ void setCaliPushCallback(void *ptr)
     systemStatus->tempCalibrationP = static_cast<int>(chunk);
     sysStatUnlock();
 
-    logHandler.logMessage("CaliBBQValue: " + String(bbq) + " CaliChunkValue: " + String(chunk));
+    // B-01: persiste após unlock
+    FileSystem::saveConfigToFile(*systemStatus);
+
+    logHandler.logMessage("Calibração: BBQ=" + String(bbq) + " Chunk=" + String(chunk));
     menu.show();
 }
+
+// --- Inicialização ---
 
 void initNextion(SystemStatus &sysStat)
 {
     Serial2.begin(9600, SERIAL_8N1, 16, 17, false, 256);
     nexInit();
 
-    setBBQTempPush.attachPush(setBBQTempPushCallback,   &sysStat);
+    setBBQTempPush.attachPush(setBBQTempPushCallback,     &sysStat);
     setChunkTempPush.attachPush(setChunkTempPushCallback, &sysStat);
-    stopPush.attachPush(setStopPushCallback,            &sysStat);
-    setCaliPush.attachPush(setCaliPushCallback,         &sysStat);
+    stopPush.attachPush(setStopPushCallback,              &sysStat);
+    setCaliPush.attachPush(setCaliPushCallback,           &sysStat);
 
     nexCache = {};
     delay(100);
 }
 
+// --- Comunicação serial ---
+
 uint8_t getCurrentPageId()
 {
-    uint8_t pageId = 0xFF;
+    // D-01: flush de bytes residuais do nexLoop antes de enviar "sendme"
+    while (nexSerial.available()) nexSerial.read();
+
     nexSerial.print("sendme");
     nexSerial.write(0xff);
     nexSerial.write(0xff);
     nexSerial.write(0xff);
 
-    delay(100);
+    // B-02: 25ms é suficiente para 5 bytes a 9600 baud (~5ms de transmissão)
+    delay(25);
 
     if (nexSerial.available() >= 5 && nexSerial.read() == 0x66) {
-        pageId = nexSerial.read();
-        nexSerial.read();
-        nexSerial.read();
-        nexSerial.read();
+        uint8_t pageId = nexSerial.read();
+        nexSerial.read(); nexSerial.read(); nexSerial.read(); // consume 0xFF x3
+        return pageId;
     }
 
-    return pageId;
+    return NEXTION_PAGE_NONE;
 }
 
 void setPageBackground(const char *pageName, uint32_t img_id)
@@ -152,6 +186,10 @@ void setPageBackground(const char *pageName, uint32_t img_id)
     nexSerial.write(0xFF);
 }
 
+// --- Funções de update do display ---
+// B-03: cada função copia os campos necessários do sysStat sob mutex,
+//       libera o mutex, e depois faz as escritas seriais fora do lock.
+
 static void updateNumberComponent(NexNumber &component, float &lastValue, float newValue, bool forceUpdate)
 {
     if (lastValue != newValue || forceUpdate) {
@@ -164,7 +202,6 @@ void updateNextionMonitorVariables(SystemStatus &sysStat, uint8_t pageId)
 {
     const unsigned long UPDATE_INTERVAL = 500;
     unsigned long currentTime = millis();
-
     if (currentTime - nexCache.lastUpdate < UPDATE_INTERVAL) return;
     nexCache.lastUpdate = currentTime;
 
@@ -173,29 +210,42 @@ void updateNextionMonitorVariables(SystemStatus &sysStat, uint8_t pageId)
         return;
     }
 
-    if (sysStat.calibratedTemp != nexCache.lastBBQTemp) {
-        bbqTemp.setValue(sysStat.calibratedTemp);
-        nexCache.lastBBQTemp = sysStat.calibratedTemp;
+    // B-03: copia sob mutex
+    int currBBQTemp, currProbeTemp, currBBQTarget, currProbeTarget, currAvgTemp;
+    bool currRelayOn;
+    sysStatLock();
+    currBBQTemp     = sysStat.calibratedTemp;
+    currProbeTemp   = sysStat.calibratedTempP;
+    currBBQTarget   = sysStat.bbqTemperature;
+    currProbeTarget = sysStat.proteinTemperature;
+    currAvgTemp     = sysStat.averageTemp;
+    currRelayOn     = sysStat.isRelayOn;
+    sysStatUnlock();
+
+    // Escritas seriais fora do mutex
+    if (currBBQTemp != nexCache.lastBBQTemp) {
+        bbqTemp.setValue(currBBQTemp);
+        nexCache.lastBBQTemp = currBBQTemp;
     }
-    if (sysStat.calibratedTempP != nexCache.lastProbeTemp) {
-        chunkTemp.setValue(sysStat.calibratedTempP);
-        nexCache.lastProbeTemp = sysStat.calibratedTempP;
+    if (currProbeTemp != nexCache.lastProbeTemp) {
+        chunkTemp.setValue(currProbeTemp);
+        nexCache.lastProbeTemp = currProbeTemp;
     }
-    if (sysStat.bbqTemperature != nexCache.lastBBQTarget) {
-        bbqTempSet.setValue(sysStat.bbqTemperature);
-        nexCache.lastBBQTarget = sysStat.bbqTemperature;
+    if (currBBQTarget != nexCache.lastBBQTarget) {
+        bbqTempSet.setValue(currBBQTarget);
+        nexCache.lastBBQTarget = currBBQTarget;
     }
-    if (sysStat.proteinTemperature != nexCache.lastProbeTarget) {
-        chunkTempSet.setValue(sysStat.proteinTemperature);
-        nexCache.lastProbeTarget = sysStat.proteinTemperature;
+    if (currProbeTarget != nexCache.lastProbeTarget) {
+        chunkTempSet.setValue(currProbeTarget);
+        nexCache.lastProbeTarget = currProbeTarget;
     }
-    if (sysStat.averageTemp != nexCache.lastAvgTemp) {
-        bbqTempAvg.setValue(sysStat.averageTemp);
-        nexCache.lastAvgTemp = sysStat.averageTemp;
+    if (currAvgTemp != nexCache.lastAvgTemp) {
+        bbqTempAvg.setValue(currAvgTemp);
+        nexCache.lastAvgTemp = currAvgTemp;
     }
-    if (sysStat.isRelayOn != nexCache.lastRelayState) {
-        setPageBackground("monitor", sysStat.isRelayOn ? 4 : 1);
-        nexCache.lastRelayState = sysStat.isRelayOn;
+    if (currRelayOn != nexCache.lastRelayState) {
+        setPageBackground("monitor", currRelayOn ? NEXTION_BG_RELAY_ON : NEXTION_BG_RELAY_OFF);
+        nexCache.lastRelayState = currRelayOn;
     }
 }
 
@@ -209,14 +259,22 @@ void updateNextionSetBBQVariables(SystemStatus &sysStat, uint8_t pageId)
         return;
     }
 
+    // B-03: copia sob mutex
+    int currBBQTemp, currMin, currMax;
+    sysStatLock();
+    currBBQTemp = sysStat.bbqTemperature;
+    currMin     = sysStat.minBBQTemp;
+    currMax     = sysStat.maxBBQTemp;
+    sysStatUnlock();
+
     if (!initialUpdateDoneBBQ) {
-        int value = sysStat.bbqTemperature > 0 ? sysStat.bbqTemperature : sysStat.minBBQTemp;
+        int value = currBBQTemp > 0 ? currBBQTemp : currMin;
         setBBQTemp.setValue(value);
         initialUpdateDoneBBQ = true;
     }
 
-    updateNumberComponent(minBBQTemp, lastMinBBQTemp, sysStat.minBBQTemp, forceUpdate);
-    updateNumberComponent(maxBBQTemp, lastMaxBBQTemp, sysStat.maxBBQTemp, forceUpdate);
+    updateNumberComponent(minBBQTemp, lastMinBBQTemp, currMin, forceUpdate);
+    updateNumberComponent(maxBBQTemp, lastMaxBBQTemp, currMax, forceUpdate);
     lastPageIdBBQ = pageId;
 }
 
@@ -230,14 +288,22 @@ void updateNextionSetChunkVariables(SystemStatus &sysStat, uint8_t pageId)
         return;
     }
 
+    // B-03: copia sob mutex
+    int currProbeTemp, currMin, currMax;
+    sysStatLock();
+    currProbeTemp = sysStat.proteinTemperature;
+    currMin       = sysStat.minPrtTemp;
+    currMax       = sysStat.maxPrtTemp;
+    sysStatUnlock();
+
     if (!initialUpdateDoneChunk) {
-        int value = sysStat.proteinTemperature > 0 ? sysStat.proteinTemperature : sysStat.minPrtTemp;
+        int value = currProbeTemp > 0 ? currProbeTemp : currMin;
         setChunkTemp.setValue(value);
         initialUpdateDoneChunk = true;
     }
 
-    updateNumberComponent(minChunkTemp, lastMinChunkTemp, sysStat.minPrtTemp,  forceUpdate);
-    updateNumberComponent(maxChunkTemp, lastMaxChunkTemp, sysStat.maxPrtTemp,  forceUpdate);
+    updateNumberComponent(minChunkTemp, lastMinChunkTemp, currMin, forceUpdate);
+    updateNumberComponent(maxChunkTemp, lastMaxChunkTemp, currMax, forceUpdate);
     lastPageIdChunk = pageId;
 }
 
@@ -251,15 +317,26 @@ void updateNextionSetCaliVariables(SystemStatus &sysStat, uint8_t pageId)
         return;
     }
 
+    // B-03: copia sob mutex
+    int currCaliBBQ, currCaliChunk, currMinBBQ, currMaxBBQ, currMinChunk, currMaxChunk;
+    sysStatLock();
+    currCaliBBQ   = sysStat.tempCalibration;
+    currCaliChunk = sysStat.tempCalibrationP;
+    currMinBBQ    = sysStat.minCaliTemp;
+    currMaxBBQ    = sysStat.maxCaliTemp;
+    currMinChunk  = sysStat.minCaliTempP;
+    currMaxChunk  = sysStat.maxCaliTempP;
+    sysStatUnlock();
+
     if (!initialUpdateDoneCali) {
-        caliBBQTemp.setValue(static_cast<int32_t>(sysStat.tempCalibration));
-        caliChunkTemp.setValue(static_cast<int32_t>(sysStat.tempCalibrationP));
+        caliBBQTemp.setValue(static_cast<int32_t>(currCaliBBQ));
+        caliChunkTemp.setValue(static_cast<int32_t>(currCaliChunk));
         initialUpdateDoneCali = true;
     }
 
-    updateNumberComponent(minCaliBBQTemp, lastMinCaliBBQ,   static_cast<float>(sysStat.minCaliTemp),  forceUpdate);
-    updateNumberComponent(maxCaliBBQTemp, lastMaxCaliBBQ,   sysStat.maxCaliTemp,                       forceUpdate);
-    updateNumberComponent(minCaliChuTemp, lastMinCaliChunk, static_cast<float>(sysStat.minCaliTempP), forceUpdate);
-    updateNumberComponent(maxCaliChuTemp, lastMaxCaliChunk, sysStat.maxCaliTempP,                      forceUpdate);
+    updateNumberComponent(minCaliBBQTemp, lastMinCaliBBQ,   static_cast<float>(currMinBBQ),   forceUpdate);
+    updateNumberComponent(maxCaliBBQTemp, lastMaxCaliBBQ,   static_cast<float>(currMaxBBQ),   forceUpdate);
+    updateNumberComponent(minCaliChuTemp, lastMinCaliChunk, static_cast<float>(currMinChunk), forceUpdate);
+    updateNumberComponent(maxCaliChuTemp, lastMaxCaliChunk, static_cast<float>(currMaxChunk), forceUpdate);
     lastPageIdCali = pageId;
 }
