@@ -62,18 +62,18 @@ void DiagnosticsHandler::checkTasks() {
 }
 
 void DiagnosticsHandler::handleTaskTimeout(const TaskInfo& task) {
-    String error = "Task bloqueada detectada: " + String(task.name);
-    error += " - Tempo: " + String((millis() - task.lastActiveTime) / 1000) + "s";
+    String error = "Task bloqueada: " + String(task.name);
+    error += " (" + String((millis() - task.lastActiveTime) / 1000) + "s)";
     _logger.logError(error);
-    
-    // Tenta recuperar a task
-    vTaskDelete(task.handle);
-    
-    // Se for uma task crítica, reinicia o sistema
+
+    // M-03: tasks críticas → reiniciar imediatamente sem vTaskDelete
+    // (vTaskDelete antes do restart deixa o sistema sem controle de temperatura)
     if (String(task.name) == "TempTask" || String(task.name) == "ControlTask") {
-        _logger.logError("Task crítica falhou - Reiniciando sistema");
+        _logger.logError("Task crítica falhou — reiniciando sistema");
         ESP.restart();
     }
+
+    vTaskDelete(task.handle);
 }
 
 void DiagnosticsHandler::enableWatchdog() {

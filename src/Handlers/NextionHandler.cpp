@@ -61,8 +61,8 @@ void setBBQTempPushCallback(void *ptr)
     systemStatus->bbqTemperature = temp;
     sysStatUnlock();
 
-    // B-01: persiste após unlock
-    FileSystem::saveConfigToFile(*systemStatus);
+    if (!FileSystem::saveConfigToFile(*systemStatus))
+        logHandler.logError("Nextion: falha ao persistir BBQ temp");
 
     logHandler.logMessage("BBQ temp setada: " + String(temp));
     monitor.show();
@@ -90,8 +90,8 @@ void setChunkTempPushCallback(void *ptr)
     systemStatus->proteinTemperature = temp;
     sysStatUnlock();
 
-    // B-01: persiste após unlock
-    FileSystem::saveConfigToFile(*systemStatus);
+    if (!FileSystem::saveConfigToFile(*systemStatus))
+        logHandler.logError("Nextion: falha ao persistir proteína temp");
 
     logHandler.logMessage("Proteína temp setada: " + String(temp));
     monitor.show();
@@ -102,8 +102,9 @@ void setStopPushCallback(void *ptr)
     if (ptr == nullptr) return;
     SystemStatus *systemStatus = static_cast<SystemStatus *>(ptr);
     resetSystem(*systemStatus);
-    // resetSystem zera os setpoints — salva o estado limpo
-    FileSystem::saveConfigToFile(*systemStatus);
+    // Salva estado limpo após reset (setpoints zerados, calibração preservada)
+    if (!FileSystem::saveConfigToFile(*systemStatus))
+        logHandler.logError("Nextion: falha ao persistir após reset");
 }
 
 void setCaliPushCallback(void *ptr)
@@ -126,8 +127,8 @@ void setCaliPushCallback(void *ptr)
     systemStatus->tempCalibrationP = static_cast<int>(chunk);
     sysStatUnlock();
 
-    // B-01: persiste após unlock
-    FileSystem::saveConfigToFile(*systemStatus);
+    if (!FileSystem::saveConfigToFile(*systemStatus))
+        logHandler.logError("Nextion: falha ao persistir calibração");
 
     logHandler.logMessage("Calibração: BBQ=" + String(bbq) + " Chunk=" + String(chunk));
     menu.show();

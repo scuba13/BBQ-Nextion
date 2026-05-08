@@ -134,6 +134,10 @@ void LogHandler::writeLog(const String &level, const String &message) {
 
     if (bufferIndex + (size_t)len >= LOG_BUFFER_SIZE) {
         flushBuffer();
+        // C-03: se flush falhou (LittleFS cheio), descarta buffer para evitar overflow
+        if (bufferIndex + (size_t)len >= LOG_BUFFER_SIZE) {
+            bufferIndex = 0;
+        }
     }
 
     memcpy(logBuffer + bufferIndex, msgBuf, len);

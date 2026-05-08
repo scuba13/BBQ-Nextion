@@ -70,7 +70,10 @@ void registerTempConfigEndpoints(AsyncWebServer& server, SystemStatus& systemSta
         systemStatus.maxCaliTempP = newMaxCaliTempP;
         sysStatUnlock();
 
-        fileSystem.saveConfigToFile(systemStatus);
+        if (!fileSystem.saveConfigToFile(systemStatus)) {
+            ResponseHelper::sendErrorResponse(request, 500, "Falha ao salvar configuração");
+            return;
+        }
 
         ResponseHelper::sendJsonResponse(request, 200, "Configuração de limites atualizada com sucesso");
     });

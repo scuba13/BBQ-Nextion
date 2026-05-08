@@ -82,7 +82,10 @@ void registerMQTTConfigEndpoints(AsyncWebServer& server, SystemStatus& systemSta
         systemStatus.isHAAvailable = isHAAvailable;
         sysStatUnlock();
 
-        fileSystem.saveConfigToFile(systemStatus);
+        if (!fileSystem.saveConfigToFile(systemStatus)) {
+            ResponseHelper::sendErrorResponse(request, 500, "Falha ao salvar configuração MQTT");
+            return;
+        }
 
         if (!wasAvailable && systemStatus.isHAAvailable) {
             mqttHandler.begin(systemStatus.mqttServer, systemStatus.mqttPort,

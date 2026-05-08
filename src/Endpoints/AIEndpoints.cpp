@@ -46,7 +46,10 @@ void registerAIEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, Log
         systemStatus.tip[sizeof(systemStatus.tip) - 1] = '\0';
         sysStatUnlock();
 
-        fileSystem.saveConfigToFile(systemStatus);
+        if (!fileSystem.saveConfigToFile(systemStatus)) {
+            ResponseHelper::sendErrorResponse(request, 500, "Falha ao salvar configuração de IA");
+            return;
+        }
 
         ResponseHelper::sendJsonResponse(request, 200, "Configuração de IA atualizada com sucesso");
     });

@@ -1,5 +1,6 @@
 #include "Endpoints/TemperatureEndpoints.h"
 #include "Handlers/LogHandler.h"
+#include "Handlers/FileSystem.h"
 #include "Endpoints/ResponseHelper.h"
 #include "SysStatMutex.h"
 
@@ -68,11 +69,17 @@ void registerTemperatureEndpoints(AsyncWebServer& server, SystemStatus& systemSt
 
         // Aplica as escritas sob mutex
         sysStatLock();
-        if (newBBQTemp  != -1)    systemStatus.bbqTemperature   = newBBQTemp;
+        if (newBBQTemp  != -1)    systemStatus.bbqTemperature    = newBBQTemp;
         if (newPrtTemp  != -1)    systemStatus.proteinTemperature = newPrtTemp;
-        if (newCali     != -9999) systemStatus.tempCalibration   = newCali;
-        if (newCaliP    != -9999) systemStatus.tempCalibrationP  = newCaliP;
+        if (newCali     != -9999) systemStatus.tempCalibration    = newCali;
+        if (newCaliP    != -9999) systemStatus.tempCalibrationP   = newCaliP;
         sysStatUnlock();
+
+        // C-01: persiste setpoints e calibração (campos que faltavam no save anterior)
+        if (!FileSystem::saveConfigToFile(systemStatus)) {
+            ResponseHelper::sendErrorResponse(request, 500, "Falha ao salvar configuração");
+            return;
+        }
 
         ResponseHelper::sendJsonResponse(request, 200, "Configuração de temperatura atualizada com sucesso");
     });

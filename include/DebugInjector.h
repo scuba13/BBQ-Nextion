@@ -4,10 +4,10 @@
 #include <Arduino.h>
 
 struct DebugInjectorState {
-    bool active = false;
+    volatile bool active = false;   // A-03: volatile para visibilidade entre cores
     float bbqTemp = 0;
     float proteinTemp = 0;
-    unsigned long endTimeMs = 0;
+    volatile unsigned long endTimeMs = 0;
 };
 
 extern DebugInjectorState debugInjector;

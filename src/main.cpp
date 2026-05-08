@@ -104,8 +104,14 @@ void loop() {
 
     diagnostics.watchdogFeed();
 
-    if (!diagnostics.isHealthy()) {
-        logHandler.logError("Sistema com recursos críticos!");
+    // A-01: verificação de saúde a cada 60s — evita overhead e log flood em loop rápido
+    static unsigned long lastHealthCheck = 0;
+    unsigned long now = millis();
+    if (now - lastHealthCheck >= 60000) {
+        lastHealthCheck = now;
+        if (!diagnostics.isHealthy()) {
+            logHandler.logError("Sistema com recursos críticos!");
+        }
     }
 
     // Lê isRelayOn sob lock para atualizar LED (único ponto de neopixelWrite)

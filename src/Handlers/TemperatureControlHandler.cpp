@@ -140,11 +140,13 @@ void controlTemperature(SystemStatus& sysStat) {
         sysStat.startAverage = true;
     }
 
+    // Histerese real: OFF ao atingir setpoint, ON apenas quando cair HYSTERESIS abaixo
+    // Zona neutra entre (setpoint - HYSTERESIS) e setpoint mantém o estado atual
     if (temp >= sysStat.bbqTemperature) {
         digitalWrite(RELAY_PIN, LOW);
         sysStat.isRelayOn = false;
     }
-    else if (temp <= sysStat.bbqTemperature + TEMP_HYSTERESIS) {
+    else if (temp < sysStat.bbqTemperature - TEMP_HYSTERESIS) {
         digitalWrite(RELAY_PIN, HIGH);
         sysStat.isRelayOn = true;
     }
@@ -211,8 +213,7 @@ void resetSystem(SystemStatus &sysStat)
 
   sysStat.bbqTemperature = 0;
   sysStat.proteinTemperature = 0;
-  sysStat.tempCalibration = 0;
-  sysStat.tempCalibrationP = 0;
+  // C-02: calibração é config de hardware — não reseta com o sistema
 
   sysStat.startAverage = false;
   sysStat.averageTemp = 0;

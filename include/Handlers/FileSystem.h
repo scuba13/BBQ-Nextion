@@ -9,7 +9,7 @@ public:
     FileSystem();
     bool begin();
     static void initializeAndLoadConfig(SystemStatus &status, String mac);
-    static void saveConfigToFile(const SystemStatus &status);
+    static bool saveConfigToFile(const SystemStatus &status);
     static void verifyFileSystem();
     static void resetLogFile();
 

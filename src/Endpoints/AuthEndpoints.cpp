@@ -55,7 +55,10 @@ void registerAuthEndpoints(AsyncWebServer& server, SystemStatus& systemStatus, F
         systemStatus.apiKey[sizeof(systemStatus.apiKey) - 1] = '\0';
         sysStatUnlock();
 
-        fileSystem.saveConfigToFile(systemStatus);
+        if (!fileSystem.saveConfigToFile(systemStatus)) {
+            ResponseHelper::sendErrorResponse(request, 500, "Falha ao salvar chave de API");
+            return;
+        }
 
         ResponseHelper::sendJsonResponse(request, 200, newKey.length() == 0
             ? "Autenticação desabilitada com sucesso"
