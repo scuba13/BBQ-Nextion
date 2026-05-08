@@ -144,7 +144,7 @@ void controlTemperature(SystemStatus& sysStat) {
         digitalWrite(RELAY_PIN, LOW);
         sysStat.isRelayOn = false;
     }
-    else if (temp <= sysStat.bbqTemperature - TEMP_HYSTERESIS) {
+    else if (temp <= sysStat.bbqTemperature + TEMP_HYSTERESIS) {
         digitalWrite(RELAY_PIN, HIGH);
         sysStat.isRelayOn = true;
     }
